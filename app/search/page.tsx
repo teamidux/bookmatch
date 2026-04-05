@@ -1,11 +1,21 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
 import { Nav, BottomNav, BookCover } from '@/components/ui'
 
-export default function SearchPage() {
+export default function SearchPageWrapper() {
+  return (
+    <Suspense fallback={
+      <><Nav /><div style={{ textAlign: 'center', padding: 60 }}><span className="spin" style={{ width: 28, height: 28 }} /></div></>
+    }>
+      <SearchPage />
+    </Suspense>
+  )
+}
+
+function SearchPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
