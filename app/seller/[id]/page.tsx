@@ -70,7 +70,7 @@ export default function SellerPage({ params }: PageProps) {
             <div className="empty"><div className="empty-icon">📭</div><div>ไม่มีหนังสือที่กำลังขาย</div></div>
           )}
 
-          {listings.length > 1 && (
+          {listings.length > 0 && (
             <input
               className="input"
               style={{ marginBottom: 12 }}

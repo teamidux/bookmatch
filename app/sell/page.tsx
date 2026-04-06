@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, fetchBookByISBN, Book } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet } from '@/components/ui'
+import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
 
 const CONDITIONS = [
   { key: 'new', label: '✨ ใหม่มาก' },
@@ -126,11 +126,12 @@ function SellPage() {
 
   const scanFromPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) { setShowLogin(true); return }
-    const file = e.target.files?.[0]
-    if (!file) return
+    const raw = e.target.files?.[0]
+    if (!raw) return
     e.target.value = ''
     setScanning(true)
     try {
+      const file = await resizeForScan(raw)
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
       let el = document.getElementById('sell-file-tmp')
       if (!el) { el = document.createElement('div'); el.id = 'sell-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }

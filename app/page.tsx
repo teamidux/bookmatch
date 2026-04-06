@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
 // Book type still used for wantedBooks
-import { Nav, BottomNav, BookCover, InAppBanner, useToast, Toast, ScanErrorSheet } from '@/components/ui'
+import { Nav, BottomNav, BookCover, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
 
 export default function HomePage() {
   const router = useRouter()
@@ -47,11 +47,12 @@ export default function HomePage() {
   }
 
   const scanFromPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const raw = e.target.files?.[0]
+    if (!raw) return
     e.target.value = ''
     setScanning(true)
     try {
+      const file = await resizeForScan(raw)
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
       let el = document.getElementById('scanner-file-tmp')
       if (!el) { el = document.createElement('div'); el.id = 'scanner-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }

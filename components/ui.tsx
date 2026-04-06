@@ -4,6 +4,30 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 
+// resize รูปก่อนส่ง barcode scan — แก้ปัญหา iPhone (ภาพใหญ่เกิน / HEIC)
+export function resizeForScan(file: File, maxPx = 1280): Promise<File> {
+  return new Promise(resolve => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else { width = Math.round(width * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(blob => {
+        resolve(blob ? new File([blob], 'scan.jpg', { type: 'image/jpeg' }) : file)
+      }, 'image/jpeg', 0.92)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
 export function Nav() {
   const { user } = useAuth()
   return (
