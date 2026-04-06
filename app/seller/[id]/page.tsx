@@ -12,6 +12,7 @@ export default function SellerPage({ params }: PageProps) {
   const { id } = params
   const [seller, setSeller] = useState<User | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
+  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -63,13 +64,28 @@ export default function SellerPage({ params }: PageProps) {
         </div>
 
         <div className="section">
-          <div className="section-title" style={{ marginBottom: 12 }}>หนังสือที่กำลังขาย ({listings.length} เล่ม)</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div className="section-title">หนังสือที่กำลังขาย ({listings.length} เล่ม)</div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <input
+              className="input"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="ค้นหาชื่อหนังสือ หรือผู้แต่ง..."
+            />
+          </div>
 
           {listings.length === 0 && (
             <div className="empty"><div className="empty-icon">📭</div><div>ไม่มีหนังสือที่กำลังขาย</div></div>
           )}
 
-          {listings.map(l => (
+          {listings.filter(l => {
+            if (!query.trim()) return true
+            const q = query.toLowerCase()
+            return l.books?.title?.toLowerCase().includes(q) || l.books?.author?.toLowerCase().includes(q)
+          }).map(l => (
             <Link key={l.id} href={`/book/${l.books?.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="card">
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

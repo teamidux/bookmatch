@@ -264,7 +264,7 @@ function SellPage() {
               ) : (
                 <>
                   <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary)' }}>ถ่ายรูปบาร์โค้ด</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary)' }}>ถ่ายบาร์โค้ด</div>
                   <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 4 }}>แตะเพื่อเปิดกล้อง</div>
                 </>
               )}
