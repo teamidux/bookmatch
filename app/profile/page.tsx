@@ -29,8 +29,8 @@ export default function ProfilePage() {
       await updateUser({ display_name: editName.trim(), line_id: editLine.trim() || undefined })
       setEditing(false)
       show('บันทึกแล้ว ✓')
-    } catch {
-      show('บันทึกไม่สำเร็จ กรุณาลองใหม่')
+    } catch (e: unknown) {
+      show(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
     } finally {
       setSaving(false)
     }

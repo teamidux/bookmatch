@@ -17,8 +17,11 @@ export async function POST(req: NextRequest) {
 
   if (Object.keys(allowed).length === 0) return NextResponse.json({ error: 'no valid fields' }, { status: 400 })
 
-  const { error } = await getSupabase().from('users').update(allowed).eq('id', userId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const { data: updated, error } = await getSupabase()
+    .from('users').update(allowed).eq('id', userId).select()
 
-  return NextResponse.json({ ok: true })
+  if (error) return NextResponse.json({ error: error.message, userId, allowed }, { status: 500 })
+  if (!updated?.length) return NextResponse.json({ error: 'user not found', userId }, { status: 404 })
+
+  return NextResponse.json({ ok: true, updated })
 }

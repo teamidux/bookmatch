@@ -75,7 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: user.id, data }),
     })
-    if (!res.ok) throw new Error('บันทึกไม่สำเร็จ กรุณาลองใหม่')
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || 'บันทึกไม่สำเร็จ')
+    }
     const updated = { ...user, ...data }
     setUser(updated)
     localStorage.setItem('bm_user', JSON.stringify(updated))
