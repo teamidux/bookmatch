@@ -203,7 +203,12 @@ function SellPage() {
       const { error: upErr } = await supabase.storage
         .from('listing-photos')
         .upload(uploadPath, coverFile, { contentType: 'image/jpeg', upsert: false })
-      if (upErr) throw new Error(upErr.message)
+      if (upErr) {
+        if (upErr.message.toLowerCase().includes('bucket')) {
+          throw new Error('กรุณาสร้าง bucket "listing-photos" ใน Supabase Storage ก่อน (ดูวิธีด้านล่าง)')
+        }
+        throw new Error(upErr.message)
+      }
       const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(uploadPath)
 
       // Update cover_url ในตาราง books ถ้ายังไม่มีรูป
@@ -305,12 +310,6 @@ function SellPage() {
               <div className="form-group">
                 <label className="label">รูปหน้าปก <span style={{ color: 'var(--red)' }}>*</span></label>
 
-                {/* hidden inputs — label click ไม่โดนบล็อกบน iOS */}
-                <input id="cover-camera" type="file" accept="image/*" capture="environment"
-                  ref={cameraInputRef} onChange={handleCoverChange} style={{ display: 'none' }} />
-                <input id="cover-gallery" type="file" accept="image/*"
-                  ref={galleryInputRef} onChange={handleCoverChange} style={{ display: 'none' }} />
-
                 {coverPreview ? (
                   <div style={{ position: 'relative', width: 90, height: 120, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <img src={coverPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -318,14 +317,15 @@ function SellPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <label htmlFor={user ? 'cover-camera' : undefined}
-                      onClick={!user ? () => setShowLogin(true) : undefined}
+                    {/* label ครอบ input โดยตรง — วิธีที่เชื่อถือได้ที่สุดบน iOS/Android */}
+                    <label onClick={!user ? (e) => { e.preventDefault(); setShowLogin(true) } : undefined}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '16px 8px', background: 'var(--primary-light)', border: '1.5px dashed var(--primary)', borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--primary)' }}>
+                      {user && <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCoverChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />}
                       <span style={{ fontSize: 22 }}>📷</span>ถ่ายรูป
                     </label>
-                    <label htmlFor={user ? 'cover-gallery' : undefined}
-                      onClick={!user ? () => setShowLogin(true) : undefined}
+                    <label onClick={!user ? (e) => { e.preventDefault(); setShowLogin(true) } : undefined}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '16px 8px', background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--ink2)' }}>
+                      {user && <input type="file" accept="image/*" ref={galleryInputRef} onChange={handleCoverChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />}
                       <span style={{ fontSize: 22 }}>🖼️</span>คลังภาพ
                     </label>
                   </div>
