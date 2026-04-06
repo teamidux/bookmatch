@@ -78,7 +78,8 @@ function SellPage() {
   const [coverPreview, setCoverPreview] = useState('')
 
   const scannerRef = useRef<any>(null)
-  const coverInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const galleryInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (user?.phone) setContact(user.phone)
@@ -88,9 +89,21 @@ function SellPage() {
 
   const isValidISBN = (v: string) => /^(978|979)\d{10}$/.test(v)
 
+  // auto-correct digit แรกที่อ่านผิด (EAN-13 parity error ทำให้ 9→4)
+  const correctISBN = (v: string) => {
+    if (isValidISBN(v)) return v
+    if (/^\d{13}$/.test(v)) {
+      const attempt = '9' + v.slice(1)
+      if (isValidISBN(attempt)) return attempt
+    }
+    return v
+  }
+
   const fetchBook = async (isbnVal?: string) => {
-    const q = (isbnVal || isbn).trim()
-    if (!q) { show('กรุณากรอก ISBN'); return }
+    const raw = (isbnVal || isbn).trim()
+    if (!raw) { show('กรุณากรอก ISBN'); return }
+    const q = correctISBN(raw)
+    if (q !== raw) setIsbn(q)   // แสดง ISBN ที่แก้แล้วใน input
     if (!isValidISBN(q)) { show('ISBN ไม่ถูกต้อง กรุณาตรวจสอบใหม่'); return }
     setFetching(true)
     setNotFound(false)
@@ -141,7 +154,8 @@ function SellPage() {
     e.stopPropagation()
     setCoverFile(null)
     setCoverPreview('')
-    if (coverInputRef.current) coverInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
   const submit = async () => {
@@ -285,22 +299,32 @@ function SellPage() {
             <>
               <div className="form-group">
                 <label className="label">รูปหน้าปก <span style={{ color: 'var(--red)' }}>*</span></label>
-                <input type="file" accept="image/*"
-                  ref={coverInputRef}
-                  onChange={handleCoverChange}
-                  style={{ display: 'none' }} />
-                <div className={`photo-slot required ${coverPreview ? 'filled' : ''}`}
-                  style={{ width: 90, height: 120 }}
-                  onClick={() => { if (!user) { setShowLogin(true); return }; coverInputRef.current?.click() }}>
-                  {coverPreview ? (
-                    <>
-                      <img src={coverPreview} alt="" />
-                      <button onClick={removeCover} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,.5)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: 'white', cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
-                    </>
-                  ) : (
-                    <><span>📷</span><span className="slot-label">หน้าปก</span></>
-                  )}
-                </div>
+
+                {/* hidden inputs — label click ไม่โดนบล็อกบน iOS */}
+                <input id="cover-camera" type="file" accept="image/*" capture="environment"
+                  ref={cameraInputRef} onChange={handleCoverChange} style={{ display: 'none' }} />
+                <input id="cover-gallery" type="file" accept="image/*"
+                  ref={galleryInputRef} onChange={handleCoverChange} style={{ display: 'none' }} />
+
+                {coverPreview ? (
+                  <div style={{ position: 'relative', width: 90, height: 120, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <img src={coverPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button onClick={removeCover} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.55)', border: 'none', borderRadius: '50%', width: 22, height: 22, color: 'white', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <label htmlFor={user ? 'cover-camera' : undefined}
+                      onClick={!user ? () => setShowLogin(true) : undefined}
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '16px 8px', background: 'var(--primary-light)', border: '1.5px dashed var(--primary)', borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--primary)' }}>
+                      <span style={{ fontSize: 22 }}>📷</span>ถ่ายรูป
+                    </label>
+                    <label htmlFor={user ? 'cover-gallery' : undefined}
+                      onClick={!user ? () => setShowLogin(true) : undefined}
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '16px 8px', background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--ink2)' }}>
+                      <span style={{ fontSize: 22 }}>🖼️</span>คลังภาพ
+                    </label>
+                  </div>
+                )}
                 {!coverPreview && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>⚠ กรุณาใส่รูปหน้าปก</div>}
               </div>
 

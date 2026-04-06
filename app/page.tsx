@@ -54,8 +54,18 @@ export default function HomePage() {
         (text: string) => {
           scanner.stop()
           setScanning(false)
-          if (!/^(978|979)\d{10}$/.test(text)) { show('ISBN ไม่ถูกต้อง กรุณาตรวจสอบใหม่'); return }
-          router.push(`/book/${text}`)
+          // auto-correct digit แรกที่อ่านผิด (EAN-13 parity error)
+          let isbn = text
+          if (!/^(978|979)\d{10}$/.test(isbn) && /^\d{13}$/.test(isbn)) {
+            const attempt = '9' + isbn.slice(1)
+            if (/^(978|979)\d{10}$/.test(attempt)) isbn = attempt
+          }
+          if (!/^(978|979)\d{10}$/.test(isbn)) {
+            setQuery(text)   // ใส่ค่าที่สแกนได้ใน input ให้แก้เอง
+            show('ISBN ไม่ถูกต้อง กรุณาตรวจสอบใหม่')
+            return
+          }
+          router.push(`/book/${isbn}`)
         },
         () => {}
       )
