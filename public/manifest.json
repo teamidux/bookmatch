@@ -8,11 +8,11 @@
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/api/icon?size=192", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/api/icon?size=512", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "shortcuts": [
-    { "name": "ลงขาย", "url": "/sell", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Wanted List", "url": "/wanted", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "ลงขาย", "url": "/sell", "icons": [{ "src": "/api/icon?size=192", "sizes": "192x192" }] },
+    { "name": "Wanted List", "url": "/wanted", "icons": [{ "src": "/api/icon?size=192", "sizes": "192x192" }] }
   ]
 }

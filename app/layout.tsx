@@ -20,7 +20,8 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#2563eb" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/api/icon?size=180" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/api/icon?size=192" />
         <link
           href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap"
           rel="stylesheet"
