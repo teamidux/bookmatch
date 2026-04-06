@@ -131,15 +131,33 @@ function SellPage() {
     e.target.value = ''
     setScanning(true)
     try {
-      const file = await resizeForScan(rawFile)
-      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
-      let el = document.getElementById('sell-file-tmp')
-      if (!el) { el = document.createElement('div'); el.id = 'sell-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }
-      const scanner = new Html5Qrcode('sell-file-tmp', { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13], verbose: false })
-      const result = await scanner.scanFile(file, false)
-      const isbn = correctISBN(result.trim())
-      setIsbn(isbn)
-      fetchBook(isbn)
+      let scanned: string | null = null
+
+      // 1. ลอง native BarcodeDetector ก่อน — รองรับ iOS 17+ / Chrome / Edge
+      //    จัดการ EXIF rotation ของ iPhone ได้อัตโนมัติ
+      if ('BarcodeDetector' in window) {
+        try {
+          const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
+          const bitmap = await createImageBitmap(rawFile, { imageOrientation: 'from-image' } as any)
+          const codes = await detector.detect(bitmap)
+          bitmap.close()
+          if (codes.length > 0) scanned = codes[0].rawValue
+        } catch { /* ไม่รองรับ format นี้ หรือ error อื่น → ลอง fallback */ }
+      }
+
+      // 2. Fallback: Html5Qrcode — รองรับ iOS รุ่นเก่า / Firefox
+      if (!scanned) {
+        const file = await resizeForScan(rawFile)
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
+        let el = document.getElementById('sell-file-tmp')
+        if (!el) { el = document.createElement('div'); el.id = 'sell-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }
+        const scanner = new Html5Qrcode('sell-file-tmp', { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13], verbose: false })
+        scanned = await scanner.scanFile(file, false)
+      }
+
+      const corrected = correctISBN(scanned!.trim())
+      setIsbn(corrected)
+      fetchBook(corrected)
     } catch {
       const shown = localStorage.getItem('scan_tips_shown')
       if (shown) {

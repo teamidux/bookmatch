@@ -4,27 +4,38 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 
-// resize รูปก่อนส่ง barcode scan — แก้ปัญหา iPhone (ภาพใหญ่เกิน / HEIC)
-export function resizeForScan(file: File, maxPx = 1280): Promise<File> {
+// resize รูปก่อนส่ง barcode scan — แก้ปัญหา iPhone (EXIF rotation + ภาพใหญ่เกิน / HEIC)
+export function resizeForScan(file: File, maxPx = 1920): Promise<File> {
   return new Promise(resolve => {
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      let { width, height } = img
+    // createImageBitmap รองรับ imageOrientation: 'from-image' บน Chrome/Firefox
+    // ซึ่งจะ handle EXIF rotation ของ iPhone ได้อัตโนมัติ
+    const drawAndResolve = (source: HTMLImageElement | ImageBitmap, w: number, h: number) => {
+      let width = w, height = h
       if (width > maxPx || height > maxPx) {
         if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
         else { width = Math.round(width * maxPx / height); height = maxPx }
       }
       const canvas = document.createElement('canvas')
       canvas.width = width; canvas.height = height
-      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.getContext('2d')!.drawImage(source as any, 0, 0, width, height)
       canvas.toBlob(blob => {
         resolve(blob ? new File([blob], 'scan.jpg', { type: 'image/jpeg' }) : file)
-      }, 'image/jpeg', 0.92)
+      }, 'image/jpeg', 0.95)
     }
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
-    img.src = url
+
+    createImageBitmap(file, { imageOrientation: 'from-image' } as any)
+      .then(bitmap => {
+        drawAndResolve(bitmap, bitmap.width, bitmap.height)
+        bitmap.close()
+      })
+      .catch(() => {
+        // fallback สำหรับ browser ที่ไม่รองรับ imageOrientation option
+        const img = new Image()
+        const url = URL.createObjectURL(file)
+        img.onload = () => { URL.revokeObjectURL(url); drawAndResolve(img, img.naturalWidth, img.naturalHeight) }
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+        img.src = url
+      })
   })
 }
 
