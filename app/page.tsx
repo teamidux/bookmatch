@@ -1,10 +1,10 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
 // Book type still used for wantedBooks
-import { Nav, BottomNav, BookCover, InAppBanner, useToast, Toast } from '@/components/ui'
+import { Nav, BottomNav, BookCover, InAppBanner, useToast, Toast, ScanErrorSheet } from '@/components/ui'
 
 export default function HomePage() {
   const router = useRouter()
@@ -13,7 +13,9 @@ export default function HomePage() {
   const [stats, setStats] = useState({ books: 0, sellers: 0, wanted: 0 })
   const [query, setQuery] = useState('')
   const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState(false)
   const [loading, setLoading] = useState(true)
+  const scanInputRef = useRef<HTMLInputElement>(null)
   const { msg, show } = useToast()
 
   useEffect(() => { loadData() }, [])
@@ -67,7 +69,7 @@ export default function HomePage() {
         router.push(`/book/${isbn}`)
       }
     } catch {
-      show('อ่านบาร์โค้ดไม่ได้ ลองถ่ายใหม่ให้เห็นบาร์โค้ดชัดขึ้น')
+      setScanError(true)
     } finally {
       setScanning(false)
     }
@@ -95,9 +97,16 @@ export default function HomePage() {
           </div>
 
           <label style={{ background: scanning ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.15)', border: '1.5px solid rgba(255,255,255,.3)', borderRadius: 10, padding: '10px 18px', color: 'white', fontFamily: 'Sarabun', fontWeight: 600, fontSize: 13, cursor: scanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto', width: 'fit-content' }}>
-            <input type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
+            <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
             {scanning ? <><span className="spin" style={{ width: 14, height: 14, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} /> กำลังอ่าน...</> : '📷 ค้นหาด้วย Barcode'}
           </label>
+
+          {scanError && (
+            <ScanErrorSheet
+              onRetry={() => { setScanError(false); scanInputRef.current?.click() }}
+              onClose={() => setScanError(false)}
+            />
+          )}
         </div>
 
         <div className="stats-bar">

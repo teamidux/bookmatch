@@ -242,3 +242,39 @@ export function LoginModal({
     </div>
   )
 }
+
+const SCAN_TIPS = [
+  { icon: '📖', text: 'ถ่ายบาร์โค้ดหลังปก ไม่ใช่หน้าปก' },
+  { icon: '☀️', text: 'ถ่ายในที่แสงสว่างเพียงพอ' },
+  { icon: '🔍', text: 'เข้าใกล้บาร์โค้ดให้พอดี อย่าห่างหรือชิดเกินไป' },
+  { icon: '🧹', text: 'เช็ดทำความสะอาดเลนส์กล้องก่อนถ่าย' },
+  { icon: '🤚', text: 'ถือมือให้นิ่ง รอให้กล้องโฟกัสก่อนถ่าย' },
+]
+
+export function ScanErrorSheet({ onRetry, onClose }: { onRetry: () => void; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18 }}>อ่านบาร์โค้ดไม่ได้</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>ลองตรวจสอบสิ่งเหล่านี้แล้วถ่ายใหม่</div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          {SCAN_TIPS.map((t, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', borderRadius: 10, padding: '10px 14px' }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>{t.icon}</span>
+              <span style={{ fontSize: 14 }}>{t.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--primary)', border: 'none', borderRadius: 12, padding: '13px 16px', color: 'white', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+          onClick={onRetry}>
+          📷 ถ่ายใหม่อีกครั้ง
+        </label>
+      </div>
+    </div>
+  )
+}

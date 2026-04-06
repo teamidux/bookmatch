@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, fetchBookByISBN, Book } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast } from '@/components/ui'
+import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet } from '@/components/ui'
 
 const CONDITIONS = [
   { key: 'new', label: '✨ ใหม่มาก' },
@@ -66,6 +66,8 @@ function SellPage() {
   const [notFound, setNotFound] = useState(false)
   const [fetching, setFetching] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState(false)
+  const scanInputRef = useRef<HTMLInputElement | null>(null)
   const [cond, setCond] = useState('good')
   const [price, setPrice] = useState('')
   const [shipping, setShipping] = useState('buyer')
@@ -139,7 +141,7 @@ function SellPage() {
       setIsbn(isbn)
       fetchBook(isbn)
     } catch {
-      show('อ่านบาร์โค้ดไม่ได้ ลองถ่ายใหม่ให้เห็นบาร์โค้ดชัดขึ้น')
+      setScanError(true)
     } finally {
       setScanning(false)
     }
@@ -255,7 +257,7 @@ function SellPage() {
 
           {!fetchedBook && (
             <label style={{ display: 'block', background: 'var(--surface)', border: '2px dashed #BFDBFE', borderRadius: 14, padding: '24px 20px', textAlign: 'center', marginBottom: 14, cursor: scanning ? 'default' : 'pointer' }}>
-              <input type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
+              <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
               {scanning ? (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><span className="spin" style={{ width: 28, height: 28 }} /></div>
@@ -269,6 +271,13 @@ function SellPage() {
                 </>
               )}
             </label>
+          )}
+
+          {scanError && (
+            <ScanErrorSheet
+              onRetry={() => { setScanError(false); scanInputRef.current?.click() }}
+              onClose={() => setScanError(false)}
+            />
           )}
 
           {!fetchedBook && (
