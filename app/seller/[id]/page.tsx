@@ -64,21 +64,20 @@ export default function SellerPage({ params }: PageProps) {
         </div>
 
         <div className="section">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div className="section-title">หนังสือที่กำลังขาย ({listings.length} เล่ม)</div>
-          </div>
+          <div className="section-title" style={{ marginBottom: 12 }}>หนังสือที่กำลังขาย ({listings.length} เล่ม)</div>
 
-          <div style={{ marginBottom: 12 }}>
+          {listings.length === 0 && (
+            <div className="empty"><div className="empty-icon">📭</div><div>ไม่มีหนังสือที่กำลังขาย</div></div>
+          )}
+
+          {listings.length > 1 && (
             <input
               className="input"
+              style={{ marginBottom: 12 }}
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="ค้นหาชื่อหนังสือ หรือผู้แต่ง..."
             />
-          </div>
-
-          {listings.length === 0 && (
-            <div className="empty"><div className="empty-icon">📭</div><div>ไม่มีหนังสือที่กำลังขาย</div></div>
           )}
 
           {listings.filter(l => {
