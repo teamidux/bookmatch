@@ -150,7 +150,10 @@ function SellPage() {
     e.target.value = ''
     try {
       const { Html5Qrcode } = await import('html5-qrcode')
-      const result = await Html5Qrcode.scanFile(file, false)
+      let el = document.getElementById('sell-file-tmp')
+      if (!el) { el = document.createElement('div'); el.id = 'sell-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }
+      const scanner = new Html5Qrcode('sell-file-tmp')
+      const result = await scanner.scanFile(file, false)
       setCameraError(false)
       setIsbn(result.trim())
       fetchBook(result.trim())

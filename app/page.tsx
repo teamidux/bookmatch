@@ -86,7 +86,10 @@ export default function HomePage() {
     e.target.value = ''
     try {
       const { Html5Qrcode } = await import('html5-qrcode')
-      const result = await Html5Qrcode.scanFile(file, false)
+      let el = document.getElementById('scanner-file-tmp')
+      if (!el) { el = document.createElement('div'); el.id = 'scanner-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }
+      const scanner = new Html5Qrcode('scanner-file-tmp')
+      const result = await scanner.scanFile(file, false)
       setCameraError(false)
       processISBN(result)
     } catch {
