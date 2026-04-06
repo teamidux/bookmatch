@@ -104,7 +104,7 @@ function SellPage() {
     if (!raw) { show('กรุณากรอก ISBN'); return }
     const q = correctISBN(raw)
     if (q !== raw) setIsbn(q)   // แสดง ISBN ที่แก้แล้วใน input
-    if (!isValidISBN(q)) { show('ISBN ไม่ถูกต้อง กรุณาตรวจสอบใหม่'); return }
+    if (!isValidISBN(q)) { show('กล้องอ่านบาร์โค้ดไม่ชัด ลองสแกนใหม่อีกครั้ง หรือพิมพ์ ISBN เอง'); return }
     setFetching(true)
     setNotFound(false)
     const book = await fetchBookByISBN(q)

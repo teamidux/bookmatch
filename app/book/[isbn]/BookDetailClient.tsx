@@ -23,25 +23,14 @@ export default function BookDetailClient({ isbn }: { isbn: string }) {
   useEffect(() => { loadData() }, [isbn])
 
   const loadListings = async (bookId: string) => {
-    // ลอง query พร้อม users join ก่อน
-    const { data: ls, error } = await supabase
-      .from('listings')
-      .select('*, users(id, display_name, sold_count, confirmed_count, is_verified)')
-      .eq('book_id', bookId)
-      .eq('status', 'active')
-      .order('price')
-
-    if (!error) { setListings(ls || []); return }
-
-    // ถ้า join ล้มเหลว (FK ไม่ได้ register) ให้ fallback query listings อย่างเดียว
-    console.error('[listings join error]', error.message)
-    const { data: lsFallback } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('book_id', bookId)
-      .eq('status', 'active')
-      .order('price')
-    setListings(lsFallback || [])
+    try {
+      const res = await fetch(`/api/listings?book_id=${bookId}`)
+      const { listings } = await res.json()
+      setListings(listings || [])
+    } catch (err) {
+      console.error('[loadListings]', err)
+      setListings([])
+    }
   }
 
   const loadData = async () => {

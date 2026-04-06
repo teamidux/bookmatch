@@ -61,8 +61,8 @@ export default function HomePage() {
             if (/^(978|979)\d{10}$/.test(attempt)) isbn = attempt
           }
           if (!/^(978|979)\d{10}$/.test(isbn)) {
-            setQuery(text)   // ใส่ค่าที่สแกนได้ใน input ให้แก้เอง
-            show('ISBN ไม่ถูกต้อง กรุณาตรวจสอบใหม่')
+            setQuery(text)
+            show('กล้องอ่านบาร์โค้ดไม่ชัด ลองสแกนใหม่อีกครั้ง')
             return
           }
           router.push(`/book/${isbn}`)
