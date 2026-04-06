@@ -141,7 +141,13 @@ function SellPage() {
       setIsbn(isbn)
       fetchBook(isbn)
     } catch {
-      setScanError(true)
+      const shown = localStorage.getItem('scan_tips_shown')
+      if (shown) {
+        show('อ่านบาร์โค้ดไม่ได้ ลองถ่ายใหม่ให้ชัดขึ้น')
+      } else {
+        setScanError(true)
+        localStorage.setItem('scan_tips_shown', '1')
+      }
     } finally {
       setScanning(false)
     }
