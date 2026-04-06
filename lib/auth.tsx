@@ -70,7 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = async (data: Partial<User>) => {
     if (!user) return
-    await supabase.from('users').update(data).eq('id', user.id)
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id, data }),
+    })
+    if (!res.ok) throw new Error('บันทึกไม่สำเร็จ กรุณาลองใหม่')
     const updated = { ...user, ...data }
     setUser(updated)
     localStorage.setItem('bm_user', JSON.stringify(updated))

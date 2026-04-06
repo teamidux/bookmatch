@@ -25,10 +25,15 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     if (!editName.trim()) { show('กรุณาใส่ชื่อ'); return }
     setSaving(true)
-    await updateUser({ display_name: editName.trim(), line_id: editLine.trim() || undefined })
-    setSaving(false)
-    setEditing(false)
-    show('บันทึกแล้ว ✓')
+    try {
+      await updateUser({ display_name: editName.trim(), line_id: editLine.trim() || undefined })
+      setEditing(false)
+      show('บันทึกแล้ว ✓')
+    } catch {
+      show('บันทึกไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setSaving(false)
+    }
   }
 
   useEffect(() => {
