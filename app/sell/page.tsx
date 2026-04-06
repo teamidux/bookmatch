@@ -133,8 +133,7 @@ function SellPage() {
     try {
       let scanned: string | null = null
 
-      // 1. ลอง native BarcodeDetector ก่อน — รองรับ iOS 17+ / Chrome / Edge
-      //    จัดการ EXIF rotation ของ iPhone ได้อัตโนมัติ
+      // 1. native BarcodeDetector — Chrome / Android (ไม่รองรับบน iPhone Safari)
       if ('BarcodeDetector' in window) {
         try {
           const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
@@ -142,12 +141,42 @@ function SellPage() {
           const codes = await detector.detect(bitmap)
           bitmap.close()
           if (codes.length > 0) scanned = codes[0].rawValue
-        } catch { /* ไม่รองรับ format นี้ หรือ error อื่น → ลอง fallback */ }
+        } catch { /* fallthrough */ }
       }
 
-      // 2. Fallback: Html5Qrcode — รองรับ iOS รุ่นเก่า / Firefox
+      // 2. ZXing โดยตรงพร้อม TRY_HARDER — แม่นยำกว่า html5-qrcode มาก
+      //    ลองไฟล์ original ก่อน (resolution สูงช่วย EAN-13) แล้ว fallback resize
       if (!scanned) {
-        const file = await resizeForScan(rawFile)
+        try {
+          const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library')
+          const hints = new Map<any, any>([
+            [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8]],
+            [DecodeHintType.TRY_HARDER, true],
+          ])
+          const reader = new BrowserMultiFormatReader(hints)
+          // ลองไฟล์ original (high-res) ก่อน
+          const urls: string[] = []
+          try {
+            const u1 = URL.createObjectURL(rawFile)
+            urls.push(u1)
+            const r1 = await reader.decodeFromImageUrl(u1)
+            scanned = r1.getText()
+          } catch {
+            // ถ้า original ไม่ได้ ลอง resize แล้วสแกนใหม่
+            const resized = await resizeForScan(rawFile, 1920)
+            const u2 = URL.createObjectURL(resized)
+            urls.push(u2)
+            const r2 = await reader.decodeFromImageUrl(u2)
+            scanned = r2.getText()
+          } finally {
+            urls.forEach(u => URL.revokeObjectURL(u))
+          }
+        } catch { /* fallthrough */ }
+      }
+
+      // 3. Last resort: html5-qrcode (fallback เดิม)
+      if (!scanned) {
+        const file = await resizeForScan(rawFile, 1920)
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
         let el = document.getElementById('sell-file-tmp')
         if (!el) { el = document.createElement('div'); el.id = 'sell-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }

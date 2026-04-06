@@ -13,6 +13,7 @@
     "react-dom": "^18",
     "@supabase/supabase-js": "^2.39.0",
     "html5-qrcode": "^2.3.8",
+    "@zxing/library": "^0.20.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
