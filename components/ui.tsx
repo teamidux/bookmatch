@@ -313,3 +313,79 @@ export function ScanErrorSheet({ onRetry, onClose }: { onRetry: () => void; onCl
     </div>
   )
 }
+
+// Live camera scan modal — ใช้ video stream แทนการถ่ายภาพนิ่ง แม่นยำกว่ามาก
+export function LiveScanModal({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
+  const [error, setError] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+  const scannerRef = useRef<any>(null)
+
+  useEffect(() => {
+    let stopped = false
+    const startScanner = async () => {
+      try {
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
+        const scanner = new Html5Qrcode('live-scan-box', {
+          formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8],
+          verbose: false,
+        })
+        scannerRef.current = scanner
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 260, height: 120 }, aspectRatio: 1.6 },
+          (text) => {
+            if (stopped) return
+            stopped = true
+            scanner.stop().catch(() => {})
+            onCode(text)
+          },
+          () => { /* frame error — ignore, retry next frame */ }
+        )
+        if (!stopped) setReady(true)
+      } catch (e: any) {
+        if (!stopped) setError(e?.message?.includes('ermission') ? 'กรุณาอนุญาตกล้อง แล้วลองใหม่' : 'ไม่สามารถเปิดกล้องได้')
+      }
+    }
+    startScanner()
+    return () => {
+      stopped = true
+      scannerRef.current?.stop().catch(() => {})
+    }
+  }, [])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ color: 'white', fontFamily: "'Playfair Display',serif", fontSize: 18 }}>สแกนบาร์โค้ด</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: 8, width: 34, height: 34, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+
+        {error ? (
+          <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 14, padding: '32px 20px', textAlign: 'center', color: 'white' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📵</div>
+            <div style={{ fontSize: 14, marginBottom: 20 }}>{error}</div>
+            <button className="btn" onClick={onClose}>ปิด</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(255,255,255,.3)', background: '#000', minHeight: 200 }}>
+              <div id="live-scan-box" style={{ width: '100%' }} />
+            </div>
+            {!ready && (
+              <div style={{ textAlign: 'center', marginTop: 16, color: 'rgba(255,255,255,.7)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span className="spin" style={{ width: 18, height: 18, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} />
+                กำลังเปิดกล้อง...
+              </div>
+            )}
+            {ready && (
+              <div style={{ textAlign: 'center', marginTop: 14, color: 'rgba(255,255,255,.75)', fontSize: 13 }}>
+                จ่อบาร์โค้ดหลังปกหนังสือในกรอบ
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, fetchBookByISBN, Book } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
+import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet, LiveScanModal, resizeForScan } from '@/components/ui'
 
 const CONDITIONS = [
   { key: 'new', label: '✨ ใหม่มาก' },
@@ -67,6 +67,7 @@ function SellPage() {
   const [fetching, setFetching] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState(false)
+  const [showLiveScan, setShowLiveScan] = useState(false)
   const scanInputRef = useRef<HTMLInputElement | null>(null)
   const [cond, setCond] = useState('good')
   const [price, setPrice] = useState('')
@@ -311,21 +312,39 @@ function SellPage() {
           ) : (
             <>
               {!fetchedBook && (
-                <label style={{ display: 'block', background: 'var(--surface)', border: '2px dashed #BFDBFE', borderRadius: 14, padding: '24px 20px', textAlign: 'center', marginBottom: 14, cursor: scanning ? 'default' : 'pointer' }}>
-                  <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
-                  {scanning ? (
-                    <>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><span className="spin" style={{ width: 28, height: 28 }} /></div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink2)' }}>กำลังอ่านบาร์โค้ด...</div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary)' }}>ถ่ายบาร์โค้ด</div>
-                      <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 4 }}>แตะเพื่อเปิดกล้อง</div>
-                    </>
-                  )}
-                </label>
+                <>
+                  {/* Primary: Live scan — แม่นยำที่สุด ใช้ video stream */}
+                  <button
+                    onClick={() => setShowLiveScan(true)}
+                    style={{ display: 'block', width: '100%', background: 'var(--surface)', border: '2px dashed #BFDBFE', borderRadius: 14, padding: '24px 20px', textAlign: 'center', marginBottom: 10, cursor: 'pointer', fontFamily: 'Sarabun' }}
+                  >
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary)' }}>สแกนบาร์โค้ด</div>
+                    <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 4 }}>แตะเพื่อเปิดกล้อง</div>
+                  </button>
+
+                  {/* Fallback: file capture — ถ้ากล้องไม่ทำงาน */}
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--ink3)', cursor: scanning ? 'default' : 'pointer', marginBottom: 14 }}>
+                    <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
+                    {scanning ? (
+                      <><span className="spin" style={{ width: 14, height: 14 }} /><span>กำลังอ่าน...</span></>
+                    ) : (
+                      <span style={{ textDecoration: 'underline' }}>หรือถ่ายภาพบาร์โค้ดแทน</span>
+                    )}
+                  </label>
+                </>
+              )}
+
+              {showLiveScan && (
+                <LiveScanModal
+                  onCode={(code) => {
+                    setShowLiveScan(false)
+                    const corrected = correctISBN(code.trim())
+                    setIsbn(corrected)
+                    fetchBook(corrected)
+                  }}
+                  onClose={() => setShowLiveScan(false)}
+                />
               )}
 
               {scanError && (
