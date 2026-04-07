@@ -70,13 +70,7 @@ export default function HomePage() {
         router.push(`/book/${isbn}`)
       }
     } catch {
-      const shown = localStorage.getItem('scan_tips_shown')
-      if (shown) {
-        show('อ่านบาร์โค้ดไม่ได้ ลองถ่ายใหม่ให้ชัดขึ้น')
-      } else {
-        setScanError(true)
-        localStorage.setItem('scan_tips_shown', '1')
-      }
+      setScanError(true)
     } finally {
       setScanning(false)
     }

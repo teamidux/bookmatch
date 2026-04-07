@@ -199,13 +199,7 @@ function SellPage() {
       setIsbn(corrected)
       fetchBook(corrected)
     } catch {
-      const shown = localStorage.getItem('scan_tips_shown')
-      if (shown) {
-        show('อ่านบาร์โค้ดไม่ได้ ลองถ่ายใหม่ให้ชัดขึ้น')
-      } else {
-        setScanError(true)
-        localStorage.setItem('scan_tips_shown', '1')
-      }
+      setScanError(true)
     } finally {
       setScanning(false)
     }
@@ -359,26 +353,39 @@ function SellPage() {
 
               {/* ── ISBN not found: เพิ่มหนังสือใหม่ ── */}
               {isbnNotFound && !fetchedBook && (
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 14, border: '1px solid #BFDBFE' }}>
+                  {/* Header */}
+                  <div style={{ background: 'var(--primary-light)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 24 }}>📖</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>พบ ISBN แต่ยังไม่มีในระบบ</div>
+                      <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 1 }}>ISBN: {isbn}</div>
+                    </div>
                     <button
                       onClick={() => { setIsbnNotFound(false); setManualTitle(''); setManualAuthor('') }}
-                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--ink3)', cursor: 'pointer', fontFamily: 'Kanit' }}
+                      style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--ink3)', cursor: 'pointer', fontFamily: 'Kanit', padding: '4px 6px' }}
                     >← กลับ</button>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>ยังไม่มีหนังสือ ISBN นี้ในระบบ</div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 14, lineHeight: 1.6 }}>
-                    กรอกชื่อหนังสือเพื่อเพิ่มเข้าระบบและลงขาย คุณจะได้รับ 🏆 ตราผู้บุกเบิก
+                  {/* Body */}
+                  <div style={{ background: 'white', padding: 16 }}>
+                    <div style={{ fontSize: 13, color: 'var(--ink2)', marginBottom: 14, lineHeight: 1.7, background: 'var(--surface)', borderRadius: 10, padding: '10px 12px' }}>
+                      💡 <strong>กรอกข้อมูลหนังสือเล่มนี้</strong> เพื่อเพิ่มเข้าระบบและลงขายได้เลย<br />
+                      ข้อมูลที่คุณกรอกจะช่วยให้คนอื่นค้นหาหนังสือเล่มนี้ได้ด้วย
+                    </div>
+                    <div className="form-group">
+                      <label className="label">ชื่อหนังสือ <span style={{ color: 'var(--red)' }}>*</span></label>
+                      <input className="input" value={manualTitle} onChange={e => setManualTitle(e.target.value)} placeholder="เช่น แฮร์รี่ พอตเตอร์ กับศิลาอาถรรพ์" autoFocus />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="label">ผู้แต่ง / ผู้แปล <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink3)' }}>(ไม่บังคับ)</span></label>
+                      <input className="input" value={manualAuthor} onChange={e => setManualAuthor(e.target.value)} placeholder="เช่น J.K. Rowling / สุมาลี บำรุงสุข" />
+                    </div>
+                    {manualTitle && (
+                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
+                        🏆 ขอบคุณที่ช่วยเพิ่มข้อมูล! คุณจะได้รับตราผู้บุกเบิก
+                      </div>
+                    )}
                   </div>
-                  <div className="form-group">
-                    <label className="label">ชื่อหนังสือ *</label>
-                    <input className="input" value={manualTitle} onChange={e => setManualTitle(e.target.value)} placeholder="ชื่อหนังสือ" autoFocus />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="label">ผู้แต่ง / ผู้แปล</label>
-                    <input className="input" value={manualAuthor} onChange={e => setManualAuthor(e.target.value)} placeholder="ผู้แต่ง หรือผู้แปล (ไม่บังคับ)" />
-                  </div>
-                  {manualTitle && <div style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600, marginTop: 10 }}>🏆 คุณจะได้รับตราผู้บุกเบิก!</div>}
                 </div>
               )}
 
