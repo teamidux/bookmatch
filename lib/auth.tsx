@@ -8,6 +8,7 @@ type AuthCtx = {
   login: (phone: string) => Promise<void>
   logout: () => void
   updateUser: (data: Partial<User>) => Promise<void>
+  syncUser: (data: Partial<User>) => void
 }
 
 const AuthContext = createContext<AuthCtx>({
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthCtx>({
   login: async () => {},
   logout: () => {},
   updateUser: async () => {},
+  syncUser: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -68,6 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('bm_user')
   }
 
+  // syncUser — อัปเดต local state เท่านั้น (ไม่ call API) ใช้หลัง API อื่นอัปเดต Supabase แล้ว
+  const syncUser = (data: Partial<User>) => {
+    if (!user) return
+    const updated = { ...user, ...data }
+    setUser(updated)
+    localStorage.setItem('bm_user', JSON.stringify(updated))
+  }
+
   const updateUser = async (data: Partial<User>) => {
     if (!user) return
     const res = await fetch('/api/user/update', {
@@ -85,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, syncUser }}>
       {children}
     </AuthContext.Provider>
   )

@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, LoginModal, useToast, Toast } from '@/components/ui'
 
 export default function ProfilePage() {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, updateUser, syncUser } = useAuth()
   const [listings, setListings] = useState<Listing[]>([])
   const [showLogin, setShowLogin] = useState(false)
   const [confirmSoldId, setConfirmSoldId] = useState<string | null>(null)
@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [editName, setEditName] = useState('')
   const [editLine, setEditLine] = useState('')
   const [saving, setSaving] = useState(false)
+  const [query, setQuery] = useState('')
   const { msg, show } = useToast()
 
   const startEdit = () => {
@@ -51,21 +52,31 @@ export default function ProfilePage() {
   }
 
   const markSold = async (id: string) => {
-    await supabase.from('listings').update({ status: 'sold', sold_at: new Date().toISOString() }).eq('id', id)
-    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'sold' as any } : l))
+    if (!user) return
+    const res = await fetch('/api/listings/mark-sold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingId: id, sellerId: user.id, action: 'sold' }),
+    })
+    const body = await res.json()
+    if (!res.ok) { show(body.error || 'เกิดข้อผิดพลาด'); return }
+    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'sold' as any, sold_at: new Date().toISOString() } : l))
+    if (body.sold_count !== undefined) syncUser({ sold_count: body.sold_count })
     setConfirmSoldId(null)
     show('อัปเดตสถานะเรียบร้อย ✓')
   }
 
   const reactivate = async (id: string) => {
-    const listing = listings.find(l => l.id === id)
-    if (!listing?.sold_at) return
-    if (Date.now() - new Date(listing.sold_at).getTime() > 24 * 60 * 60 * 1000) {
-      show('ไม่สามารถเปิดคืนได้หลัง 24 ชั่วโมง')
-      return
-    }
-    await supabase.from('listings').update({ status: 'active', sold_at: null }).eq('id', id)
+    if (!user) return
+    const res = await fetch('/api/listings/mark-sold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingId: id, sellerId: user.id, action: 'reactivate' }),
+    })
+    const body = await res.json()
+    if (!res.ok) { show(body.error || 'เกิดข้อผิดพลาด'); return }
     setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'active' as any, sold_at: undefined } : l))
+    if (body.sold_count !== undefined) syncUser({ sold_count: body.sold_count })
     show('เปิดประกาศขายอีกครั้งแล้ว')
   }
 
@@ -85,6 +96,15 @@ export default function ProfilePage() {
 
   const active = listings.filter(l => l.status === 'active')
   const sold = listings.filter(l => l.status === 'sold')
+
+  const filterListings = (ls: Listing[]) => {
+    if (!query.trim()) return ls
+    const q = query.toLowerCase()
+    return ls.filter(l =>
+      l.books?.title?.toLowerCase().includes(q) ||
+      l.books?.author?.toLowerCase().includes(q)
+    )
+  }
 
   return (
     <>
@@ -111,23 +131,11 @@ export default function ProfilePage() {
             <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 20 }}>แก้ไขข้อมูล</div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
-              <input
-                className="search-input"
-                style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }}
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                placeholder="ชื่อของคุณ"
-              />
+              <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ" />
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>Line ID</label>
-              <input
-                className="search-input"
-                style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }}
-                value={editLine}
-                onChange={e => setEditLine(e.target.value)}
-                placeholder="@lineid หรือ lineid"
-              />
+              <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editLine} onChange={e => setEditLine(e.target.value)} placeholder="@lineid หรือ lineid" />
             </div>
             <button className="btn" style={{ marginBottom: 8 }} onClick={saveProfile} disabled={saving}>
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
@@ -160,13 +168,24 @@ export default function ProfilePage() {
           <div style={{ textAlign: 'center' }}><div className="stat-n">{user.confirmed_count || 0}</div><div className="stat-l">ยืนยันรับแล้ว</div></div>
         </div>
 
+        {listings.length > 0 && (
+          <div style={{ padding: '10px 16px 0' }}>
+            <input
+              className="input"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="ค้นหาชื่อหนังสือ หรือผู้แต่ง..."
+            />
+          </div>
+        )}
+
         <div className="section">
           <div className="section-hd" style={{ marginBottom: 12 }}>
             <div className="section-title">กำลังขาย ({active.length})</div>
             <Link href="/sell" className="section-link">+ ลงขายเพิ่ม</Link>
           </div>
 
-          {active.length === 0 && (
+          {active.length === 0 && !query && (
             <div className="empty">
               <div className="empty-icon">📭</div>
               <div style={{ marginBottom: 12 }}>ยังไม่มีหนังสือที่ลงขาย</div>
@@ -174,7 +193,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {active.map(l => (
+          {filterListings(active).map(l => (
             <div key={l.id} className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <BookCover coverUrl={l.books?.cover_url} title={l.books?.title} size={48} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -187,12 +206,16 @@ export default function ProfilePage() {
               </button>
             </div>
           ))}
+
+          {query && filterListings(active).length === 0 && (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--ink3)', fontSize: 14 }}>ไม่พบหนังสือที่ตรงกัน</div>
+          )}
         </div>
 
         {sold.length > 0 && (
           <div className="section" style={{ marginTop: 8 }}>
             <div className="section-title" style={{ marginBottom: 12 }}>ขายแล้ว ({sold.length})</div>
-            {sold.map(l => {
+            {filterListings(sold).map(l => {
               const canReactivate = l.sold_at && Date.now() - new Date(l.sold_at).getTime() < 24 * 60 * 60 * 1000
               return (
                 <div key={l.id} className="card" style={{ display: 'flex', gap: 12, alignItems: 'center', opacity: 0.7 }}>
