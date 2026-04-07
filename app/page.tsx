@@ -81,13 +81,46 @@ export default function HomePage() {
     e.target.value = ''
     setScanning(true)
     try {
-      const file = await resizeForScan(raw)
-      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
-      let el = document.getElementById('scanner-file-tmp')
-      if (!el) { el = document.createElement('div'); el.id = 'scanner-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }
-      const scanner = new Html5Qrcode('scanner-file-tmp', { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13], verbose: false })
-      const result = await scanner.scanFile(file, false)
-      let isbn = result.trim()
+      // แปลงเป็น JPEG ก่อน — รองรับ HEIC (iPhone) + แก้ EXIF rotation
+      const file = await resizeForScan(raw, 1920)
+      let scanned: string | null = null
+
+      // 1. BarcodeDetector (Chrome/Android)
+      if ('BarcodeDetector' in window) {
+        try {
+          const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
+          const bitmap = await createImageBitmap(file)
+          const codes = await detector.detect(bitmap)
+          bitmap.close()
+          if (codes.length > 0) scanned = codes[0].rawValue
+        } catch { /* fallthrough */ }
+      }
+
+      // 2. ZXing
+      if (!scanned) {
+        try {
+          const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library')
+          const hints = new Map<any, any>([
+            [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8]],
+            [DecodeHintType.TRY_HARDER, true],
+          ])
+          const reader = new BrowserMultiFormatReader(hints)
+          const u = URL.createObjectURL(file)
+          try { scanned = (await reader.decodeFromImageUrl(u)).getText() }
+          finally { URL.revokeObjectURL(u) }
+        } catch { /* fallthrough */ }
+      }
+
+      // 3. html5-qrcode fallback
+      if (!scanned) {
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
+        let el = document.getElementById('scanner-file-tmp')
+        if (!el) { el = document.createElement('div'); el.id = 'scanner-file-tmp'; el.style.display = 'none'; document.body.appendChild(el) }
+        const scanner = new Html5Qrcode('scanner-file-tmp', { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13], verbose: false })
+        scanned = await scanner.scanFile(file, false)
+      }
+
+      let isbn = scanned!.trim()
       if (!/^(978|979)\d{10}$/.test(isbn) && /^\d{13}$/.test(isbn)) {
         const attempt = '9' + isbn.slice(1)
         if (/^(978|979)\d{10}$/.test(attempt)) isbn = attempt
