@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { searchVariants, buildOrFilter } from '@/lib/search'
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
@@ -10,11 +11,12 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  // ค้นหาหนังสือ
+  // ค้นหาหนังสือด้วย fuzzy variants (ตัวเลข/ช่องว่าง/คำไทย)
+  const orFilter = buildOrFilter(searchVariants(q))
   const { data: books, error } = await supabase
     .from('books')
     .select('id, isbn, title, author, cover_url, wanted_count')
-    .ilike('title', `%${q}%`)
+    .or(orFilter)
     .limit(30)
 
   if (error || !books?.length) return NextResponse.json({ results: [] })

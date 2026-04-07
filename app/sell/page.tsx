@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, fetchBookByISBN, Book } from '@/lib/supabase'
+import { searchVariants, buildOrFilter } from '@/lib/search'
 import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
 
@@ -106,7 +107,7 @@ function SellPage() {
       const { data } = await supabase
         .from('books')
         .select('id, isbn, title, author, cover_url')
-        .or(`title.ilike.%${q}%,author.ilike.%${q}%`)
+        .or(buildOrFilter(searchVariants(q)))
         .limit(8)
       setSellResults(data || [])
       setSellSearching(false)

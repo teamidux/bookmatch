@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
+import { searchVariants, buildOrFilter } from '@/lib/search'
 // Book type still used for wantedBooks
 import { Nav, BottomNav, BookCover, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
 
@@ -12,6 +13,8 @@ export default function HomePage() {
   const [wantedBooks, setWantedBooks] = useState<Book[]>([])
   const [stats, setStats] = useState({ books: 0, sellers: 0, wanted: 0 })
   const [query, setQuery] = useState('')
+  const [liveResults, setLiveResults] = useState<any[]>([])
+  const [liveSearching, setLiveSearching] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -19,6 +22,26 @@ export default function HomePage() {
   const { msg, show } = useToast()
 
   useEffect(() => { loadData() }, [])
+
+  // Live search — debounce 400ms, ใช้ fuzzy variants
+  useEffect(() => {
+    if (!query.trim()) { setLiveResults([]); return }
+    const t = setTimeout(async () => {
+      const q = query.trim()
+      // ISBN → ไปหน้า book โดยตรง
+      if (/^(978|979)\d{10}$/.test(q.replace(/[^0-9]/g, ''))) return
+      setLiveSearching(true)
+      const orFilter = buildOrFilter(searchVariants(q))
+      const { data } = await supabase
+        .from('books')
+        .select('id, isbn, title, author, cover_url')
+        .or(orFilter)
+        .limit(6)
+      setLiveResults(data || [])
+      setLiveSearching(false)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [query])
 
   const loadData = async () => {
     const [recentRes, { data: wanted }, { count: sellerCount }, { count: bookCount }] = await Promise.all([
@@ -86,20 +109,47 @@ export default function HomePage() {
           <h1 className="hero-title">ระบบซื้อขายหนังสือแบบง่ายสุดๆ</h1>
           <p className="hero-sub">ไม่ว่าคุณจะตามหาเล่มโปรด หรืออยากเปลี่ยนตู้หนังสือให้เป็นรายได้ เรา Match คุณให้เจอคนที่ใช่ ในคลิกเดียว</p>
 
-          <div className="search-row" style={{ maxWidth: 440, margin: '0 auto 10px' }}>
-            <input
-              className="search-input"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="ISBN หรือชื่อหนังสือ..."
-              onKeyDown={e => e.key === 'Enter' && doSearch()}
-            />
-            <button className="btn-search" onClick={doSearch}>ค้นหา</button>
+          {/* Search input */}
+          <div style={{ maxWidth: 440, margin: '0 auto 10px', position: 'relative' }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                className="search-input"
+                value={query}
+                onChange={e => { setQuery(e.target.value); setLiveResults([]) }}
+                placeholder="ชื่อหนังสือ หรือ ISBN..."
+                onKeyDown={e => e.key === 'Enter' && doSearch()}
+                style={{ width: '100%', paddingRight: liveSearching ? 44 : 16 }}
+              />
+              {liveSearching && (
+                <span className="spin" style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, borderColor: 'rgba(37,99,235,.2)', borderTopColor: 'var(--primary)' }} />
+              )}
+            </div>
+
+            {/* Live results dropdown */}
+            {liveResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,.15)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
+                {liveResults.map((b, i) => (
+                  <button key={b.id} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]) }}
+                    style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'white', border: 'none', borderBottom: i < liveResults.length - 1 ? '1px solid var(--border-light)' : 'none', padding: '10px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
+                    <BookCover coverUrl={b.cover_url} title={b.title} size={36} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                      {b.author && <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1 }}>{b.author}</div>}
+                    </div>
+                    <span style={{ color: 'var(--primary)', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>›</span>
+                  </button>
+                ))}
+                <button onClick={doSearch} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'var(--surface)', border: 'none', fontFamily: 'Kanit', fontSize: 13, color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+                  🔍 ดูผลทั้งหมดสำหรับ "{query}"
+                </button>
+              </div>
+            )}
           </div>
 
+          {/* Scan button */}
           <label style={{ background: scanning ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.15)', border: '1.5px solid rgba(255,255,255,.3)', borderRadius: 10, padding: '10px 18px', color: 'white', fontFamily: 'Kanit', fontWeight: 600, fontSize: 13, cursor: scanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto', width: 'fit-content' }}>
             <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
-            {scanning ? <><span className="spin" style={{ width: 14, height: 14, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} /> กำลังอ่าน...</> : '📷 ค้นหาด้วย Barcode'}
+            {scanning ? <><span className="spin" style={{ width: 14, height: 14, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} /> กำลังอ่าน...</> : '📷 สแกน Barcode'}
           </label>
 
           {scanError && (
