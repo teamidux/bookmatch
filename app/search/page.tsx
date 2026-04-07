@@ -101,7 +101,7 @@ function SearchPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {(b as any).min_price ? <span className="price">฿{(b as any).min_price}</span> : <span style={{ fontSize: 12, color: 'var(--ink3)' }}>ยังไม่มีคนขาย</span>}
                       {(b as any).count > 0 && <span style={{ fontSize: 11, color: 'var(--ink3)' }}>{(b as any).count} คนขาย</span>}
-                      {b.wanted_count > 0 && <span className="badge badge-blue">🔔 {b.wanted_count} คนรอ</span>}
+                      {b.wanted_count > 0 && <span className="badge badge-blue">🔔 {b.wanted_count} คนรอซื้อ</span>}
                     </div>
                   </div>
                 </div>

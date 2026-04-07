@@ -96,6 +96,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
     if (isWanted && book?.id) {
       await supabase.from('wanted').delete().eq('user_id', user.id).eq('book_id', book.id)
       setIsWanted(false)
+      setBook(b => b ? { ...b, wanted_count: Math.max(0, (b.wanted_count || 1) - 1) } : b)
       show('ลบออกจาก Wanted List แล้ว')
     } else {
       setShowWantedForm(true)
@@ -114,6 +115,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       status: 'waiting',
     })
     setIsWanted(true)
+    setBook(b => b ? { ...b, wanted_count: (b.wanted_count || 0) + 1 } : b)
     setShowWantedForm(false)
     show('เพิ่มใน Wanted List แล้ว 🔔')
   }
@@ -273,7 +275,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             <div style={{ textAlign: 'center' }}><div className="price">฿{minP}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>ต่ำสุด</div></div>
             <div style={{ textAlign: 'center' }}><div className="price">฿{avgP}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>กลาง</div></div>
             <div style={{ textAlign: 'center' }}><div className="price">฿{maxP}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>สูงสุด</div></div>
-            <div style={{ textAlign: 'center' }}><div className="price">{book.wanted_count || 0}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>คนรอ</div></div>
+            <div style={{ textAlign: 'center' }}><div className="price">{book.wanted_count || 0}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>คนรอซื้อ</div></div>
           </div>
         )}
 
@@ -286,7 +288,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '20px 18px', marginBottom: 14 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>ยังไม่มีผู้ลงขายตอนนี้</div>
               <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 18, lineHeight: 1.7 }}>
-                คุณมีหนังสือเล่มนี้อยู่ไหม? มีคนรอซื้ออยู่แล้ว — นี่คือโอกาสของคุณ
+                คุณมีหนังสือเล่มนี้อยู่ไหม? มีคนรอซื้อซื้ออยู่แล้ว — นี่คือโอกาสของคุณ
               </div>
               <Link href={`/sell?isbn=${isbn}`}>
                 <button className="btn" style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
