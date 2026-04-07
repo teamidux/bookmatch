@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
+import { fetchGoogleBooksByTitle, GoogleBook } from '@/lib/search'
 import { Nav, BottomNav, BookCover } from '@/components/ui'
 
 export default function SearchPageWrapper() {
@@ -20,7 +21,9 @@ function SearchPage() {
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [results, setResults] = useState<Book[]>([])
+  const [googleResults, setGoogleResults] = useState<GoogleBook[]>([])
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [searched, setSearched] = useState(false)
 
   // โหลดผลจาก URL param เมื่อเข้าหน้าครั้งแรก
@@ -40,10 +43,18 @@ function SearchPage() {
   const doSearch = async (q: string) => {
     if (!q.trim()) return
     setLoading(true)
+    setGoogleResults([])
     const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`)
     const { results } = await res.json()
     setResults(results || [])
     setLoading(false)
+    // ถ้า DB ไม่มีผล และ query ยาวพอ → fallback Google Books
+    if ((!results || results.length === 0) && q.trim().length >= 3) {
+      setGoogleLoading(true)
+      const gBooks = await fetchGoogleBooksByTitle(q.trim())
+      setGoogleResults(gBooks)
+      setGoogleLoading(false)
+    }
   }
 
   const handleSubmit = () => {
@@ -76,7 +87,7 @@ function SearchPage() {
             </div>
           )}
 
-          {!loading && results.length === 0 && searched && query.trim() && (
+          {!loading && !googleLoading && results.length === 0 && googleResults.length === 0 && searched && query.trim() && (
             <div className="empty">
               <div className="empty-icon">🔍</div>
               <div>ไม่พบหนังสือที่ตรงกับ "{query}"</div>
@@ -101,6 +112,37 @@ function SearchPage() {
               </div>
             </Link>
           ))}
+
+          {/* Google Books fallback */}
+          {googleLoading && (
+            <div style={{ textAlign: 'center', padding: 20 }}>
+              <span className="spin" style={{ width: 20, height: 20 }} />
+              <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 8 }}>ค้นหาใน Google Books...</div>
+            </div>
+          )}
+          {!googleLoading && googleResults.length > 0 && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 12px' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                <span style={{ fontSize: 11, color: 'var(--ink3)', fontWeight: 600, whiteSpace: 'nowrap' }}>พบใน Google Books — ยังไม่มีคนขาย</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              {googleResults.map(b => (
+                <Link key={b.isbn} href={`/book/${b.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div className="card" style={{ opacity: 0.85 }}>
+                    <div className="book-card">
+                      <BookCover coverUrl={b.cover_url} title={b.title} size={52} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                        <div className="book-author">{b.author}</div>
+                        <span style={{ fontSize: 11, color: 'var(--ink3)' }}>ยังไม่มีคนขาย · กด Wantlist เพื่อรับแจ้งเตือน</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </>
+          )}
         </div>
         <div style={{ height: 12 }} />
       </div>

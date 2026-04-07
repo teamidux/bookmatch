@@ -64,10 +64,34 @@ export default function BookDetailClient({ isbn }: { isbn: string }) {
     return () => { supabase.removeChannel(channel) }
   }, [isbn])
 
+  // ถ้า book ยังไม่อยู่ใน DB (มาจาก Google Books) → save ก่อนแล้วคืน bookId
+  const ensureBookInDB = async (): Promise<string | null> => {
+    if (book?.id) return book.id
+    if (!book?.title) return null
+    const { data: existing } = await supabase.from('books').select('id').eq('isbn', isbn).maybeSingle()
+    if (existing?.id) {
+      setBook(b => b ? { ...b, id: existing.id } : b)
+      bookIdRef.current = existing.id
+      return existing.id
+    }
+    const { data: newBook, error } = await supabase.from('books').insert({
+      isbn,
+      title: book.title,
+      author: book.author || '',
+      publisher: book.publisher || '',
+      cover_url: book.cover_url || '',
+      language: book.language || 'th',
+      source: 'community',
+    }).select('id').single()
+    if (error || !newBook) return null
+    setBook(b => b ? { ...b, id: newBook.id } : b)
+    bookIdRef.current = newBook.id
+    return newBook.id
+  }
+
   const toggleWanted = async () => {
     if (!user) { setShowLogin(true); return }
-    if (!book?.id) return
-    if (isWanted) {
+    if (isWanted && book?.id) {
       await supabase.from('wanted').delete().eq('user_id', user.id).eq('book_id', book.id)
       setIsWanted(false)
       show('ลบออกจาก Wanted List แล้ว')
@@ -77,10 +101,12 @@ export default function BookDetailClient({ isbn }: { isbn: string }) {
   }
 
   const confirmWanted = async () => {
-    if (!user || !book?.id) return
+    if (!user) return
+    const bookId = await ensureBookInDB()
+    if (!bookId) { show('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง'); return }
     await supabase.from('wanted').insert({
       user_id: user.id,
-      book_id: book.id,
+      book_id: bookId,
       isbn,
       max_price: wantedPrice ? parseFloat(wantedPrice) : null,
       status: 'waiting',

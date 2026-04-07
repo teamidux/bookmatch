@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
-import { searchVariants, buildOrFilter } from '@/lib/search'
+import { searchVariants, buildOrFilter, fetchGoogleBooksByTitle, GoogleBook } from '@/lib/search'
 // Book type still used for wantedBooks
 import { Nav, BottomNav, BookCover, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
 
@@ -15,6 +15,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('')
   const [liveResults, setLiveResults] = useState<any[]>([])
   const [liveSearching, setLiveSearching] = useState(false)
+  const [googleLiveResults, setGoogleLiveResults] = useState<GoogleBook[]>([])
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -25,12 +26,12 @@ export default function HomePage() {
 
   // Live search — debounce 400ms, ใช้ fuzzy variants
   useEffect(() => {
-    if (!query.trim()) { setLiveResults([]); return }
+    if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); return }
     const t = setTimeout(async () => {
       const q = query.trim()
-      // ISBN → ไปหน้า book โดยตรง
       if (/^(978|979)\d{10}$/.test(q.replace(/[^0-9]/g, ''))) return
       setLiveSearching(true)
+      setGoogleLiveResults([])
       const orFilter = buildOrFilter(searchVariants(q))
       const { data } = await supabase
         .from('books')
@@ -39,6 +40,11 @@ export default function HomePage() {
         .limit(6)
       setLiveResults(data || [])
       setLiveSearching(false)
+      // fallback Google Books ถ้า DB ไม่มีผลและ query >= 3 ตัว
+      if ((!data || data.length === 0) && q.length >= 3) {
+        const gBooks = await fetchGoogleBooksByTitle(q)
+        setGoogleLiveResults(gBooks)
+      }
     }, 400)
     return () => clearTimeout(t)
   }, [query])
@@ -126,10 +132,10 @@ export default function HomePage() {
             </div>
 
             {/* Live results dropdown */}
-            {liveResults.length > 0 && (
+            {(liveResults.length > 0 || googleLiveResults.length > 0) && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,.15)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
                 {liveResults.map((b, i) => (
-                  <button key={b.id} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]) }}
+                  <button key={b.id} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
                     style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'white', border: 'none', borderBottom: i < liveResults.length - 1 ? '1px solid var(--border-light)' : 'none', padding: '10px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
                     <BookCover coverUrl={b.cover_url} title={b.title} size={36} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -139,6 +145,24 @@ export default function HomePage() {
                     <span style={{ color: 'var(--primary)', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>›</span>
                   </button>
                 ))}
+                {googleLiveResults.length > 0 && (
+                  <>
+                    <div style={{ padding: '6px 14px', fontSize: 10, fontWeight: 700, color: 'var(--ink3)', background: 'var(--surface)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                      Google Books — ยังไม่มีคนขาย
+                    </div>
+                    {googleLiveResults.map((b, i) => (
+                      <button key={b.isbn} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
+                        style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'white', border: 'none', borderBottom: i < googleLiveResults.length - 1 ? '1px solid var(--border-light)' : 'none', padding: '10px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%', opacity: 0.8 }}>
+                        <BookCover coverUrl={b.cover_url} title={b.title} size={36} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                          {b.author && <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1 }}>{b.author}</div>}
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--ink3)', flexShrink: 0 }}>🔔 Wantlist</span>
+                      </button>
+                    ))}
+                  </>
+                )}
                 <button onClick={doSearch} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'var(--surface)', border: 'none', fontFamily: 'Kanit', fontSize: 13, color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
                   🔍 ดูผลทั้งหมดสำหรับ "{query}"
                 </button>

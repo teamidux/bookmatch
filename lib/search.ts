@@ -1,3 +1,44 @@
+export type GoogleBook = {
+  isbn: string
+  title: string
+  author: string
+  publisher?: string
+  cover_url?: string
+  language?: string
+}
+
+export async function fetchGoogleBooksByTitle(query: string): Promise<GoogleBook[]> {
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
+    const url = `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(query)}&maxResults=5${apiKey ? `&key=${apiKey}` : ''}`
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    const r = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeout)
+    if (!r.ok) return []
+    const d = await r.json()
+    if (!d.items?.length) return []
+    return d.items
+      .map((item: any) => {
+        const info = item.volumeInfo
+        const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')?.identifier || ''
+        if (!isbn13 || !info.title) return null
+        const thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ''
+        return {
+          isbn: isbn13,
+          title: info.title,
+          author: info.authors?.join(', ') || '',
+          publisher: info.publisher || '',
+          cover_url: thumb ? thumb.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '').replace(/&zoom=\d+/g, '') : '',
+          language: info.language || '',
+        }
+      })
+      .filter(Boolean) as GoogleBook[]
+  } catch {
+    return []
+  }
+}
+
 // Map ตัวเลขอารบิก → คำไทย และกลับกัน
 const ARABIC_TO_THAI: Record<string, string> = {
   '0': 'ศูนย์', '1': 'หนึ่ง', '2': 'สอง', '3': 'สาม',
