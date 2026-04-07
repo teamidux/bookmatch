@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, LoginModal, InAppBanner, useToast, Toast, ScanErrorSheet, resizeForScan } from '@/components/ui'
 
 const CONDITIONS = [
+  { key: 'brand_new', label: '🆕 มือหนึ่ง', desc: 'ยังไม่ผ่านการใช้งาน ซื้อมาแล้วไม่ได้อ่าน' },
   { key: 'new', label: '✨ ใหม่มาก', desc: 'ไม่มีรอยใดๆ เหมือนซื้อจากร้าน' },
   { key: 'good', label: '👍 ดี', desc: 'มีรอยการใช้งานเล็กน้อย อ่านได้ปกติ' },
   { key: 'fair', label: '📖 พอใช้', desc: 'มีรอยชัดเจน แต่เนื้อหาครบถ้วน' },
@@ -83,6 +84,11 @@ function SellPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState('')
 
+  // Section 1: unified search (title + ISBN)
+  const [sellSearch, setSellSearch] = useState('')
+  const [sellResults, setSellResults] = useState<any[]>([])
+  const [sellSearching, setSellSearching] = useState(false)
+
   // Section 2: old book / no ISBN
   const [oldBookMode, setOldBookMode] = useState(false)
   const [titleQuery, setTitleQuery] = useState('')
@@ -92,6 +98,28 @@ function SellPage() {
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Debounced search: ISBN → fetchBook / title → DB search
+  useEffect(() => {
+    if (!sellSearch.trim()) { setSellResults([]); return }
+    const t = setTimeout(async () => {
+      const q = sellSearch.trim()
+      const digits = q.replace(/[^0-9]/g, '')
+      if (digits.length === 13) {
+        const corrected = correctISBN(digits)
+        if (isValidISBN(corrected)) { setIsbn(corrected); fetchBook(corrected); return }
+      }
+      setSellSearching(true)
+      const { data } = await supabase
+        .from('books')
+        .select('id, isbn, title, author, cover_url')
+        .or(`title.ilike.%${q}%,author.ilike.%${q}%`)
+        .limit(8)
+      setSellResults(data || [])
+      setSellSearching(false)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [sellSearch])
 
   useEffect(() => {
     if (user?.phone) setContact(user.phone)
@@ -389,35 +417,54 @@ function SellPage() {
                 </div>
               )}
 
-              {/* ── Section 1: สแกน/ISBN ── */}
+              {/* ── Section 1: ค้นหาหนังสือ (title + ISBN) ── */}
               {!fetchedBook && !notFound && !isbnNotFound && !oldBookMode && (
                 <>
-                  {/* Photo capture — primary method, works on iPhone */}
-                  <label style={{ display: 'block', background: 'var(--surface)', border: '2px dashed #BFDBFE', borderRadius: 14, padding: '24px 20px', textAlign: 'center', marginBottom: 10, cursor: scanning ? 'default' : 'pointer' }}>
-                    <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
-                    {scanning ? (
-                      <>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><span className="spin" style={{ width: 28, height: 28 }} /></div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink2)' }}>กำลังอ่านบาร์โค้ด...</div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary)' }}>ถ่ายรูปบาร์โค้ด</div>
-                        <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 4 }}>แตะเพื่อถ่ายภาพหรือเลือกจากคลัง</div>
-                      </>
-                    )}
-                  </label>
-
                   <div className="form-group">
-                    <label className="label">ISBN</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input className="input" value={isbn} onChange={e => setIsbn(e.target.value)} placeholder="เช่น 9780747532743" onKeyDown={e => e.key === 'Enter' && fetchBook()} />
-                      <button onClick={() => fetchBook()} disabled={fetching} style={{ background: 'var(--primary)', border: 'none', borderRadius: 10, padding: '0 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        {fetching ? <span className="spin" /> : 'ดึงข้อมูล'}
-                      </button>
+                    <label className="label">ค้นหาหนังสือที่จะขาย</label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                          className="input"
+                          value={sellSearch}
+                          onChange={e => setSellSearch(e.target.value)}
+                          placeholder="ชื่อหนังสือ หรือ ISBN..."
+                          style={{ paddingRight: (fetching || sellSearching) ? 40 : 14 }}
+                        />
+                        {(fetching || sellSearching) && (
+                          <span className="spin" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16 }} />
+                        )}
+                      </div>
+                      <label
+                        title="สแกนบาร์โค้ด"
+                        style={{ flexShrink: 0, width: 48, height: 48, background: scanning ? 'var(--surface)' : 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, cursor: scanning ? 'default' : 'pointer' }}
+                      >
+                        <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
+                        {scanning ? <span className="spin" style={{ width: 18, height: 18 }} /> : '📷'}
+                      </label>
                     </div>
+                    <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 5 }}>พิมพ์ชื่อหนังสือหรือ ISBN แล้วรอสักครู่ — หรือกด 📷 เพื่อสแกนบาร์โค้ด</div>
                   </div>
+
+                  {/* Search results */}
+                  {sellResults.length > 0 && (
+                    <div style={{ marginBottom: 14, border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                      {sellResults.map((b, i) => (
+                        <button
+                          key={b.id}
+                          onClick={() => { selectTitleBook(b); setSellSearch(''); setSellResults([]) }}
+                          style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'white', border: 'none', borderBottom: i < sellResults.length - 1 ? '1px solid var(--border-light)' : 'none', padding: '10px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}
+                        >
+                          <BookCover coverUrl={b.cover_url} title={b.title} size={38} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                            {b.author && <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1 }}>{b.author}</div>}
+                          </div>
+                          <span style={{ color: 'var(--primary)', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>เลือก ›</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Divider */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 14px' }}>

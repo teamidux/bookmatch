@@ -248,6 +248,7 @@ body {
   border-radius: 9999px;
   font-weight: 700;
 }
+.badge-brand-new { background: #166534; color: white; }
 .badge-new { background: #e8f5e9; color: #2e7d32; }
 .badge-good { background: #fff8e1; color: #e65100; }
 .badge-fair { background: #fbe9e7; color: #b71c1c; }

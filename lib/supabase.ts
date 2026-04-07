@@ -27,7 +27,7 @@ export type Listing = {
   id: string
   book_id: string
   seller_id: string
-  condition: 'new' | 'good' | 'fair'
+  condition: 'brand_new' | 'new' | 'good' | 'fair'
   price: number
   price_includes_shipping: boolean
   photos: string[]
@@ -70,6 +70,7 @@ export type Wanted = {
 }
 
 export const CONDITIONS: Record<string, { label: string; cls: string }> = {
+  brand_new: { label: '🆕 มือหนึ่ง', cls: 'badge-brand-new' },
   new: { label: '✨ ใหม่มาก', cls: 'badge-new' },
   good: { label: '👍 ดี', cls: 'badge-good' },
   fair: { label: '📖 พอใช้', cls: 'badge-fair' },

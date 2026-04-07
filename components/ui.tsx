@@ -161,6 +161,7 @@ export function InAppBanner() {
 
 export function CondBadge({ cond }: { cond: string }) {
   const map: Record<string, { cls: string; label: string }> = {
+    brand_new: { cls: 'badge-brand-new', label: '🆕 มือหนึ่ง' },
     new: { cls: 'badge-new', label: '✨ ใหม่มาก' },
     good: { cls: 'badge-good', label: '👍 ดี' },
     fair: { cls: 'badge-fair', label: '📖 พอใช้' },
