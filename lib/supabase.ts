@@ -85,32 +85,28 @@ export async function fetchBookByISBN(isbn: string): Promise<Partial<Book> | nul
   if (data) return { ...data, fromDB: true } as any
 
   try {
-    const r = await fetch(`https://openlibrary.org/isbn/${isbn}.json`)
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
+    const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}${apiKey ? `&key=${apiKey}` : ''}`
+    const r = await fetch(url)
     if (!r.ok) return null
     const d = await r.json()
+    if (!d.items?.length) return null
 
-    let author = ''
-    if (d.authors?.[0]?.key) {
-      try {
-        const ar = await fetch(`https://openlibrary.org${d.authors[0].key}.json`)
-        if (ar.ok) {
-          const ad = await ar.json()
-          author = ad.name || ''
-        }
-      } catch { }
-    }
-
-    const cover_url = d.covers?.[0]
-      ? `https://covers.openlibrary.org/b/id/${d.covers[0]}-M.jpg`
+    const info = d.items[0].volumeInfo
+    const author = info.authors?.join(', ') || ''
+    const raw_thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ''
+    // Google Books ส่ง HTTP มา — upgrade เป็น HTTPS และเอา edge/zoom params ออก
+    const cover_url = raw_thumb
+      ? raw_thumb.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '').replace(/&zoom=\d+/g, '')
       : ''
 
     return {
       isbn,
-      title: d.title || '',
+      title: info.title || '',
       author,
-      publisher: d.publishers?.[0] || '',
+      publisher: info.publisher || '',
       cover_url,
-      language: 'en',
+      language: info.language || 'th',
     }
   } catch {
     return null
