@@ -46,7 +46,7 @@ export default function SellerPage({ params }: PageProps) {
         <div style={{ background: 'var(--primary)', padding: '20px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)', flexShrink: 0 }}>👤</div>
           <div>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: 'white', marginBottom: 3 }}>{seller?.display_name}</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, color: 'white', marginBottom: 3 }}>{seller?.display_name}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', marginBottom: 6 }}>
               ขายแล้ว {seller?.sold_count || 0} ครั้ง · ยืนยันรับแล้ว {seller?.confirmed_count || 0} ครั้ง
             </div>

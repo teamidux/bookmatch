@@ -83,7 +83,7 @@ export default function WantedPage() {
       <Toast msg={msg} />
       <div className="page">
         <div style={{ padding: '16px 16px 0' }}>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>Wanted List</div>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, marginBottom: 4 }}>Wanted List</div>
           <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>เราจะแจ้งเตือนเมื่อมีคนลงขายหนังสือที่คุณต้องการ</div>
 
           {pushState !== 'unsupported' && pushState !== 'loading' && (
@@ -97,7 +97,7 @@ export default function WantedPage() {
                 </div>
               </div>
               {pushState !== 'denied' && (
-                <button onClick={togglePush} style={{ background: pushState === 'subscribed' ? 'white' : 'var(--primary)', border: `1px solid ${pushState === 'subscribed' ? '#BBF7D0' : 'transparent'}`, borderRadius: 8, padding: '7px 14px', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 12, color: pushState === 'subscribed' ? 'var(--ink2)' : 'white', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <button onClick={togglePush} style={{ background: pushState === 'subscribed' ? 'white' : 'var(--primary)', border: `1px solid ${pushState === 'subscribed' ? '#BBF7D0' : 'transparent'}`, borderRadius: 8, padding: '7px 14px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 12, color: pushState === 'subscribed' ? 'var(--ink2)' : 'white', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {pushState === 'subscribed' ? 'ปิด' : 'เปิด'}
                 </button>
               )}

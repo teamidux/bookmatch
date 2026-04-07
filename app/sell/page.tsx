@@ -338,7 +338,7 @@ function SellPage() {
 
       <div className="page">
         <div style={{ padding: '16px 16px 80px' }}>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 16 }}>ลงขายหนังสือ</div>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, marginBottom: 16 }}>ลงขายหนังสือ</div>
 
           {!user ? (
             <div style={{ background: 'var(--surface)', border: '2px dashed #BFDBFE', borderRadius: 14, padding: '36px 20px', textAlign: 'center', marginBottom: 14 }}>
@@ -380,7 +380,7 @@ function SellPage() {
                     <label className="label">ISBN</label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input className="input" value={isbn} onChange={e => setIsbn(e.target.value)} placeholder="เช่น 9780747532743" onKeyDown={e => e.key === 'Enter' && fetchBook()} />
-                      <button onClick={() => fetchBook()} disabled={fetching} style={{ background: 'var(--primary)', border: 'none', borderRadius: 10, padding: '0 16px', color: 'white', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      <button onClick={() => fetchBook()} disabled={fetching} style={{ background: 'var(--primary)', border: 'none', borderRadius: 10, padding: '0 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         {fetching ? <span className="spin" /> : 'ดึงข้อมูล'}
                       </button>
                     </div>
@@ -396,7 +396,7 @@ function SellPage() {
                   {/* ── Section 2: หนังสือเก่า/ไม่มี ISBN ── */}
                   <button
                     onClick={() => setOldBookMode(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: '#FFFBEB', border: '1.5px solid #FDE68A', borderRadius: 14, padding: '16px 18px', cursor: 'pointer', fontFamily: 'Sarabun', textAlign: 'left' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: '#FFFBEB', border: '1.5px solid #FDE68A', borderRadius: 14, padding: '16px 18px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left' }}
                   >
                     <span style={{ fontSize: 28, flexShrink: 0 }}>📖</span>
                     <div>
@@ -414,11 +414,11 @@ function SellPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                     <button
                       onClick={() => { setOldBookMode(false); setTitleQuery(''); setTitleResults([]); setTitleSearchDone(false) }}
-                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--ink3)', cursor: 'pointer', fontFamily: 'Sarabun', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--ink3)', cursor: 'pointer', fontFamily: 'Kanit', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
                       ← กลับ
                     </button>
-                    <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16 }}>หนังสือเก่า / ไม่มี ISBN</div>
+                    <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 16 }}>หนังสือเก่า / ไม่มี ISBN</div>
                   </div>
 
                   <div style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A', borderRadius: 14, padding: 16, marginBottom: 14 }}>
@@ -434,7 +434,7 @@ function SellPage() {
                       <button
                         onClick={searchByTitle}
                         disabled={searchingTitle || !titleQuery.trim()}
-                        style={{ background: '#D97706', border: 'none', borderRadius: 10, padding: '0 16px', color: 'white', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                        style={{ background: '#D97706', border: 'none', borderRadius: 10, padding: '0 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                       >
                         {searchingTitle ? <span className="spin" /> : 'ค้นหา'}
                       </button>
@@ -447,7 +447,7 @@ function SellPage() {
                           <button
                             key={b.id}
                             onClick={() => selectTitleBook(b)}
-                            style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'white', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: 'Sarabun', textAlign: 'left', width: '100%' }}
+                            style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'white', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}
                           >
                             <BookCover coverUrl={b.cover_url} title={b.title} size={40} />
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -468,7 +468,7 @@ function SellPage() {
                   {/* ปุ่มกรอกเอง */}
                   <button
                     onClick={() => { setNotFound(true); setIsbn(bmIsbn) }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, padding: '13px 16px', cursor: 'pointer', fontFamily: 'Sarabun', fontSize: 14, fontWeight: 600, color: 'var(--ink2)' }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, padding: '13px 16px', cursor: 'pointer', fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: 'var(--ink2)' }}
                   >
                     ✏️ กรอกข้อมูลหนังสือเอง
                     <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--ink3)' }}>(ได้รับ 🏆 ตราผู้บุกเบิก)</span>
@@ -483,7 +483,7 @@ function SellPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <button
                   onClick={() => { setNotFound(false); setOldBookMode(true); setManualTitle(''); setManualAuthor(''); setManualTranslator('') }}
-                  style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--ink3)', cursor: 'pointer', fontFamily: 'Sarabun' }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--ink3)', cursor: 'pointer', fontFamily: 'Kanit' }}
                 >← กลับ</button>
                 <div style={{ fontSize: 13, color: 'var(--ink2)', fontWeight: 600 }}>กรอกข้อมูลหนังสือเองได้เลย 🏆</div>
               </div>
@@ -546,7 +546,7 @@ function SellPage() {
                 <label className="label">สภาพหนังสือ</label>
                 <div style={{ display: 'flex', gap: 7 }}>
                   {CONDITIONS.map(c => (
-                    <button key={c.key} onClick={() => setCond(c.key)} style={{ flex: 1, padding: '10px 6px', border: `1.5px solid ${cond === c.key ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, background: cond === c.key ? 'var(--primary-light)' : 'white', fontFamily: 'Sarabun', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: cond === c.key ? 'var(--primary-dark)' : 'var(--ink2)' }}>
+                    <button key={c.key} onClick={() => setCond(c.key)} style={{ flex: 1, padding: '10px 6px', border: `1.5px solid ${cond === c.key ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, background: cond === c.key ? 'var(--primary-light)' : 'white', fontFamily: 'Kanit', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: cond === c.key ? 'var(--primary-dark)' : 'var(--ink2)' }}>
                       {c.label}
                     </button>
                   ))}

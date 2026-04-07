@@ -114,7 +114,7 @@ export default function ProfilePage() {
       {confirmSoldId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 8 }}>ยืนยันการขาย</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 8 }}>ยืนยันการขาย</div>
             <div style={{ fontSize: 14, color: 'var(--ink2)', marginBottom: 20, lineHeight: 1.6 }}>
               หนังสือเล่มนี้ขายไปแล้วใช่ไหม?<br />
               <span style={{ fontSize: 12, color: 'var(--ink3)' }}>เปิดคืนได้ภายใน 24 ชั่วโมง</span>
@@ -128,7 +128,7 @@ export default function ProfilePage() {
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 20 }}>แก้ไขข้อมูล</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 20 }}>แก้ไขข้อมูล</div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
               <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ" />
@@ -149,7 +149,7 @@ export default function ProfilePage() {
         <div style={{ background: 'var(--primary)', padding: '24px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)' }}>👤</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: 'white', marginBottom: 3 }}>{user.display_name}</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, color: 'white', marginBottom: 3 }}>{user.display_name}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', marginBottom: 2 }}>{user.phone}</div>
             {user.line_id && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', marginBottom: 4 }}>Line: {user.line_id}</div>}
             <div style={{ display: 'flex', gap: 6 }}>
@@ -157,7 +157,7 @@ export default function ProfilePage() {
               {user.is_pioneer && <span className="badge" style={{ background: 'rgba(255,255,255,.2)', color: 'white', fontSize: 11 }}>🏆 ผู้บุกเบิก</span>}
             </div>
           </div>
-          <button onClick={startEdit} style={{ background: 'rgba(255,255,255,.15)', border: '1.5px solid rgba(255,255,255,.3)', borderRadius: 8, padding: '7px 12px', color: 'white', fontFamily: 'Sarabun', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+          <button onClick={startEdit} style={{ background: 'rgba(255,255,255,.15)', border: '1.5px solid rgba(255,255,255,.3)', borderRadius: 8, padding: '7px 12px', color: 'white', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
             แก้ไข
           </button>
         </div>
@@ -201,7 +201,7 @@ export default function ProfilePage() {
                 <div className="price" style={{ marginTop: 3 }}>฿{l.price}</div>
                 <span className="badge badge-green" style={{ marginTop: 3, display: 'inline-block' }}>กำลังขาย</span>
               </div>
-              <button onClick={() => setConfirmSoldId(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
+              <button onClick={() => setConfirmSoldId(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
                 ขายแล้ว?
               </button>
             </div>
@@ -226,7 +226,7 @@ export default function ProfilePage() {
                     <span className="badge" style={{ background: '#FCE4EC', color: '#AD1457', marginTop: 3, display: 'inline-block' }}>ขายแล้ว ✓</span>
                   </div>
                   {canReactivate && (
-                    <button onClick={() => reactivate(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
+                    <button onClick={() => reactivate(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
                       เปิดคืน
                     </button>
                   )}

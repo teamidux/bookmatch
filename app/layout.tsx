@@ -40,7 +40,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/api/icon?size=180" />
         <link rel="icon" type="image/png" sizes="192x192" href="/api/icon?size=192" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;900&display=swap"
           rel="stylesheet"
         />
       </head>

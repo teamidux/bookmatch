@@ -43,7 +43,7 @@ export function Nav() {
   const { user } = useAuth()
   return (
     <nav className="nav">
-      <Link href="/" className="nav-logo">BookMatch</Link>
+      <Link href="/" className="nav-logo">Book<span>Match</span></Link>
       <div style={{ display: 'flex', gap: 8 }}>
         <Link href="/sell">
           <button className="btn btn-sm" style={{ width: 'auto' }}>
@@ -147,7 +147,7 @@ export function InAppBanner() {
           border: 'none',
           borderRadius: 6,
           padding: '5px 10px',
-          fontFamily: 'Sarabun',
+          fontFamily: 'Kanit',
           fontWeight: 700,
           fontSize: 12,
           cursor: 'pointer',
@@ -219,7 +219,7 @@ export function LoginModal({
         <Toast msg={msg} />
         <div
           style={{
-            fontFamily: "'Playfair Display',serif",
+            fontFamily: "'Kanit', sans-serif",
             fontSize: 20,
             marginBottom: 4,
           }}
@@ -291,7 +291,7 @@ export function ScanErrorSheet({ onRetry, onClose }: { onRetry: () => void; onCl
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18 }}>อ่านบาร์โค้ดไม่ได้</div>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18 }}>อ่านบาร์โค้ดไม่ได้</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
         </div>
         <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>ลองตรวจสอบสิ่งเหล่านี้แล้วถ่ายใหม่</div>
@@ -305,7 +305,7 @@ export function ScanErrorSheet({ onRetry, onClose }: { onRetry: () => void; onCl
           ))}
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--primary)', border: 'none', borderRadius: 12, padding: '13px 16px', color: 'white', fontFamily: 'Sarabun', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--primary)', border: 'none', borderRadius: 12, padding: '13px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
           onClick={onRetry}>
           📷 ถ่ายใหม่อีกครั้ง
         </label>
@@ -357,7 +357,7 @@ export function LiveScanModal({ onCode, onClose }: { onCode: (code: string) => v
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ color: 'white', fontFamily: "'Playfair Display',serif", fontSize: 18 }}>สแกนบาร์โค้ด</div>
+          <div style={{ color: 'white', fontFamily: "'Kanit', sans-serif", fontSize: 18 }}>สแกนบาร์โค้ด</div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: 8, width: 34, height: 34, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
 
