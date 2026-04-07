@@ -192,21 +192,34 @@ function SellPage() {
     try {
       let scanned: string | null = null
 
-      // แปลงเป็น JPEG ก่อนเสมอ — รองรับ HEIC (iPhone) + แก้ EXIF rotation อัตโนมัติ
+      // แปลงเป็น JPEG + แก้ EXIF rotation ก่อนเสมอ
       const file = await resizeForScan(rawFile, 1920)
 
-      // 1. native BarcodeDetector — Chrome / Android
+      // สร้าง canvas จาก img element — iOS Safari handle ได้ดีกว่าส่ง URL ให้ library โดยตรง
+      const canvas = await new Promise<HTMLCanvasElement>((res, rej) => {
+        const img = new Image()
+        const u = URL.createObjectURL(file)
+        img.onload = () => {
+          URL.revokeObjectURL(u)
+          const c = document.createElement('canvas')
+          c.width = img.naturalWidth; c.height = img.naturalHeight
+          c.getContext('2d')!.drawImage(img, 0, 0)
+          res(c)
+        }
+        img.onerror = () => { URL.revokeObjectURL(u); rej() }
+        img.src = u
+      })
+
+      // 1. native BarcodeDetector — Chrome / Android (รับ canvas ได้โดยตรง)
       if ('BarcodeDetector' in window) {
         try {
           const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
-          const bitmap = await createImageBitmap(file)
-          const codes = await detector.detect(bitmap)
-          bitmap.close()
+          const codes = await detector.detect(canvas)
           if (codes.length > 0) scanned = codes[0].rawValue
         } catch { /* fallthrough */ }
       }
 
-      // 2. ZXing พร้อม TRY_HARDER
+      // 2. ZXing — ใช้ decodeFromCanvas แทน decodeFromImageUrl (ทำงานได้บน iOS Safari)
       if (!scanned) {
         try {
           const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library')
@@ -215,13 +228,7 @@ function SellPage() {
             [DecodeHintType.TRY_HARDER, true],
           ])
           const reader = new BrowserMultiFormatReader(hints)
-          const u = URL.createObjectURL(file)
-          try {
-            const r = await reader.decodeFromImageUrl(u)
-            scanned = r.getText()
-          } finally {
-            URL.revokeObjectURL(u)
-          }
+          scanned = reader.decodeFromCanvas(canvas).getText()
         } catch { /* fallthrough */ }
       }
 

@@ -81,22 +81,34 @@ export default function HomePage() {
     e.target.value = ''
     setScanning(true)
     try {
-      // แปลงเป็น JPEG ก่อน — รองรับ HEIC (iPhone) + แก้ EXIF rotation
       const file = await resizeForScan(raw, 1920)
       let scanned: string | null = null
+
+      // สร้าง canvas ก่อน — ทุก library รับ canvas ได้โดยตรง ไม่ต้องโหลด URL ซ้ำ (ดีกว่าสำหรับ iOS)
+      const canvas = await new Promise<HTMLCanvasElement>((res, rej) => {
+        const img = new Image()
+        const u = URL.createObjectURL(file)
+        img.onload = () => {
+          URL.revokeObjectURL(u)
+          const c = document.createElement('canvas')
+          c.width = img.naturalWidth; c.height = img.naturalHeight
+          c.getContext('2d')!.drawImage(img, 0, 0)
+          res(c)
+        }
+        img.onerror = () => { URL.revokeObjectURL(u); rej() }
+        img.src = u
+      })
 
       // 1. BarcodeDetector (Chrome/Android)
       if ('BarcodeDetector' in window) {
         try {
           const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
-          const bitmap = await createImageBitmap(file)
-          const codes = await detector.detect(bitmap)
-          bitmap.close()
+          const codes = await detector.detect(canvas)
           if (codes.length > 0) scanned = codes[0].rawValue
         } catch { /* fallthrough */ }
       }
 
-      // 2. ZXing
+      // 2. ZXing decodeFromCanvas
       if (!scanned) {
         try {
           const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } = await import('@zxing/library')
@@ -104,10 +116,7 @@ export default function HomePage() {
             [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8]],
             [DecodeHintType.TRY_HARDER, true],
           ])
-          const reader = new BrowserMultiFormatReader(hints)
-          const u = URL.createObjectURL(file)
-          try { scanned = (await reader.decodeFromImageUrl(u)).getText() }
-          finally { URL.revokeObjectURL(u) }
+          scanned = new BrowserMultiFormatReader(hints).decodeFromCanvas(canvas).getText()
         } catch { /* fallthrough */ }
       }
 
