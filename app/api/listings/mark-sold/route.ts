@@ -8,7 +8,7 @@ const getSupabase = () => createClient(
 
 export async function POST(req: NextRequest) {
   const { listingId, sellerId, action } = await req.json()
-  // action: 'sold' | 'reactivate'
+  // action: 'sold' | 'reactivate' | 'remove'
   if (!listingId || !sellerId || !action) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 })
   }
@@ -50,6 +50,11 @@ export async function POST(req: NextRequest) {
     await sb.from('listings').update({ status: 'active', sold_at: null }).eq('id', listingId)
     await sb.from('users').update({ sold_count: Math.max(0, currentCount - 1) }).eq('id', sellerId)
     return NextResponse.json({ ok: true, sold_count: Math.max(0, currentCount - 1) })
+  }
+
+  if (action === 'remove') {
+    await sb.from('listings').update({ status: 'removed' }).eq('id', listingId)
+    return NextResponse.json({ ok: true })
   }
 
   return NextResponse.json({ error: 'invalid action' }, { status: 400 })

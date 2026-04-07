@@ -10,6 +10,7 @@ export default function ProfilePage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [showLogin, setShowLogin] = useState(false)
   const [confirmSoldId, setConfirmSoldId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editLine, setEditLine] = useState('')
@@ -28,15 +29,17 @@ export default function ProfilePage() {
   }
 
   const saveProfile = async () => {
-    if (!editName.trim()) { show('กรุณาใส่ชื่อ'); return }
     if (editSellerType === 'store' && !editStoreName.trim()) { show('กรุณาใส่ชื่อร้าน'); return }
+    if (editSellerType === 'individual' && !editName.trim()) { show('กรุณาใส่ชื่อ'); return }
     setSaving(true)
     try {
+      const storeName = editSellerType === 'store' ? editStoreName.trim() : undefined
       await updateUser({
-        display_name: editName.trim(),
+        // ถ้าเป็นร้านค้า ให้ sync display_name = store_name เพื่อให้ชื่อที่แสดงตรงกันทุกที่
+        display_name: editSellerType === 'store' ? editStoreName.trim() : editName.trim(),
         line_id: editLine.trim() || undefined,
         seller_type: editSellerType,
-        store_name: editSellerType === 'store' ? editStoreName.trim() : undefined,
+        store_name: storeName,
       })
       setEditing(false)
       show('บันทึกแล้ว ✓')
@@ -90,6 +93,19 @@ export default function ProfilePage() {
     show('เปิดประกาศขายอีกครั้งแล้ว')
   }
 
+  const deleteListing = async (id: string) => {
+    if (!user) return
+    const res = await fetch('/api/listings/mark-sold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingId: id, sellerId: user.id, action: 'remove' }),
+    })
+    if (!res.ok) { show('เกิดข้อผิดพลาด'); return }
+    setListings(prev => prev.filter(l => l.id !== id))
+    setConfirmDeleteId(null)
+    show('ลบประกาศแล้ว')
+  }
+
   if (!user) return (
     <>
       <Nav />
@@ -135,14 +151,30 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {confirmDeleteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 8 }}>ลบประกาศ</div>
+            <div style={{ fontSize: 14, color: 'var(--ink2)', marginBottom: 20, lineHeight: 1.6 }}>
+              ต้องการลบประกาศนี้ใช่ไหม?<br />
+              <span style={{ fontSize: 12, color: 'var(--ink3)' }}>ลบแล้วไม่สามารถกู้คืนได้</span>
+            </div>
+            <button className="btn" style={{ background: 'var(--red)', marginBottom: 8 }} onClick={() => deleteListing(confirmDeleteId)}>🗑️ ลบประกาศ</button>
+            <button className="btn btn-ghost" onClick={() => setConfirmDeleteId(null)}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
+
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 20 }}>แก้ไขข้อมูล</div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
-              <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ" />
-            </div>
+            {editSellerType !== 'store' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
+                <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ" />
+              </div>
+            )}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>Line ID</label>
               <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editLine} onChange={e => setEditLine(e.target.value)} placeholder="@lineid หรือ lineid" />
@@ -234,9 +266,14 @@ export default function ProfilePage() {
                 <div className="price" style={{ marginTop: 3 }}>฿{l.price}</div>
                 <span className="badge badge-green" style={{ marginTop: 3, display: 'inline-block' }}>กำลังขาย</span>
               </div>
-              <button onClick={() => setConfirmSoldId(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
-                ขายแล้ว?
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button onClick={() => setConfirmSoldId(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
+                  ขายแล้ว?
+                </button>
+                <button onClick={() => setConfirmDeleteId(l.id)} style={{ background: 'white', border: '1px solid #FECACA', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 11, cursor: 'pointer', color: 'var(--red)' }}>
+                  🗑️ ลบ
+                </button>
+              </div>
             </div>
           ))}
 
