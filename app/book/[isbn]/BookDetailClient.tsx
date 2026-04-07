@@ -285,15 +285,27 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
           )}
 
           {listings.length === 0 && (
-            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '20px 18px', marginBottom: 14 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>ยังไม่มีผู้ลงขายตอนนี้</div>
-              <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 18, lineHeight: 1.7 }}>
-                คุณมีหนังสือเล่มนี้อยู่ไหม? มีคนรอซื้อซื้ออยู่แล้ว — นี่คือโอกาสของคุณ
+            <>
+              {/* สถานะ: ยังไม่มีผู้ขาย */}
+              <div style={{ background: '#FEF9C3', border: '1px solid #FDE047', borderRadius: 12, padding: '14px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>📭</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#713F12' }}>ยังไม่มีผู้ลงขายตอนนี้</div>
+                  <div style={{ fontSize: 12, color: '#92400E', marginTop: 2 }}>กด "ต้องการเล่มนี้" เพื่อรับแจ้งเตือนเมื่อมีคนนำมาขาย</div>
+                </div>
               </div>
-              <Link href={`/sell?isbn=${isbn}`}>
-                <button className="btn" style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
-              </Link>
-            </div>
+
+              {/* เชิญชวนลงขาย */}
+              <div style={{ background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 12, padding: '16px 18px', marginBottom: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 4 }}>คุณมีหนังสือเล่มนี้อยู่ไหม?</div>
+                <div style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 14, lineHeight: 1.7 }}>
+                  มีคนรอซื้ออยู่แล้ว — เป็นคนแรกที่ลงขาย โอกาสขายได้เร็วมาก
+                </div>
+                <Link href={`/sell?isbn=${isbn}`}>
+                  <button className="btn" style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
+                </Link>
+              </div>
+            </>
           )}
 
           {listings.map(l => {
