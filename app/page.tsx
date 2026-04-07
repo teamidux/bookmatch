@@ -89,10 +89,8 @@ export default function HomePage() {
       } else if (result.raw) {
         setQuery(result.raw)
         show('อ่านบาร์โค้ดไม่ชัด ลองถ่ายใหม่ให้เห็นบาร์โค้ดชัดขึ้น')
-        alert(`🔍 Debug (got value but invalid ISBN):\nraw=${result.raw}\nvariant=${result.variantHit}\n\n${result.debug.join('\n')}`)
       } else {
         setScanError(true)
-        alert('🔍 Debug:\n' + result.debug.join('\n'))
       }
     } finally {
       setScanning(false)

@@ -199,10 +199,8 @@ function SellPage() {
       } else if (result.raw) {
         setIsbn(result.raw)
         show('อ่านบาร์โค้ดไม่ชัด ลองสแกนใหม่')
-        alert(`🔍 Debug (got value but invalid ISBN):\nraw=${result.raw}\nvariant=${result.variantHit}\n\n${result.debug.join('\n')}`)
       } else {
         setScanError(true)
-        alert('🔍 Debug:\n' + result.debug.join('\n'))
       }
     } finally {
       setScanning(false)
