@@ -478,7 +478,6 @@ function SellPage() {
                       <label className="label">ผู้แต่ง / ผู้แปล <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink3)' }}>(ไม่บังคับ)</span></label>
                       <input className="input" value={manualAuthor} onChange={e => setManualAuthor(e.target.value)} placeholder="เช่น J.K. Rowling" />
                     </div>
-                    {manualTitle && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>🏆 ขอบคุณ! คุณจะได้รับตราผู้บุกเบิก</div>}
                   </div>
                 </div>
               )}
@@ -504,7 +503,6 @@ function SellPage() {
                       <label className="label">ผู้แปล <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink3)' }}>(ไม่บังคับ)</span></label>
                       <input className="input" value={manualTranslator} onChange={e => setManualTranslator(e.target.value)} placeholder="ชื่อผู้แปล" />
                     </div>
-                    {manualTitle && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>🏆 คุณจะได้รับตราผู้บุกเบิก!</div>}
                   </div>
                 </div>
               )}

@@ -278,17 +278,18 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
         )}
 
         <div className="section">
-          <div className="section-title" style={{ marginBottom: 12 }}>{listings.length} คนกำลังขายอยู่</div>
+          {listings.length > 0 && (
+            <div className="section-title" style={{ marginBottom: 12 }}>{listings.length} คนกำลังขายอยู่</div>
+          )}
 
           {listings.length === 0 && (
-            <div className="empty">
-              <div className="empty-icon">📭</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>ยังไม่มีใครขายเล่มนี้</div>
-              <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 20, lineHeight: 1.6 }}>
-                ลงขายเป็นคนแรก แล้วรับ <strong>🏆 ตราผู้บุกเบิก</strong>
+            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '20px 18px', marginBottom: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>ยังไม่มีผู้ลงขายตอนนี้</div>
+              <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 18, lineHeight: 1.7 }}>
+                คุณมีหนังสือเล่มนี้อยู่ไหม? มีคนรอซื้ออยู่แล้ว — นี่คือโอกาสของคุณ
               </div>
               <Link href={`/sell?isbn=${isbn}`}>
-                <button className="btn" style={{ maxWidth: 220, margin: '0 auto', display: 'block' }}>ลงขายเป็นคนแรก</button>
+                <button className="btn" style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
               </Link>
             </div>
           )}
