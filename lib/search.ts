@@ -10,10 +10,20 @@ const THAI_TO_ARABIC: Array<[RegExp, string]> = [
   [/แปด/g, '8'], [/เก้า/g, '9'],
 ]
 
+// Normalize สระสั้น → สระยาว: ิ→ี  ุ→ู  ึ→ื
+function vowelShortToLong(s: string): string {
+  return s.replace(/\u0E34/g, '\u0E35').replace(/\u0E38/g, '\u0E39').replace(/\u0E36/g, '\u0E37')
+}
+// Normalize สระยาว → สระสั้น: ี→ิ  ู→ุ  ื→ึ
+function vowelLongToShort(s: string): string {
+  return s.replace(/\u0E35/g, '\u0E34').replace(/\u0E39/g, '\u0E38').replace(/\u0E37/g, '\u0E36')
+}
+
 /**
  * สร้าง query variants เพื่อ fuzzy search:
  * - ตัวเลขอารบิก ↔ คำไทย  (4 ↔ สี่)
  * - มีช่องว่าง / ไม่มีช่องว่าง
+ * - สระสั้น ↔ สระยาว  (ทิม ↔ ทีม)
  */
 export function searchVariants(q: string): string[] {
   const base = q.trim().replace(/\s+/g, ' ')
@@ -30,6 +40,12 @@ export function searchVariants(q: string): string[] {
   }
 
   add(base)
+
+  // สระสั้น ↔ สระยาว (เช่น "ทิม" → "ทีม", "ทีม" → "ทิม")
+  const shortToLong = vowelShortToLong(base)
+  if (shortToLong !== base) add(shortToLong)
+  const longToShort = vowelLongToShort(base)
+  if (longToShort !== base) add(longToShort)
 
   // อารบิก → ไทย (เช่น "4 แผ่นดิน" → "สี่ แผ่นดิน" → "สี่แผ่นดิน")
   const toThai = base.replace(/[0-9]/g, d => ARABIC_TO_THAI[d] ?? d)

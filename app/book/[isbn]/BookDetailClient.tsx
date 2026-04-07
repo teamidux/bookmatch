@@ -262,10 +262,9 @@ export default function BookDetailClient({ isbn }: { isbn: string }) {
                       {sellerName}
                     </Link>
                     {l.users?.is_verified && <span className="badge badge-blue">✓ Verified</span>}
-                    {isStore && <span className="badge" style={{ background: '#FFF7ED', color: '#C2410C' }}>🏪 ร้านค้า</span>}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>
-                    {isStore ? 'ร้านค้า / สำนักพิมพ์' : `ขายแล้ว ${l.users?.sold_count || 0} · ยืนยัน ${l.users?.confirmed_count || 0} ครั้ง`}
+                    {`ขายแล้ว ${l.users?.sold_count || 0} · ยืนยัน ${l.users?.confirmed_count || 0} ครั้ง`}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
