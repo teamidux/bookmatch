@@ -481,8 +481,8 @@ function SellPage() {
           )}
 
           {fetchedBook?.title && (
-            <div style={{ background: 'var(--green-bg)', border: '1px solid #BBF7D0', borderLeft: '4px solid var(--green)', borderRadius: 14, padding: 16, display: 'flex', gap: 16, marginBottom: 16, alignItems: 'flex-start' }}>
-              <BookCover coverUrl={fetchedBook.cover_url} title={fetchedBook.title} size={110} />
+            <div style={{ background: 'var(--green-bg)', border: '1px solid #BBF7D0', borderLeft: '4px solid var(--green)', borderRadius: 14, padding: 14, display: 'flex', gap: 14, marginBottom: 16, alignItems: 'flex-start' }}>
+              <BookCover coverUrl={fetchedBook.cover_url} title={fetchedBook.title} size={68} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.35, color: '#121212', letterSpacing: '-0.01em', marginBottom: 4 }}>{fetchedBook.title}</div>
                 {fetchedBook.author && (
@@ -510,23 +510,23 @@ function SellPage() {
                 <label className="label">รูปหน้าปก <span style={{ color: 'var(--red)' }}>*</span></label>
 
                 {coverPreview ? (
-                  <div style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>
-                    <img src={coverPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    <button onClick={removeCover} style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,.7)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: 'white', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
+                  <div style={{ position: 'relative', width: 120, height: 180, borderRadius: 12, overflow: 'hidden', background: 'var(--surface)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}>
+                    <img src={coverPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button onClick={removeCover} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,.65)', border: 'none', borderRadius: '50%', width: 28, height: 28, color: 'white', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    {/* portrait shape นำสายตาให้ user ถ่ายภาพหนังสือแนวตั้ง — 2:3 = book ratio มาตรฐาน */}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {/* portrait 2:3 — ขนาดพอดีต่อการใช้งาน ไม่ใหญ่จนกินจอ */}
                     <label onClick={!user ? (e) => { e.preventDefault(); setShowLogin(true) } : undefined}
-                      style={{ flex: 1, aspectRatio: '2 / 3', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'var(--primary-light)', border: '1.5px dashed var(--primary)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--primary)' }}>
+                      style={{ width: 120, height: 180, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--primary-light)', border: '1.5px dashed var(--primary)', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--primary)', flexShrink: 0 }}>
                       {user && <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCoverChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />}
-                      <span style={{ fontSize: 38 }}>📷</span>
+                      <span style={{ fontSize: 28 }}>📷</span>
                       <span>ถ่ายรูป</span>
                     </label>
                     <label onClick={!user ? (e) => { e.preventDefault(); setShowLogin(true) } : undefined}
-                      style={{ flex: 1, aspectRatio: '2 / 3', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--ink2)' }}>
+                      style={{ width: 120, height: 180, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--ink2)', flexShrink: 0 }}>
                       {user && <input type="file" accept="image/*" ref={galleryInputRef} onChange={handleCoverChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />}
-                      <span style={{ fontSize: 38 }}>🖼️</span>
+                      <span style={{ fontSize: 28 }}>🖼️</span>
                       <span>คลังภาพ</span>
                     </label>
                   </div>
