@@ -12,14 +12,21 @@ interface CacheBookInput {
   description?: string
 }
 
-export async function cacheBookFromGoogle(input: CacheBookInput): Promise<void> {
-  if (!input.isbn || !input.title) return
+export async function cacheBookFromGoogle(input: CacheBookInput): Promise<boolean> {
+  if (!input.isbn || !input.title) {
+    console.warn('[cacheBookFromGoogle] skipped: missing isbn or title', { isbn: input.isbn, title: input.title })
+    return false
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[cacheBookFromGoogle] SUPABASE_SERVICE_ROLE_KEY not set — book will not be cached')
+    return false
+  }
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    await supabase.from('books').upsert(
+    const { error } = await supabase.from('books').upsert(
       {
         isbn: input.isbn,
         title: input.title,
@@ -32,8 +39,13 @@ export async function cacheBookFromGoogle(input: CacheBookInput): Promise<void> 
       },
       { onConflict: 'isbn', ignoreDuplicates: false }
     )
+    if (error) {
+      console.error('[cacheBookFromGoogle] upsert failed:', error.message, 'isbn:', input.isbn)
+      return false
+    }
+    return true
   } catch (err) {
-    // fire-and-forget — don't crash the page if caching fails
-    console.error('[cacheBookFromGoogle] failed:', err)
+    console.error('[cacheBookFromGoogle] exception:', err)
+    return false
   }
 }

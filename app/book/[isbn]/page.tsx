@@ -38,10 +38,11 @@ async function getBook(isbn: string) {
     const publisher = info.publisher || ''
     const language = info.language || 'th'
 
-    // Persist to our DB so subsequent loads + the home/search/market lists pick it up.
-    // Fire-and-forget — don't block render if write fails.
+    // Persist to our DB synchronously so subsequent title-search hits the
+    // DB immediately. Adds ~50-100ms to first load but every subsequent
+    // search across the site finds the book — worth it.
     if (title) {
-      cacheBookFromGoogle({
+      await cacheBookFromGoogle({
         isbn,
         title,
         author,
