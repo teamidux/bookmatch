@@ -29,10 +29,17 @@ export default function HomePage() {
   // เพื่อให้พฤติกรรมเหมือนกันทุก surface
   useEffect(() => {
     if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); setGoogleLoading(false); return }
+
+    // ถ้า user paste ISBN-13 ที่ valid → auto-redirect ไปหน้า book ทันที ไม่ต้องรอ Enter
+    const digits = query.replace(/[^0-9]/g, '')
+    if (/^(978|979)\d{10}$/.test(digits)) {
+      router.push(`/book/${digits}`)
+      return
+    }
+
     let cancelled = false
     const t = setTimeout(async () => {
       const q = query.trim()
-      if (/^(978|979)\d{10}$/.test(q.replace(/[^0-9]/g, ''))) return
       setLiveSearching(true)
       setGoogleLoading(q.length >= 2)
       setGoogleLiveResults([])
