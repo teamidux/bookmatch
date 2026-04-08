@@ -12,7 +12,7 @@ export default function HomePage() {
   const router = useRouter()
   const [recentListings, setRecentListings] = useState<any[]>([])
   const [wantedBooks, setWantedBooks] = useState<Book[]>([])
-  const [stats, setStats] = useState({ books: 0, sellers: 0, wanted: 0 })
+  const [stats, setStats] = useState({ listings: 0, sellers: 0, wanted: 0 })
   const [query, setQuery] = useState('')
   const [liveResults, setLiveResults] = useState<any[]>([])
   const [liveSearching, setLiveSearching] = useState(false)
@@ -51,16 +51,20 @@ export default function HomePage() {
   }, [query])
 
   const loadData = async () => {
-    const [recentRes, { data: wanted }, { count: sellerCount }, { count: bookCount }] = await Promise.all([
+    const [recentRes, { data: wanted }, { count: sellerCount }, { count: listingCount }] = await Promise.all([
       fetch('/api/listings/recent?limit=10'),
       supabase.from('books').select('*').gt('wanted_count', 0).order('wanted_count', { ascending: false }).limit(3),
       supabase.from('users').select('*', { count: 'exact', head: true }),
-      supabase.from('books').select('*', { count: 'exact', head: true }),
+      supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     ])
     const { listings } = await recentRes.json()
     setRecentListings(listings || [])
     setWantedBooks(wanted || [])
-    setStats({ books: bookCount || 0, sellers: sellerCount || 0, wanted: wanted?.reduce((s, b) => s + (b.wanted_count || 0), 0) || 0 })
+    setStats({
+      listings: listingCount || 0,
+      sellers: sellerCount || 0,
+      wanted: wanted?.reduce((s, b) => s + (b.wanted_count || 0), 0) || 0,
+    })
     setLoading(false)
   }
 
@@ -177,9 +181,18 @@ export default function HomePage() {
         </div>
 
         <div className="stats-bar">
-          <div className="stat"><div className="stat-n">{stats.books}+</div><div className="stat-l">หนังสือ</div></div>
-          <div className="stat"><div className="stat-n">{stats.sellers}</div><div className="stat-l">ผู้ขาย</div></div>
-          <div className="stat"><div className="stat-n">{stats.wanted}</div><div className="stat-l">Wanted</div></div>
+          <div className="stat">
+            <div className="stat-n">40M+</div>
+            <div className="stat-l">หนังสือทั่วโลก</div>
+          </div>
+          <div className="stat">
+            <div className="stat-n">{stats.listings}</div>
+            <div className="stat-l">ประกาศกำลังขาย</div>
+          </div>
+          <div className="stat">
+            <div className="stat-n">{stats.wanted}</div>
+            <div className="stat-l">คนรอซื้อ</div>
+          </div>
         </div>
 
         <div className="section">
