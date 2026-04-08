@@ -96,7 +96,7 @@ export function useToast() {
 export function BookCover({
   coverUrl,
   title,
-  size = 52,
+  size = 68,
 }: {
   coverUrl?: string
   title?: string
@@ -145,11 +145,12 @@ export function InAppBanner() {
           background: '#D97706',
           color: 'white',
           border: 'none',
-          borderRadius: 6,
-          padding: '5px 10px',
+          borderRadius: 8,
+          padding: '10px 14px',
+          minHeight: 44,
           fontFamily: 'Kanit',
           fontWeight: 700,
-          fontSize: 12,
+          fontSize: 13,
           cursor: 'pointer',
         }}
       >
@@ -221,29 +222,36 @@ export function LoginModal({
         <div
           style={{
             fontFamily: "'Kanit', sans-serif",
-            fontSize: 20,
-            marginBottom: 4,
+            fontSize: 22,
+            fontWeight: 700,
+            color: '#121212',
+            lineHeight: 1.3,
+            letterSpacing: '-0.02em',
+            marginBottom: 6,
           }}
         >
           เข้าสู่ระบบ
         </div>
         <div
-          style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 20 }}
+          style={{ fontSize: 14, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 22 }}
         >
           ใส่เบอร์มือถือเพื่อลงขาย
         </div>
         <div className="form-group">
           <label className="label">เบอร์มือถือ</label>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
             <div
               style={{
                 background: 'var(--surface)',
                 border: '1.5px solid var(--border)',
-                borderRadius: 10,
-                padding: '12px 14px',
-                fontSize: 15,
+                borderRadius: 12,
+                padding: '14px 16px',
+                minHeight: 48,
+                fontSize: 16,
                 fontWeight: 600,
                 color: 'var(--ink2)',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               🇹🇭 +66
@@ -291,22 +299,22 @@ export function ScanErrorSheet({ onRetry, onClose }: { onRetry: () => void; onCl
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 480, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18 }}>อ่านบาร์โค้ดไม่ได้</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, fontWeight: 700, color: '#121212', lineHeight: 1.3, letterSpacing: '-0.02em' }}>อ่านบาร์โค้ดไม่ได้</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1, minWidth: 44, minHeight: 44 }}>✕</button>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>ลองตรวจสอบสิ่งเหล่านี้แล้วถ่ายใหม่</div>
+        <div style={{ fontSize: 14, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 18 }}>ลองตรวจสอบสิ่งเหล่านี้แล้วถ่ายใหม่</div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 22 }}>
           {SCAN_TIPS.map((t, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', borderRadius: 10, padding: '10px 14px' }}>
-              <span style={{ fontSize: 20, flexShrink: 0 }}>{t.icon}</span>
-              <span style={{ fontSize: 14 }}>{t.text}</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 12, padding: '14px 16px' }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{t.icon}</span>
+              <span style={{ fontSize: 15, lineHeight: 1.6 }}>{t.text}</span>
             </div>
           ))}
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--primary)', border: 'none', borderRadius: 12, padding: '13px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'var(--primary)', border: 'none', borderRadius: 12, minHeight: 48, padding: '14px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 600, fontSize: 16, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}
           onClick={onRetry}>
           📷 ถ่ายใหม่อีกครั้ง
         </label>
@@ -357,15 +365,15 @@ export function LiveScanModal({ onCode, onClose }: { onCode: (code: string) => v
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 420 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ color: 'white', fontFamily: "'Kanit', sans-serif", fontSize: 18 }}>สแกนบาร์โค้ด</div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: 8, width: 34, height: 34, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ color: 'white', fontFamily: "'Kanit', sans-serif", fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>สแกนบาร์โค้ด</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: 10, width: 44, height: 44, color: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
 
         {error ? (
           <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 14, padding: '32px 20px', textAlign: 'center', color: 'white' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📵</div>
-            <div style={{ fontSize: 14, marginBottom: 20 }}>{error}</div>
+            <div style={{ fontSize: 40, marginBottom: 14 }}>📵</div>
+            <div style={{ fontSize: 16, lineHeight: 1.6, marginBottom: 22 }}>{error}</div>
             <button className="btn" onClick={onClose}>ปิด</button>
           </div>
         ) : (
@@ -374,13 +382,13 @@ export function LiveScanModal({ onCode, onClose }: { onCode: (code: string) => v
               <div id="live-scan-box" style={{ width: '100%' }} />
             </div>
             {!ready && (
-              <div style={{ textAlign: 'center', marginTop: 16, color: 'rgba(255,255,255,.7)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <div style={{ textAlign: 'center', marginTop: 18, color: 'rgba(255,255,255,.7)', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <span className="spin" style={{ width: 18, height: 18, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} />
                 กำลังเปิดกล้อง...
               </div>
             )}
             {ready && (
-              <div style={{ textAlign: 'center', marginTop: 14, color: 'rgba(255,255,255,.75)', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', marginTop: 14, color: 'rgba(255,255,255,.75)', fontSize: 14, lineHeight: 1.6 }}>
                 จ่อบาร์โค้ดหลังปกหนังสือในกรอบ
               </div>
             )}
@@ -396,11 +404,11 @@ export function SkeletonCard() {
   return (
     <div className="card">
       <div className="book-card">
-        <div className="skeleton" style={{ width: 52, height: 52, borderRadius: 8, flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div className="skeleton" style={{ height: 14, width: '70%' }} />
-          <div className="skeleton" style={{ height: 11, width: '45%' }} />
-          <div className="skeleton" style={{ height: 11, width: '30%' }} />
+        <div className="skeleton" style={{ width: 68, height: 95, borderRadius: 8, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="skeleton" style={{ height: 18, width: '70%' }} />
+          <div className="skeleton" style={{ height: 14, width: '45%' }} />
+          <div className="skeleton" style={{ height: 22, width: '35%' }} />
         </div>
       </div>
     </div>
@@ -414,9 +422,9 @@ export function SkeletonList({ count = 4 }: { count?: number }) {
 export function PageLoading() {
   return (
     <>
-      <div style={{ textAlign: 'center', padding: '28px 0 12px' }}>
-        <span className="spin" style={{ width: 22, height: 22 }} />
-        <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 10 }}>กำลังโหลด...</div>
+      <div style={{ textAlign: 'center', padding: '32px 0 14px' }}>
+        <span className="spin" style={{ width: 24, height: 24 }} />
+        <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink3)', marginTop: 12 }}>กำลังโหลด...</div>
       </div>
     </>
   )
