@@ -26,7 +26,7 @@ const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20
     <line x1="30" y1="14" x2="38" y2="14"/>
     <line x1="30" y1="22" x2="38" y2="22"/>
   </g>
-  <text x="100" y="210" font-family="-apple-system, system-ui, sans-serif" font-size="13" font-weight="500" text-anchor="middle" fill="#64748B">ไม่มีปก</text>
+  <text x="100" y="210" font-family="-apple-system, system-ui, sans-serif" font-size="13" font-weight="500" text-anchor="middle" fill="#64748B">ไม่มีภาพปก</text>
 </svg>`
 
 function bumpGoogleQuality(url: string): string {

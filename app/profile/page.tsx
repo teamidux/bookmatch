@@ -20,6 +20,17 @@ export default function ProfilePage() {
   const [query, setQuery] = useState('')
   const { msg, show } = useToast()
 
+  // เข้าร่วมเมื่อ — แสดงเป็นข้อความสั้นๆ
+  const memberSince = (createdAt?: string): string => {
+    if (!createdAt) return '—'
+    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    if (days < 1) return 'วันนี้'
+    if (days < 7) return `${days} วัน`
+    if (days < 30) return `${Math.floor(days / 7)} สัปดาห์`
+    if (days < 365) return `${Math.floor(days / 30)} เดือน`
+    return `${Math.floor(days / 365)} ปี`
+  }
+
   const startEdit = () => {
     setEditName(user?.display_name || '')
     setEditLine(user?.line_id || '')
@@ -229,8 +240,11 @@ export default function ProfilePage() {
 
         <div style={{ background: 'var(--surface)', padding: '18px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-around' }}>
           <div style={{ textAlign: 'center' }}><div className="stat-n">{active.length}</div><div className="stat-l">กำลังขาย</div></div>
-          <div style={{ textAlign: 'center' }}><div className="stat-n">{user.sold_count || 0}</div><div className="stat-l">ขายแล้ว</div></div>
-          <div style={{ textAlign: 'center' }}><div className="stat-n">{user.confirmed_count || 0}</div><div className="stat-l">ยืนยันรับแล้ว</div></div>
+          <div style={{ textAlign: 'center' }}><div className="stat-n">{user.sold_count || 0}</div><div className="stat-l">ขายไปแล้ว</div></div>
+          <div style={{ textAlign: 'center' }}>
+            <div className="stat-n" style={{ fontSize: 18 }}>{memberSince(user.created_at)}</div>
+            <div className="stat-l">เข้าร่วมเมื่อ</div>
+          </div>
         </div>
 
         {/* Market demand insight — push sellers to /market page */}

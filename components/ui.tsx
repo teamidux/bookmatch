@@ -131,7 +131,7 @@ export function BookCover({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#64748B' }}>
           <span style={{ fontSize: Math.max(18, size * 0.32) }}>📕</span>
-          {size >= 56 && <span style={{ fontSize: Math.max(10, size * 0.16), fontWeight: 500 }}>ไม่มีปก</span>}
+          {size >= 56 && <span style={{ fontSize: Math.max(10, size * 0.16), fontWeight: 500 }}>ไม่มีภาพปก</span>}
         </div>
       )}
     </div>

@@ -2,20 +2,35 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, Listing, User } from '@/lib/supabase'
-import { Nav, BottomNav, BookCover, CondBadge, SkeletonList, useToast, Toast } from '@/components/ui'
+import { useAuth } from '@/lib/auth'
+import { Nav, BottomNav, BookCover, CondBadge, SkeletonList, useToast, Toast, LoginModal } from '@/components/ui'
 
 interface PageProps {
   params: { id: string }
 }
 
+const REPORT_REASONS = [
+  { key: 'scam',          label: '💰 หลอกโอนเงิน / ไม่ส่งของ' },
+  { key: 'fake_book',     label: '📕 หนังสือไม่ตรงปก / ปลอม' },
+  { key: 'no_ship',       label: '📦 รับเงินแล้วไม่ส่ง' },
+  { key: 'inappropriate', label: '⚠️ ขายของผิดกฎ / ไม่เหมาะสม' },
+  { key: 'other',         label: '❓ อื่นๆ' },
+]
+
 export default function SellerPage({ params }: PageProps) {
   const { id } = params
+  const { user } = useAuth()
   const [seller, setSeller] = useState<User | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [contactListing, setContactListing] = useState<Listing | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetails, setReportDetails] = useState('')
+  const [reportSubmitting, setReportSubmitting] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
   const { msg, show } = useToast()
 
   // contact ของแต่ละ listing — ถ้าเป็นเบอร์โทรเปิด tel: ได้, ถ้าไม่ใช่ใช้คัดลอก
@@ -23,6 +38,47 @@ export default function SellerPage({ params }: PageProps) {
   const sellerLineId = seller?.line_id?.trim() || ''
   const contactValue = contactListing?.contact?.trim() || ''
   const showSellerLine = sellerLineId && sellerLineId !== contactValue
+
+  const submitReport = async () => {
+    if (!user) { setShowLogin(true); return }
+    if (!reportReason) { show('กรุณาเลือกเหตุผล'); return }
+    setReportSubmitting(true)
+    try {
+      const r = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: id,
+          reporterUserId: user.id,
+          reason: reportReason,
+          details: reportDetails,
+        }),
+      })
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}))
+        if (data.error === 'already reported recently') show('คุณรายงานผู้ขายนี้ไปแล้วในช่วง 24 ชั่วโมง')
+        else show('ส่งรายงานไม่สำเร็จ ลองใหม่')
+      } else {
+        show('ขอบคุณที่แจ้ง — ทีมงานจะตรวจสอบโดยเร็ว 🙏')
+        setShowReport(false)
+        setReportReason('')
+        setReportDetails('')
+      }
+    } finally {
+      setReportSubmitting(false)
+    }
+  }
+
+  // แปลงวันที่เข้าร่วมเป็นข้อความสั้นๆ
+  const memberSince = (createdAt?: string): string => {
+    if (!createdAt) return '—'
+    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    if (days < 1) return 'วันนี้'
+    if (days < 7) return `${days} วัน`
+    if (days < 30) return `${Math.floor(days / 7)} สัปดาห์`
+    if (days < 365) return `${Math.floor(days / 30)} เดือน`
+    return `${Math.floor(days / 365)} ปี`
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -62,6 +118,78 @@ export default function SellerPage({ params }: PageProps) {
     <>
       <Nav />
       <Toast msg={msg} />
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} onDone={() => setShowLogin(false)} />}
+
+      {showReport && (
+        <div onClick={() => setShowReport(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 32px', width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, fontWeight: 700, color: '#121212', letterSpacing: '-0.02em' }}>🚨 รายงานผู้ขาย</div>
+              <button onClick={() => setShowReport(false)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--ink3)', minWidth: 44, minHeight: 44 }}>✕</button>
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 18 }}>
+              ทีมงานจะตรวจสอบและระงับบัญชีหากพบความผิดจริง
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label className="label">เหตุผล</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {REPORT_REASONS.map(r => (
+                  <button key={r.key} onClick={() => setReportReason(r.key)} style={{
+                    padding: '14px 16px',
+                    minHeight: 48,
+                    borderRadius: 12,
+                    border: `2px solid ${reportReason === r.key ? 'var(--red)' : 'var(--border)'}`,
+                    background: reportReason === r.key ? '#FEF2F2' : 'white',
+                    fontFamily: 'Kanit',
+                    fontSize: 15,
+                    fontWeight: 500,
+                    color: reportReason === r.key ? '#DC2626' : 'var(--ink)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label className="label">รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
+              <textarea
+                value={reportDetails}
+                onChange={e => setReportDetails(e.target.value)}
+                placeholder="เช่น โอนเงินไปแล้วไม่ได้รับของ ติดต่อไม่ได้..."
+                rows={4}
+                maxLength={500}
+                style={{
+                  width: '100%',
+                  fontFamily: 'Kanit',
+                  fontSize: 15,
+                  lineHeight: 1.5,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: '1.5px solid var(--border)',
+                  resize: 'vertical',
+                  outline: 'none',
+                  color: 'var(--ink)',
+                }}
+              />
+              <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 4, textAlign: 'right' }}>{reportDetails.length}/500</div>
+            </div>
+
+            <button
+              className="btn"
+              onClick={submitReport}
+              disabled={reportSubmitting || !reportReason}
+              style={{ background: '#DC2626', marginBottom: 8 }}
+            >
+              {reportSubmitting ? <><span className="spin" />กำลังส่ง...</> : '🚨 ส่งรายงาน'}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setShowReport(false)}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
 
       {contactListing && (
         <div onClick={() => setContactListing(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
@@ -133,24 +261,47 @@ export default function SellerPage({ params }: PageProps) {
       <div className="page">
         <Link href="/" className="back-btn">← กลับ</Link>
 
-        <div style={{ background: 'var(--primary)', padding: '20px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)', flexShrink: 0 }}>👤</div>
-          <div>
-            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, color: 'white', marginBottom: 3 }}>{seller?.display_name}</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', marginBottom: 6 }}>
-              ขายแล้ว {seller?.sold_count || 0} ครั้ง · ยืนยันรับแล้ว {seller?.confirmed_count || 0} ครั้ง
+        <div style={{ background: 'var(--primary)', padding: '20px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)', flexShrink: 0 }}>{seller?.seller_type === 'store' ? '🏪' : '👤'}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, fontWeight: 700, color: 'white', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: 4 }}>{seller?.display_name}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', marginBottom: 8, lineHeight: 1.5 }}>
+              ขายไปแล้ว {seller?.sold_count || 0} ครั้ง
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {seller?.is_verified && <span className="badge" style={{ background: 'rgba(255,255,255,.2)', color: 'white' }}>✓ Verified</span>}
               {seller?.is_pioneer && <span className="badge" style={{ background: 'rgba(255,255,255,.2)', color: 'white' }}>🏆 ผู้บุกเบิก</span>}
             </div>
           </div>
+          <button
+            onClick={() => setShowReport(true)}
+            style={{
+              background: 'rgba(255,255,255,.15)',
+              border: '1px solid rgba(255,255,255,.3)',
+              borderRadius: 10,
+              padding: '8px 12px',
+              minHeight: 40,
+              color: 'white',
+              fontFamily: 'Kanit',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+            title="รายงานผู้ขาย"
+          >
+            🚨 รายงาน
+          </button>
         </div>
 
-        <div style={{ background: 'var(--surface)', padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-around' }}>
-          <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>{listings.length}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>กำลังขาย</div></div>
-          <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>{seller?.sold_count || 0}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>ขายแล้ว</div></div>
-          <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>{seller?.confirmed_count || 0}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>ยืนยันรับแล้ว</div></div>
+        <div style={{ background: 'var(--surface)', padding: '18px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-around' }}>
+          <div style={{ textAlign: 'center' }}><div className="stat-n">{listings.length}</div><div className="stat-l">กำลังขาย</div></div>
+          <div style={{ textAlign: 'center' }}><div className="stat-n">{seller?.sold_count || 0}</div><div className="stat-l">ขายไปแล้ว</div></div>
+          <div style={{ textAlign: 'center' }}>
+            <div className="stat-n" style={{ fontSize: 18 }}>{memberSince(seller?.created_at)}</div>
+            <div className="stat-l">เข้าร่วมเมื่อ</div>
+          </div>
         </div>
 
         <div className="section">
