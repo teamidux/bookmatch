@@ -3,27 +3,21 @@
 // render first and external results stream in.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, fetchOpenLibraryByQuery, normalizeThai, _searchDebug, GoogleBook } from '@/lib/search'
+import { fetchGoogleBooksByTitle, fetchOpenLibraryByQuery, normalizeThai, GoogleBook } from '@/lib/search'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get('q')?.trim()
-  if (!raw || raw.length < 2) return NextResponse.json({ results: [], debug: { reason: 'too short' } })
+  if (!raw || raw.length < 2) return NextResponse.json({ results: [] })
   const q = normalizeThai(raw)
 
-  let google: GoogleBook[] = []
-  let openLib: GoogleBook[] = []
-  let googleErr: string | null = null
-  let openLibErr: string | null = null
-
-  try {
-    google = await fetchGoogleBooksByTitle(q, 15)
-  } catch (e: any) { googleErr = e?.message || String(e) }
-  try {
-    openLib = await fetchOpenLibraryByQuery(q, 10)
-  } catch (e: any) { openLibErr = e?.message || String(e) }
+  // ยิงทั้ง 2 source คู่ขนาน — coverage ต่างกัน
+  const [google, openLib] = await Promise.all([
+    fetchGoogleBooksByTitle(q, 15).catch(() => [] as GoogleBook[]),
+    fetchOpenLibraryByQuery(q, 10).catch(() => [] as GoogleBook[]),
+  ])
 
   // Merge + dedupe by ISBN, Google ก่อน (cover คุณภาพดีกว่า)
   const seen = new Set<string>()
@@ -34,12 +28,7 @@ export async function GET(req: NextRequest) {
     gBooks.push(b)
   }
 
-  if (gBooks.length === 0) {
-    return NextResponse.json({
-      results: [],
-      debug: { q, raw, googleCount: google.length, openLibCount: openLib.length, googleErr, openLibErr, ..._searchDebug }
-    })
-  }
+  if (gBooks.length === 0) return NextResponse.json({ results: [] })
 
   // Auto-cache new books — normalize Thai sara am ก่อนเก็บ
   try {
