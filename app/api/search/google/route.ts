@@ -10,16 +10,20 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get('q')?.trim()
-  if (!raw || raw.length < 2) return NextResponse.json({ results: [] })
+  if (!raw || raw.length < 2) return NextResponse.json({ results: [], debug: { reason: 'too short' } })
   const q = normalizeThai(raw)
 
-  // ยิงทั้ง 2 source คู่ขนาน — coverage แตกต่างกัน เช่น
-  // หนังสือ Thai title 'เจอจุดแข็ง' (ISBN 9781595621207) ที่ Google indexed
-  // เป็น 'StrengthsFinder 2.0' → OpenLibrary มีข้อมูลผ่าน edition อื่น
-  const [google, openLib] = await Promise.all([
-    fetchGoogleBooksByTitle(q, 15),
-    fetchOpenLibraryByQuery(q, 10),
-  ])
+  let google: GoogleBook[] = []
+  let openLib: GoogleBook[] = []
+  let googleErr: string | null = null
+  let openLibErr: string | null = null
+
+  try {
+    google = await fetchGoogleBooksByTitle(q, 15)
+  } catch (e: any) { googleErr = e?.message || String(e) }
+  try {
+    openLib = await fetchOpenLibraryByQuery(q, 10)
+  } catch (e: any) { openLibErr = e?.message || String(e) }
 
   // Merge + dedupe by ISBN, Google ก่อน (cover คุณภาพดีกว่า)
   const seen = new Set<string>()
@@ -30,7 +34,12 @@ export async function GET(req: NextRequest) {
     gBooks.push(b)
   }
 
-  if (gBooks.length === 0) return NextResponse.json({ results: [] })
+  if (gBooks.length === 0) {
+    return NextResponse.json({
+      results: [],
+      debug: { q, raw, googleCount: google.length, openLibCount: openLib.length, googleErr, openLibErr }
+    })
+  }
 
   // Auto-cache new books — normalize Thai sara am ก่อนเก็บ
   try {
