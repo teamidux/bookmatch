@@ -22,41 +22,38 @@ export async function POST(req: NextRequest) {
 
     const sb = admin()
 
-    // ตรวจว่ามีในระบบหรือยัง
+    // 1. ตรวจว่ามีใน DB แล้วยัง
     const { data: existing } = await sb
       .from('books')
-      .select('id, view_count')
+      .select('id')
       .eq('isbn', isbn)
       .maybeSingle()
 
-    if (existing) {
-      // มีอยู่แล้ว → แค่ increment view_count
-      await sb
-        .from('books')
-        .update({ view_count: (existing.view_count || 0) + 1 })
-        .eq('id', existing.id)
-      return NextResponse.json({ ok: true, view_count: (existing.view_count || 0) + 1 })
+    // 2. ถ้ายังไม่มี + มี title → insert (ไม่มี view_count เพื่อกัน column ขาด)
+    if (!existing) {
+      if (!title) return NextResponse.json({ ok: true, skipped: 'no title' })
+      const { error: insertErr } = await sb.from('books').insert({
+        isbn,
+        title,
+        author: author || '',
+        publisher: publisher || null,
+        cover_url: cover_url || null,
+        language: language || 'th',
+        source: 'google_books',
+      })
+      if (insertErr) {
+        console.error('[/api/books/view] insert error:', insertErr.message)
+        return NextResponse.json({ error: insertErr.message }, { status: 500 })
+      }
     }
 
-    // ยังไม่มี + มี title → insert ใหม่ พร้อม view_count = 1
-    if (!title) {
-      return NextResponse.json({ ok: true, skipped: true })
+    // 3. ลอง increment view_count (silent ignore ถ้า column ไม่มี)
+    const { error: rpcErr } = await sb.rpc('increment_book_view', { p_isbn: isbn })
+    if (rpcErr && !rpcErr.message?.includes('does not exist')) {
+      console.warn('[view_count]', rpcErr.message)
     }
-    const { error: insertErr } = await sb.from('books').insert({
-      isbn,
-      title,
-      author: author || '',
-      publisher: publisher || null,
-      cover_url: cover_url || null,
-      language: language || 'th',
-      source: 'google_books',
-      view_count: 1,
-    })
-    if (insertErr) {
-      console.error('[/api/books/view] insert error:', insertErr.message)
-      return NextResponse.json({ error: insertErr.message }, { status: 500 })
-    }
-    return NextResponse.json({ ok: true, created: true, view_count: 1 })
+
+    return NextResponse.json({ ok: true, created: !existing })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 })
   }

@@ -2,7 +2,7 @@
 // คู่ขนาน, merge by ISBN, ไม่มี auto-cache
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, rankBooksByQuery, _searchDebug } from '@/lib/search'
+import { fetchGoogleBooksByTitle, rankBooksByQuery } from '@/lib/search'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -100,16 +100,5 @@ export async function GET(req: NextRequest) {
   // เล่มมีคนขายก่อน → เล่มไม่มีคนขายตามมา (ทั้งคู่ระดับ relevance ภายในกลุ่ม)
   const results = [...withListings, ...noListings]
 
-  return NextResponse.json({
-    results,
-    debug: {
-      q,
-      googleAfterFilter: google.length,
-      googleRaw: _searchDebug.lastRawCount,
-      googleRawTitles: _searchDebug.lastRawTitles,
-      dbRaw: dbBooks.length,
-      mergedRaw: allBooks.length,
-      afterRank: ranked.length,
-    }
-  })
+  return NextResponse.json({ results })
 }
