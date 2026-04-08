@@ -28,6 +28,7 @@ export default function MarketPage() {
       .select('isbn, title, author, cover_url, wanted_count, active_listings_count, min_price')
       .gt('wanted_count', 0)
       .order('wanted_count', { ascending: false })
+      .order('created_at', { ascending: false })  // tiebreaker: newer first
       .limit(50)
     setItems(data || [])
     setLoading(false)

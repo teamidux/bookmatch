@@ -59,7 +59,7 @@ export default function HomePage() {
   const loadData = async () => {
     const [recentRes, { data: wanted }] = await Promise.all([
       fetch('/api/listings/recent?limit=10'),
-      supabase.from('books').select('*').gt('wanted_count', 0).order('wanted_count', { ascending: false }).limit(3),
+      supabase.from('books').select('*').gt('wanted_count', 0).order('wanted_count', { ascending: false }).order('created_at', { ascending: false }).limit(3),
     ])
     const { listings } = await recentRes.json()
     setRecentListings(listings || [])
