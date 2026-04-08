@@ -36,10 +36,17 @@ export async function GET(req: NextRequest) {
       return []
     }
   })()
+  // DEBUG: ดู error จาก Google branch แทนที่จะกลืนเงียบ
+  let googleError: string | null = null
   const [google, dbBooks] = await Promise.all([
-    fetchGoogleBooksByTitle(q, 20).catch(() => [] as any[]),
+    fetchGoogleBooksByTitle(q, 20).catch((err: any) => {
+      googleError = String(err?.message || err)
+      console.error('[search] google fail:', googleError)
+      return [] as any[]
+    }),
     dbQuery,
   ])
+  const hasApiKey = !!(process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY)
 
   // ดึง listings count + min_price จริงจาก listings table (ไม่ trust column ใน books)
   const bookIds = (dbBooks || []).map(b => b.id).filter(Boolean)
@@ -108,5 +115,16 @@ export async function GET(req: NextRequest) {
   const matchQuality: 'exact' | 'partial' | 'none' =
     results.length === 0 ? 'none' : isExact ? 'exact' : 'partial'
 
-  return NextResponse.json({ results, matchQuality })
+  return NextResponse.json({
+    results,
+    matchQuality,
+    _debug: {
+      hasApiKey,
+      googleRaw: google.length,
+      dbRaw: dbBooks.length,
+      mergedTotal: allBooks.length,
+      afterRank: ranked.length,
+      googleError,
+    },
+  })
 }
