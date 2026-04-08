@@ -24,9 +24,10 @@ export async function GET(req: NextRequest) {
     max_results: DB_LIMIT,
   })
 
-  if (rpcError) {
-    // Fallback ถ้า RPC ยังไม่ถูกสร้าง (SQL ยังไม่ run) → ใช้ .or() แบบเดิม
-    console.warn('[/api/search/db] RPC missing, falling back to .or():', rpcError.message)
+  if (rpcError || !rpcData || rpcData.length === 0) {
+    // Fallback ถ้า RPC ยังไม่ถูกสร้าง (SQL ยังไม่ run) หรือไม่เจอ →
+    // ใช้ .or() แบบเดิมพร้อม searchVariants ที่ generate ทั้ง composed/decomposed form
+    if (rpcError) console.warn('[/api/search/db] RPC missing, fallback:', rpcError.message)
     const orFilter = buildOrFilter(searchVariants(q))
     const { data: fallbackData } = await supabase
       .from('books')

@@ -161,6 +161,7 @@ export function normalizeThai(s: string): string {
 
 /**
  * สร้าง query variants เพื่อ fuzzy search:
+ * - composed/decomposed sara am (ำ ↔ ◌ํา)
  * - ตัวเลขอารบิก ↔ คำไทย  (4 ↔ สี่)
  * - มีช่องว่าง / ไม่มีช่องว่าง
  * - สระสั้น ↔ สระยาว  (ทิม ↔ ทีม)
@@ -171,12 +172,16 @@ export function searchVariants(q: string): string[] {
 
   const add = (s: string) => {
     const t = s.trim()
-    if (t.length >= 1) {
-      set.add(t)
-      // เพิ่มแบบไม่มี space ถ้าต่างจากต้นฉบับ
-      const noSpace = t.replace(/\s/g, '')
-      if (noSpace !== t) set.add(noSpace)
-    }
+    if (t.length < 1) return
+    set.add(t)
+    // เพิ่มแบบไม่มี space ถ้าต่างจากต้นฉบับ
+    const noSpace = t.replace(/\s/g, '')
+    if (noSpace !== t) set.add(noSpace)
+    // เพิ่มทั้ง composed (ำ) และ decomposed (◌ํา) form ของ sara am
+    const composed = t.replace(/\u0E4D\u0E32/g, '\u0E33')
+    if (composed !== t) set.add(composed)
+    const decomposed = t.replace(/\u0E33/g, '\u0E4D\u0E32')
+    if (decomposed !== t) set.add(decomposed)
   }
 
   add(base)
