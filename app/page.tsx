@@ -147,8 +147,13 @@ export default function HomePage() {
                 ))}
                 {googleLiveResults.length > 0 && (
                   <>
-                    <div style={{ padding: '10px 14px 6px', fontSize: 12, fontWeight: 700, color: 'var(--ink3)', background: 'var(--surface)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      📚 มีในฐานข้อมูล ยังไม่มีคนลงขาย
+                    <div style={{ padding: '12px 14px 8px', background: 'var(--surface)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.04em' }}>
+                        📚 พบข้อมูลหนังสือ ยังไม่มีคนลงขาย
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2, lineHeight: 1.5 }}>
+                        กด "ต้องการเล่มนี้" — เราจะแจ้งเตือนเมื่อมีคนลงขาย
+                      </div>
                     </div>
                     {googleLiveResults.map((b, i) => (
                       <button key={b.isbn} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}

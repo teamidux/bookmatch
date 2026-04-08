@@ -115,8 +115,13 @@ function SearchPage() {
 
           {!loading && googleResults.length > 0 && (
             <>
-              <div style={{ padding: '16px 0 12px', fontSize: 13, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '0.02em' }}>
-                📚 มีในฐานข้อมูล ยังไม่มีคนลงขาย ({googleResults.length})
+              <div style={{ padding: '20px 0 12px' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#121212', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                  📚 พบข้อมูลหนังสือ ยังไม่มีคนลงขาย ({googleResults.length})
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4, lineHeight: 1.6 }}>
+                  กด "ต้องการเล่มนี้" — เราจะแจ้งเตือนเมื่อมีคนลงขาย
+                </div>
               </div>
               {googleResults.map(b => (
                 <Link key={b.isbn} href={`/book/${b.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
