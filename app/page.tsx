@@ -49,8 +49,9 @@ export default function HomePage() {
         const { results, matchQuality: mq } = await r.json()
         if (cancelled) return
         // แยก: เล่มที่มีคนขาย (เด่น) vs เล่มจาก Google (ยังไม่มีคนขาย)
+        // ตัด preview ในหน้า home — กดปุ่ม "ดูผลทั้งหมด" จะไป /search ที่ไม่มี cap
         const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
-        const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 2)
+        const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5)
         setLiveResults(withListings)
         setGoogleLiveResults(noListings)
         setMatchQuality(mq || 'none')

@@ -92,6 +92,10 @@ export function rankBooksByQuery<T extends { title?: string; author?: string }>(
     .map(({ _score, ...rest }: any) => rest)
 }
 
+// DEBUG ชั่วคราว — record raw page diagnostics (จะลบหลัง diagnose Google fail บน Vercel)
+export type SearchPageDebug = { startIndex: number; status: number | null; rawItems: number; mapped: number; totalItems?: number; error?: string }
+export const _searchPageDebug: { last: SearchPageDebug[] } = { last: [] }
+
 // ขอ 1 หน้า (Google cap ~20 ต่อ request แม้ขอ maxResults=40 — ตรวจสอบกับ API จริงแล้ว)
 async function callGoogleSearchPage(qParam: string, startIndex: number): Promise<GoogleBook[]> {
   const apiKey = process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
@@ -105,25 +109,39 @@ async function callGoogleSearchPage(qParam: string, startIndex: number): Promise
   if (apiKey) params.set('key', apiKey)
   const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
 
+  const dbg: SearchPageDebug = { startIndex, status: null, rawItems: 0, mapped: 0 }
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), 8000)
   try {
     const r = await fetch(url, { signal: ctrl.signal })
     clearTimeout(t)
+    dbg.status = r.status
     if (!r.ok) {
-      console.warn('[Google Books]', r.status, 'q:', qParam, 'startIndex:', startIndex)
+      const body = await r.text().catch(() => '')
+      dbg.error = body.slice(0, 200)
+      console.warn('[Google Books]', r.status, body.slice(0, 200), 'q:', qParam, 'startIndex:', startIndex)
+      _searchPageDebug.last.push(dbg)
       return []
     }
     const d = await r.json()
-    if (!d.items?.length) return []
+    dbg.totalItems = d.totalItems
+    dbg.rawItems = d.items?.length || 0
+    if (!d.items?.length) {
+      _searchPageDebug.last.push(dbg)
+      return []
+    }
     const out: GoogleBook[] = []
     for (const item of d.items) {
       const mapped = mapVolume(item)
       if (mapped) out.push(mapped)
     }
+    dbg.mapped = out.length
+    _searchPageDebug.last.push(dbg)
     return out
   } catch (err: any) {
     clearTimeout(t)
+    dbg.error = String(err?.message || err)
+    _searchPageDebug.last.push(dbg)
     console.error('[Google Books] error:', err?.message || err, 'startIndex:', startIndex)
     return []
   }
@@ -135,6 +153,7 @@ async function callGoogleSearchPage(qParam: string, startIndex: number): Promise
  * — ปัญหาคลาสสิกของหนังสือชุดเช่น Harry Potter ที่มีหลายเล่ม/หลายภาษา
  */
 export async function fetchGoogleBooksByTitle(query: string, limit: number = 10): Promise<GoogleBook[]> {
+  _searchPageDebug.last = []
   const pages = await Promise.all([
     callGoogleSearchPage(query, 0),
     callGoogleSearchPage(query, 20),

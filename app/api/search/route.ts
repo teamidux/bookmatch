@@ -2,7 +2,7 @@
 // คู่ขนาน, merge by ISBN, ไม่มี auto-cache
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/lib/search'
+import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch, _searchPageDebug } from '@/lib/search'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -125,6 +125,7 @@ export async function GET(req: NextRequest) {
       mergedTotal: allBooks.length,
       afterRank: ranked.length,
       googleError,
+      pages: _searchPageDebug.last,
     },
   })
 }
