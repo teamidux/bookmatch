@@ -25,14 +25,15 @@ export async function GET(req: NextRequest) {
   // SQL ILIKE ปกติทำงานได้ (verified with ขุนช้างขุนแผน case)
   const escaped = q.replace(/[%_]/g, '\\$&')
   const escapedNoWs = escaped.replace(/\s+/g, '')
-  const variants = new Set([escaped])
-  if (escapedNoWs !== escaped && escapedNoWs.length > 0) variants.add(escapedNoWs)
+  const variants: string[] = [escaped]
+  if (escapedNoWs !== escaped && escapedNoWs.length > 0) variants.push(escapedNoWs)
 
   const dbErrors: string[] = []
   const dbQuery = (async () => {
     try {
       const queries: Promise<any>[] = []
-      for (const v of variants) {
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i]
         queries.push(
           supabase.from('books').select('id, isbn, title, author, cover_url, wanted_count').ilike('title', `%${v}%`).limit(20),
           supabase.from('books').select('id, isbn, title, author, cover_url, wanted_count').ilike('author', `%${v}%`).limit(10),
@@ -178,7 +179,7 @@ export async function GET(req: NextRequest) {
       hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       dbErrors,
-      variants: Array.from(variants),
+      variants,
     },
   })
 }
