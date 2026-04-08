@@ -6,6 +6,9 @@ import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// รัน function ที่ Singapore (ใกล้ผู้ใช้ไทยที่สุด) — Google Books API geo-localize
+// ตาม IP ของ caller, ถ้ารันที่ US จะได้ผลที่ไม่เกี่ยวกับหนังสือไทย
+export const preferredRegion = 'sin1'
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
@@ -43,6 +46,12 @@ export async function GET(req: NextRequest) {
     }),
     dbQuery,
   ])
+  // DEBUG ชั่วคราว — ลบหลัง verify region fix
+  const _dbg = {
+    googleCount: google.length,
+    googleSample: google.slice(0, 5).map((b: any) => b.title),
+    region: process.env.VERCEL_REGION || 'unknown',
+  }
 
   // ดึง listings count + min_price จริงจาก listings table (ไม่ trust column ใน books)
   const bookIds = (dbBooks || []).map(b => b.id).filter(Boolean)
@@ -111,5 +120,5 @@ export async function GET(req: NextRequest) {
   const matchQuality: 'exact' | 'partial' | 'none' =
     results.length === 0 ? 'none' : isExact ? 'exact' : 'partial'
 
-  return NextResponse.json({ results, matchQuality })
+  return NextResponse.json({ results, matchQuality, _dbg })
 }
