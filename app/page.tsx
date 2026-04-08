@@ -182,8 +182,8 @@ export default function HomePage() {
 
         <div className="stats-bar">
           <div className="stat">
-            <div className="stat-n">40M+</div>
-            <div className="stat-l">หนังสือทั่วโลก</div>
+            <div className="stat-n">200,000+</div>
+            <div className="stat-l">หนังสือในระบบ</div>
           </div>
           <div className="stat">
             <div className="stat-n">{stats.listings}</div>
