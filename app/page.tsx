@@ -19,6 +19,7 @@ export default function HomePage() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const scanInputRef = useRef<HTMLInputElement>(null)
   const { msg, show } = useToast()
 
@@ -26,12 +27,13 @@ export default function HomePage() {
 
   // Live search — DB ก่อน (เร็ว ~100ms), Google เติมในพื้นหลัง (1-3s)
   useEffect(() => {
-    if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); return }
+    if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); setGoogleLoading(false); return }
     let cancelled = false
     const t = setTimeout(async () => {
       const q = query.trim()
       if (/^(978|979)\d{10}$/.test(q.replace(/[^0-9]/g, ''))) return
       setLiveSearching(true)
+      setGoogleLoading(q.length >= 2)
       setGoogleLiveResults([])
 
       // 1. DB ก่อน — แสดงทันที
@@ -48,10 +50,15 @@ export default function HomePage() {
       // 2. Google ในพื้นหลัง — append เมื่อพร้อม (ไม่บล็อก)
       if (q.length >= 2) {
         const dbIsbns = new Set((data || []).map(b => b.isbn))
-        fetchGoogleBooksByTitle(q, 5).then(gBooks => {
-          if (cancelled) return
-          setGoogleLiveResults((gBooks || []).filter(b => !dbIsbns.has(b.isbn)).slice(0, 2))
-        }).catch(() => {})
+        fetchGoogleBooksByTitle(q, 5)
+          .then(gBooks => {
+            if (cancelled) return
+            setGoogleLiveResults((gBooks || []).filter(b => !dbIsbns.has(b.isbn)).slice(0, 2))
+          })
+          .catch(() => {})
+          .finally(() => { if (!cancelled) setGoogleLoading(false) })
+      } else {
+        setGoogleLoading(false)
       }
     }, 180)
     return () => { cancelled = true; clearTimeout(t) }
@@ -176,8 +183,8 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Empty state — เมื่อพิมพ์แล้วไม่เจอเลย */}
-            {query.trim() && !liveSearching && liveResults.length === 0 && googleLiveResults.length === 0 && (
+            {/* Empty state — รอทั้ง DB และ Google เสร็จก่อน ไม่งั้นจะ flicker */}
+            {query.trim() && !liveSearching && !googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6, padding: '20px 16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>
@@ -189,6 +196,16 @@ export default function HomePage() {
                 <button onClick={doSearch} style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 10, padding: '10px 16px', minHeight: 44, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: 'var(--primary)', cursor: 'pointer' }}>
                   🔍 ค้นต่อในฐานข้อมูล →
                 </button>
+              </div>
+            )}
+
+            {/* Loading state — Google ยังหาอยู่ และยังไม่มีผลใดๆ */}
+            {query.trim() && !liveSearching && googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6, padding: '20px 16px', textAlign: 'center' }}>
+                <span className="spin" style={{ width: 20, height: 20 }} />
+                <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 10, lineHeight: 1.6 }}>
+                  กำลังค้นในฐานข้อมูลเพิ่มเติม...
+                </div>
               </div>
             )}
           </div>

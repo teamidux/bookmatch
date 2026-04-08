@@ -2,7 +2,6 @@
 // the slower Google fallback finishes.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { searchVariants, buildOrFilter } from '@/lib/search'
 
 const DB_LIMIT = 50
 
@@ -15,13 +14,17 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const orFilter = buildOrFilter(searchVariants(q))
-  const { data: books } = await supabase
-    .from('books')
-    .select('id, isbn, title, author, cover_url, wanted_count')
-    .or(orFilter)
-    .limit(DB_LIMIT)
+  // ใช้ RPC search_books_fuzzy — ค้น title + author + alt_titles
+  // ranked by prefix > substring > author > alt
+  const { data: books, error } = await supabase.rpc('search_books_fuzzy', {
+    search_query: q,
+    max_results: DB_LIMIT,
+  })
 
+  if (error) {
+    console.error('[/api/search/db] rpc error:', error.message)
+    return NextResponse.json({ results: [], error: error.message })
+  }
   if (!books || books.length === 0) return NextResponse.json({ results: [] })
 
   // Fetch active listings to compute price + count per book

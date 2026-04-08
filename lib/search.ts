@@ -194,9 +194,9 @@ export function searchVariants(q: string): string[] {
 
 /**
  * สร้าง Supabase .or() string จาก variants
- * columns: ['title', 'author']
+ * columns: title, author, alt_titles (user-contributed Thai aliases)
  */
-export function buildOrFilter(variants: string[], columns = ['title', 'author']): string {
+export function buildOrFilter(variants: string[], columns = ['title', 'author', 'alt_titles']): string {
   return variants
     .flatMap(v => columns.map(col => `${col}.ilike.%${v}%`))
     .join(',')
