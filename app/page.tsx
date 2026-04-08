@@ -36,20 +36,21 @@ export default function HomePage() {
       setGoogleLiveResults([])
 
       const orFilter = buildOrFilter(searchVariants(q))
+      // dropdown แสดงสูงสุด 5 รายการ (3 DB + 2 Google) — ที่เหลือคลิก "ดูทั้งหมด"
       const dbPromise = supabase
         .from('books')
         .select('id, isbn, title, author, cover_url')
         .or(orFilter)
-        .limit(6)
+        .limit(3)
 
       // เรียก Google คู่ขนาน — ทำเฉพาะ query ยาวพอเพื่อประหยัด quota
       const googlePromise = q.length >= 3 ? fetchGoogleBooksByTitle(q) : Promise.resolve([])
 
       const [{ data }, gBooks] = await Promise.all([dbPromise, googlePromise])
       setLiveResults(data || [])
-      // กรอง Google ออก ISBN ที่ซ้ำกับ DB (เพราะแสดงใน DB section แล้ว)
+      // กรอง Google ออก ISBN ที่ซ้ำกับ DB และ cap ที่ 2 รายการ
       const dbIsbns = new Set((data || []).map(b => b.isbn))
-      setGoogleLiveResults((gBooks || []).filter(b => !dbIsbns.has(b.isbn)))
+      setGoogleLiveResults((gBooks || []).filter(b => !dbIsbns.has(b.isbn)).slice(0, 2))
       setLiveSearching(false)
     }, 220)
     return () => clearTimeout(t)
