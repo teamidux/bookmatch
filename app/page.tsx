@@ -198,16 +198,13 @@ export default function HomePage() {
             <Link key={l.id} href={`/book/${l.books?.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="card">
                 <div className="book-card">
-                  {l.photos?.[0]
-                    ? <img src={l.photos[0]} alt="" style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-                    : <BookCover coverUrl={l.books?.cover_url} title={l.books?.title} size={52} />
-                  }
+                  <BookCover coverUrl={l.photos?.[0] || l.books?.cover_url} title={l.books?.title} size={72} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.books?.title}</div>
-                    <div className="book-author">{l.books?.author}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                    <div className="book-title" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.books?.title}</div>
+                    {l.books?.author && <div className="book-author">{l.books.author}</div>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
                       <span className="price">฿{l.price}</span>
-                      {l.price_includes_shipping && <span style={{ fontSize: 11, color: 'var(--green)' }}>ส่งฟรี</span>}
+                      {l.price_includes_shipping && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--green)' }}>ส่งฟรี</span>}
                     </div>
                   </div>
                 </div>

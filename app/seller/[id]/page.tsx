@@ -96,23 +96,27 @@ export default function SellerPage({ params }: PageProps) {
             if (!query.trim()) return true
             const q = query.toLowerCase()
             return l.books?.title?.toLowerCase().includes(q) || l.books?.author?.toLowerCase().includes(q)
-          }).map(l => (
-            <Link key={l.id} href={`/book/${l.books?.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="card">
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <BookCover coverUrl={l.books?.cover_url} title={l.books?.title} size={52} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.books?.title}</div>
-                    <div className="book-author">{l.books?.author}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
-                      <span className="price">฿{l.price}</span>
-                      <CondBadge cond={l.condition} />
+          }).map(l => {
+            // ใช้รูปจริงที่ผู้ขายอัปโหลด (photos[0]) ถ้ามี — fallback เป็น cover ของหนังสือ
+            const displayImage = l.photos?.[0] || l.books?.cover_url
+            return (
+              <Link key={l.id} href={`/book/${l.books?.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="card">
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <BookCover coverUrl={displayImage} title={l.books?.title} size={84} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="book-title" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.books?.title}</div>
+                      {l.books?.author && <div className="book-author">{l.books.author}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                        <span className="price">฿{l.price}</span>
+                        <CondBadge cond={l.condition} />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
         <div style={{ height: 12 }} />
       </div>
