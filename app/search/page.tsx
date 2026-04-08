@@ -33,28 +33,31 @@ function SearchPage() {
     if (q) { doSearch(q); setSearched(true) }
   }, [searchParams])
 
-  // debounced live search — ยิง query หลังพิมพ์หยุด 400ms
+  // debounced live search — ยิง query หลังพิมพ์หยุด 220ms
   useEffect(() => {
     if (!query.trim()) { setResults([]); setSearched(false); return }
-    const t = setTimeout(() => { doSearch(query); setSearched(true) }, 400)
+    const t = setTimeout(() => { doSearch(query); setSearched(true) }, 220)
     return () => clearTimeout(t)
   }, [query])
 
   const doSearch = async (q: string) => {
     if (!q.trim()) return
+    const trimmed = q.trim()
     setLoading(true)
+    setGoogleLoading(trimmed.length >= 3)
     setGoogleResults([])
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`)
-    const { results } = await res.json()
-    setResults(results || [])
+
+    // ค้น DB + Google คู่ขนาน — เพื่อให้คนเห็น match อื่นๆ ที่อยู่นอก DB
+    const dbPromise = fetch(`/api/search?q=${encodeURIComponent(trimmed)}`).then(r => r.json())
+    const googlePromise = trimmed.length >= 3 ? fetchGoogleBooksByTitle(trimmed) : Promise.resolve([])
+
+    const [{ results: dbResults }, gBooks] = await Promise.all([dbPromise, googlePromise])
+    setResults(dbResults || [])
     setLoading(false)
-    // ถ้า DB ไม่มีผล และ query ยาวพอ → fallback Google Books
-    if ((!results || results.length === 0) && q.trim().length >= 3) {
-      setGoogleLoading(true)
-      const gBooks = await fetchGoogleBooksByTitle(q.trim())
-      setGoogleResults(gBooks)
-      setGoogleLoading(false)
-    }
+    // กรอง Google ออก ISBN ที่ซ้ำกับ DB เพื่อไม่แสดงซ้ำ
+    const dbIsbns = new Set((dbResults || []).map((b: any) => b.isbn))
+    setGoogleResults((gBooks || []).filter((b: any) => !dbIsbns.has(b.isbn)))
+    setGoogleLoading(false)
   }
 
   const handleSubmit = () => {

@@ -24,7 +24,9 @@ export default function HomePage() {
 
   useEffect(() => { loadData() }, [])
 
-  // Live search — debounce 400ms, ใช้ fuzzy variants
+  // Live search — debounce 220ms, ค้น DB + Google Books คู่ขนาน
+  // เหตุผล: query "เทคนิค" อาจ match "เทคนิคการขาย" ใน DB → ผู้ใช้ควรเห็น
+  // "เทคนิคออกกำลังกาย" จาก Google ด้วย ไม่งั้นเหมือนระบบไม่รู้จัก
   useEffect(() => {
     if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); return }
     const t = setTimeout(async () => {
@@ -32,20 +34,24 @@ export default function HomePage() {
       if (/^(978|979)\d{10}$/.test(q.replace(/[^0-9]/g, ''))) return
       setLiveSearching(true)
       setGoogleLiveResults([])
+
       const orFilter = buildOrFilter(searchVariants(q))
-      const { data } = await supabase
+      const dbPromise = supabase
         .from('books')
         .select('id, isbn, title, author, cover_url')
         .or(orFilter)
         .limit(6)
+
+      // เรียก Google คู่ขนาน — ทำเฉพาะ query ยาวพอเพื่อประหยัด quota
+      const googlePromise = q.length >= 3 ? fetchGoogleBooksByTitle(q) : Promise.resolve([])
+
+      const [{ data }, gBooks] = await Promise.all([dbPromise, googlePromise])
       setLiveResults(data || [])
+      // กรอง Google ออก ISBN ที่ซ้ำกับ DB (เพราะแสดงใน DB section แล้ว)
+      const dbIsbns = new Set((data || []).map(b => b.isbn))
+      setGoogleLiveResults((gBooks || []).filter(b => !dbIsbns.has(b.isbn)))
       setLiveSearching(false)
-      // fallback Google Books ถ้า DB ไม่มีผลและ query >= 3 ตัว
-      if ((!data || data.length === 0) && q.length >= 3) {
-        const gBooks = await fetchGoogleBooksByTitle(q)
-        setGoogleLiveResults(gBooks)
-      }
-    }, 400)
+    }, 220)
     return () => clearTimeout(t)
   }, [query])
 
@@ -121,10 +127,15 @@ export default function HomePage() {
 
             {/* Live results dropdown */}
             {(liveResults.length > 0 || googleLiveResults.length > 0) && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,.15)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6 }}>
+                {liveResults.length > 0 && (
+                  <div style={{ padding: '10px 14px 6px', fontSize: 12, fontWeight: 700, color: 'var(--green)', background: '#F0FDF4', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    ✓ มีในระบบ มีคนลงขาย
+                  </div>
+                )}
                 {liveResults.map((b, i) => (
                   <button key={b.id} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
-                    style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: i < liveResults.length - 1 ? '1px solid var(--border-light)' : 'none', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
+                    style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: '1px solid var(--border-light)', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
                     <BookCover isbn={b.isbn} title={b.title} size={44} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
@@ -135,24 +146,25 @@ export default function HomePage() {
                 ))}
                 {googleLiveResults.length > 0 && (
                   <>
-                    <div style={{ padding: '6px 14px', fontSize: 10, fontWeight: 700, color: 'var(--ink3)', background: 'var(--surface)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                      พบในระบบ — ยังไม่มีผู้ลงขายตอนนี้
+                    <div style={{ padding: '10px 14px 6px', fontSize: 12, fontWeight: 700, color: 'var(--ink3)', background: 'var(--surface)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      📚 มีในฐานข้อมูล ยังไม่มีคนลงขาย
                     </div>
                     {googleLiveResults.map((b, i) => (
                       <button key={b.isbn} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
-                        style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: i < googleLiveResults.length - 1 ? '1px solid var(--border-light)' : 'none', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%', opacity: 0.85 }}>
+                        style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: '1px solid var(--border-light)', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
                         <BookCover isbn={b.isbn} title={b.title} size={44} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                           {b.author && <div style={{ fontSize: 13, fontWeight: 500, color: '#555555', lineHeight: 1.5, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.author}</div>}
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink3)', flexShrink: 0 }}>🔔</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink3)', flexShrink: 0 }}>🔔</span>
                       </button>
                     ))}
                   </>
                 )}
-                <button onClick={doSearch} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'var(--surface)', border: 'none', fontFamily: 'Kanit', fontSize: 13, color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
-                  🔍 ดูผลทั้งหมดสำหรับ "{query}"
+                <button onClick={doSearch} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '14px 16px', background: 'var(--primary)', border: 'none', fontFamily: 'Kanit', fontSize: 15, color: 'white', fontWeight: 600, cursor: 'pointer', textAlign: 'left', minHeight: 48 }}>
+                  <span>🔍 ดูผลทั้งหมดสำหรับ "{query}"</span>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>→</span>
                 </button>
               </div>
             )}
