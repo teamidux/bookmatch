@@ -158,10 +158,10 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Scan button */}
-          <label style={{ background: scanning ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.15)', border: '1.5px solid rgba(255,255,255,.3)', borderRadius: 10, padding: '12px 18px', color: 'white', fontFamily: 'Kanit', fontWeight: 600, fontSize: 14, cursor: scanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '0 auto', maxWidth: 440, width: '100%' }}>
+          {/* Scan button — secondary action บน home (search เป็น primary) */}
+          <label style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,.85)', fontFamily: 'Kanit', fontWeight: 500, fontSize: 13, cursor: scanning ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, margin: '0 auto', minHeight: 36, textDecoration: 'underline', textUnderlineOffset: 4 }}>
             <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={scanFromPhoto} style={{ display: 'none' }} disabled={scanning} />
-            {scanning ? <><span className="spin" style={{ width: 14, height: 14, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} /> กำลังอ่าน...</> : '📷 ค้นหาด้วย Barcode'}
+            {scanning ? <><span className="spin" style={{ width: 14, height: 14, borderColor: 'rgba(255,255,255,.3)', borderTopColor: 'white' }} /> กำลังอ่าน...</> : 'หรือ 📷 สแกนปกหนังสือ'}
           </label>
 
           {scanError && (
@@ -188,8 +188,15 @@ export default function HomePage() {
         </div>
 
         <div className="section">
-          <div className="section-hd">
-            <div className="section-title">ลงใหม่ล่าสุด</div>
+          <div className="section-hd" style={{ marginBottom: 16, alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#121212', lineHeight: 1.3, letterSpacing: '-0.02em' }}>
+                ✨ ลงใหม่ล่าสุด
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4, lineHeight: 1.5 }}>
+                หนังสือมือสองที่เพิ่งลงขายในระบบ
+              </div>
+            </div>
           </div>
           {loading && <SkeletonList count={5} />}
           {!loading && recentListings.length === 0 && (
