@@ -31,13 +31,15 @@ function extractISBN(info: any): string {
 function mapVolume(item: any): GoogleBook | null {
   const info = item.volumeInfo
   if (!info?.title) return null
+  // ตัดเล่มที่ไม่มี author ออก (ข้อมูลไม่ครบ)
+  if (!info.authors || !Array.isArray(info.authors) || info.authors.length === 0) return null
   const isbn = extractISBN(info)
   if (!isbn) return null
   const thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ''
   return {
     isbn,
     title: info.title,
-    author: info.authors?.join(', ') || '',
+    author: info.authors.join(', '),
     publisher: info.publisher || '',
     cover_url: thumb
       ? thumb.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '').replace(/&zoom=\d+/g, '')
@@ -46,47 +48,66 @@ function mapVolume(item: any): GoogleBook | null {
   }
 }
 
-/**
- * ค้น Google Books ด้วย query string
- */
-export async function fetchGoogleBooksByTitle(query: string, limit: number = 10): Promise<GoogleBook[]> {
+async function callGoogleSearch(qParam: string, limit: number): Promise<GoogleBook[]> {
   const apiKey = process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
-  try {
-    const maxResults = Math.min(40, Math.max(1, limit))
-    const params = new URLSearchParams({
-      q: query,
-      maxResults: String(maxResults),
-      printType: 'books',
-    })
-    if (apiKey) params.set('key', apiKey)
-    const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
+  const params = new URLSearchParams({
+    q: qParam,
+    maxResults: String(Math.min(40, Math.max(1, limit))),
+    printType: 'books',
+    orderBy: 'relevance',
+  })
+  if (apiKey) params.set('key', apiKey)
+  const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
 
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 8000)
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 8000)
+  try {
     const r = await fetch(url, { signal: ctrl.signal })
     clearTimeout(t)
     if (!r.ok) {
-      console.warn('[Google Books]', r.status, 'q:', query)
+      console.warn('[Google Books]', r.status, 'q:', qParam)
       return []
     }
     const d = await r.json()
     if (!d.items?.length) return []
-
+    const out: GoogleBook[] = []
     const seen = new Set<string>()
-    const results: GoogleBook[] = []
     for (const item of d.items) {
       const mapped = mapVolume(item)
-      if (!mapped) continue
-      if (seen.has(mapped.isbn)) continue
+      if (!mapped || seen.has(mapped.isbn)) continue
       seen.add(mapped.isbn)
-      results.push(mapped)
-      if (results.length >= limit) break
+      out.push(mapped)
+      if (out.length >= limit) break
     }
-    return results
+    return out
   } catch (err: any) {
+    clearTimeout(t)
     console.error('[Google Books] error:', err?.message || err)
     return []
   }
+}
+
+/**
+ * ค้น Google Books — intitle: ก่อน, fallback เป็น general ถ้าผลน้อย
+ */
+export async function fetchGoogleBooksByTitle(query: string, limit: number = 10): Promise<GoogleBook[]> {
+  // 1. ลอง intitle: ก่อน — match title field โดยตรง = relevant สุด
+  const inTitleResults = await callGoogleSearch(`intitle:${query}`, limit)
+
+  // 2. ถ้าได้น้อยกว่า 3 → fallback general search
+  if (inTitleResults.length < 3) {
+    const generalResults = await callGoogleSearch(query, limit)
+    // merge dedupe
+    const seen = new Set(inTitleResults.map(b => b.isbn))
+    for (const b of generalResults) {
+      if (seen.has(b.isbn)) continue
+      seen.add(b.isbn)
+      inTitleResults.push(b)
+      if (inTitleResults.length >= limit) break
+    }
+  }
+
+  return inTitleResults
 }
 
 /**

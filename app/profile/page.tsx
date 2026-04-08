@@ -71,7 +71,7 @@ export default function ProfilePage() {
     if (!user) return
     const { data } = await supabase
       .from('listings')
-      .select('*, books(isbn, title, author, cover_url)')
+      .select('*, books(isbn, title, author, cover_url, view_count)')
       .eq('seller_id', user.id)
       .order('created_at', { ascending: false })
     setListings(data || [])
@@ -360,7 +360,14 @@ export default function ProfilePage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.books?.title}</div>
                 <div className="price" style={{ marginTop: 3 }}>฿{l.price}</div>
-                <span className="badge badge-green" style={{ marginTop: 3, display: 'inline-block' }}>กำลังขาย</span>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+                  <span className="badge badge-green">กำลังขาย</span>
+                  {(l.books as any)?.view_count > 0 && (
+                    <span style={{ fontSize: 12, color: 'var(--ink3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      👁 {(l.books as any).view_count}
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <button onClick={() => setConfirmSoldId(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>

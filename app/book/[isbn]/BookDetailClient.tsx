@@ -22,6 +22,24 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
 
   useEffect(() => { loadData() }, [isbn])
 
+  // Auto-save book + increment view_count ทุกครั้งที่เปิดหน้า detail
+  // (ครั้งแรก = insert, ครั้งต่อไป = increment)
+  useEffect(() => {
+    if (!book?.title) return
+    fetch('/api/books/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        isbn,
+        title: book.title,
+        author: book.author,
+        cover_url: book.cover_url,
+        publisher: book.publisher,
+        language: book.language,
+      }),
+    }).catch(() => {})
+  }, [isbn, book?.title])
+
   const loadListings = async (bookId: string) => {
     try {
       const res = await fetch(`/api/listings?book_id=${bookId}`)
