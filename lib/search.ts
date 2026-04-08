@@ -92,6 +92,9 @@ export function rankBooksByQuery<T extends { title?: string; author?: string }>(
     .map(({ _score, ...rest }: any) => rest)
 }
 
+// DEBUG ชั่วคราว
+export const _dbgLast: any = { call: null }
+
 // ขอ 1 หน้า (Google cap ~20 ต่อ request แม้ขอ maxResults=40 — ตรวจสอบกับ API จริงแล้ว).
 // ถ้า GOOGLE_BOOKS_PROXY_URL set → call ผ่าน Thai proxy (real Thai IP) แทน
 // เพื่อแก้ปัญหา Google geo-localize ตาม caller IP (Vercel = sin1 ≠ Thailand)
@@ -110,11 +113,22 @@ async function callGoogleSearchPage(qParam: string, startIndex: number): Promise
   if (apiKey) params.set('key', apiKey)
 
   let url: string
+  let usedProxy = false
   if (proxyUrl && proxyToken) {
     params.set('t', proxyToken)
     url = `${proxyUrl}?${params.toString()}`
+    usedProxy = true
   } else {
     url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
+  }
+
+  const dbg: any = {
+    usedProxy,
+    hasProxyUrl: !!proxyUrl,
+    hasProxyToken: !!proxyToken,
+    proxyUrlPrefix: proxyUrl ? proxyUrl.slice(0, 40) : null,
+    tokenLen: proxyToken ? proxyToken.length : 0,
+    urlLen: url.length,
   }
 
   const ctrl = new AbortController()
@@ -122,21 +136,32 @@ async function callGoogleSearchPage(qParam: string, startIndex: number): Promise
   try {
     const r = await fetch(url, { signal: ctrl.signal })
     clearTimeout(t)
+    dbg.status = r.status
     if (!r.ok) {
-      console.warn('[Google Books]', r.status, 'q:', qParam, 'startIndex:', startIndex)
+      const body = await r.text().catch(() => '')
+      dbg.errorBody = body.slice(0, 200)
+      _dbgLast.call = dbg
       return []
     }
     const d = await r.json()
-    if (!d.items?.length) return []
+    dbg.totalItems = d.totalItems
+    dbg.rawItems = d.items?.length || 0
+    if (!d.items?.length) {
+      _dbgLast.call = dbg
+      return []
+    }
     const out: GoogleBook[] = []
     for (const item of d.items) {
       const mapped = mapVolume(item)
       if (mapped) out.push(mapped)
     }
+    dbg.mapped = out.length
+    _dbgLast.call = dbg
     return out
   } catch (err: any) {
     clearTimeout(t)
-    console.error('[Google Books] error:', err?.message || err, 'startIndex:', startIndex)
+    dbg.exception = String(err?.message || err)
+    _dbgLast.call = dbg
     return []
   }
 }
