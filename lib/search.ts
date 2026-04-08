@@ -126,6 +126,9 @@ async function callGoogleSearch(qParam: string, limit: number): Promise<GoogleBo
   }
 }
 
+// debug counters — แค่ใช้ระหว่าง diagnose
+export const _searchDebug: { lastRawCount?: number; lastRawTitles?: string[] } = {}
+
 /**
  * ค้น Google Books — general search (intitle: ไม่ดีกับ Thai), re-rank ด้วย score เอง
  */
@@ -133,6 +136,8 @@ export async function fetchGoogleBooksByTitle(query: string, limit: number = 10)
   // ดึงผลเยอะกว่าที่ต้องการ — เผื่อ re-rank แล้วเลือก top
   const fetchSize = Math.min(40, Math.max(limit * 2, 20))
   const results = await callGoogleSearch(query, fetchSize)
+  _searchDebug.lastRawCount = results.length
+  _searchDebug.lastRawTitles = results.slice(0, 10).map(b => b.title)
   // Re-rank: prefix > substring > partial — แก้ปัญหา Google ไม่ค่อย rank Thai ถูก
   const ranked = rankBooksByQuery(results, query)
   return ranked.slice(0, limit)
