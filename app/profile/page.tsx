@@ -227,11 +227,38 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <div style={{ background: 'var(--surface)', padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-around' }}>
+        <div style={{ background: 'var(--surface)', padding: '18px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-around' }}>
           <div style={{ textAlign: 'center' }}><div className="stat-n">{active.length}</div><div className="stat-l">กำลังขาย</div></div>
           <div style={{ textAlign: 'center' }}><div className="stat-n">{user.sold_count || 0}</div><div className="stat-l">ขายแล้ว</div></div>
           <div style={{ textAlign: 'center' }}><div className="stat-n">{user.confirmed_count || 0}</div><div className="stat-l">ยืนยันรับแล้ว</div></div>
         </div>
+
+        {/* Market demand insight — push sellers to /market page */}
+        <Link href="/market" style={{ textDecoration: 'none', color: 'inherit', display: 'block', padding: '14px 16px 0' }}>
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+              border: '1px solid #C7D2FE',
+              borderRadius: 14,
+              padding: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ fontSize: 32, lineHeight: 1 }}>📊</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#1D4ED8', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: 4 }}>
+                หนังสือที่ตลาดต้องการ
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
+                ดูว่าคนกำลังรอซื้อเล่มไหน — มีโอกาสขายไว
+              </div>
+            </div>
+            <div style={{ fontSize: 22, color: '#1D4ED8', fontWeight: 700, lineHeight: 1 }}>›</div>
+          </div>
+        </Link>
 
         {listings.length > 0 && (
           <div style={{ padding: '10px 16px 0' }}>
