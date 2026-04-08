@@ -80,12 +80,16 @@ export async function fetchOpenLibraryByQuery(query: string, limit: number = 10)
   }
 }
 
+// debug: ขอเก็บข้อมูลล่าสุดของ fetch สำหรับ debugging
+export const _searchDebug: { lastUrl?: string; lastStatus?: number; lastTotalItems?: number; lastError?: string; hasApiKey?: boolean } = {}
+
 /**
  * ค้น Google Books — single request, simple, robust
  */
 export async function fetchGoogleBooksByTitle(query: string, limit: number = 5): Promise<GoogleBook[]> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
+  _searchDebug.hasApiKey = !!apiKey
   try {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
     const maxResults = Math.min(40, Math.max(1, limit))
     const params = new URLSearchParams({
       q: query,
@@ -94,17 +98,22 @@ export async function fetchGoogleBooksByTitle(query: string, limit: number = 5):
     })
     if (apiKey) params.set('key', apiKey)
     const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
+    _searchDebug.lastUrl = url
 
     const ctrl = new AbortController()
     const t = setTimeout(() => ctrl.abort(), 8000)
     const r = await fetch(url, { signal: ctrl.signal })
     clearTimeout(t)
+    _searchDebug.lastStatus = r.status
     if (!r.ok) {
+      _searchDebug.lastError = `status ${r.status}`
       console.warn('[fetchGoogleBooksByTitle] status', r.status, 'q:', query)
       return []
     }
     const d = await r.json()
+    _searchDebug.lastTotalItems = d.totalItems
     if (!d.items?.length) {
+      _searchDebug.lastError = 'no items'
       console.warn('[fetchGoogleBooksByTitle] no items q:', query, 'totalItems:', d.totalItems)
       return []
     }
@@ -119,8 +128,10 @@ export async function fetchGoogleBooksByTitle(query: string, limit: number = 5):
       results.push(mapped)
       if (results.length >= limit) break
     }
+    _searchDebug.lastError = undefined
     return results
   } catch (err: any) {
+    _searchDebug.lastError = err?.message || String(err)
     console.error('[fetchGoogleBooksByTitle] error:', err?.message || err, 'q:', query)
     return []
   }

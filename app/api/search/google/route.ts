@@ -3,7 +3,7 @@
 // render first and external results stream in.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, fetchOpenLibraryByQuery, normalizeThai, GoogleBook } from '@/lib/search'
+import { fetchGoogleBooksByTitle, fetchOpenLibraryByQuery, normalizeThai, _searchDebug, GoogleBook } from '@/lib/search'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   if (gBooks.length === 0) {
     return NextResponse.json({
       results: [],
-      debug: { q, raw, googleCount: google.length, openLibCount: openLib.length, googleErr, openLibErr }
+      debug: { q, raw, googleCount: google.length, openLibCount: openLib.length, googleErr, openLibErr, ..._searchDebug }
     })
   }
 
