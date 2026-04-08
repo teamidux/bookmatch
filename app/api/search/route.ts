@@ -126,6 +126,9 @@ export async function GET(req: NextRequest) {
       afterRank: ranked.length,
       googleError,
       pages: _searchPageDebug.last,
+      mergedBeforeRank: _searchPageDebug.mergedBeforeRank,
+      postRank: _searchPageDebug.postRank,
+      qNorm: normalizeForMatch(q),
     },
   })
 }

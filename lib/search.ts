@@ -93,8 +93,8 @@ export function rankBooksByQuery<T extends { title?: string; author?: string }>(
 }
 
 // DEBUG ชั่วคราว — record raw page diagnostics (จะลบหลัง diagnose Google fail บน Vercel)
-export type SearchPageDebug = { startIndex: number; status: number | null; rawItems: number; mapped: number; totalItems?: number; error?: string }
-export const _searchPageDebug: { last: SearchPageDebug[] } = { last: [] }
+export type SearchPageDebug = { startIndex: number; status: number | null; rawItems: number; mapped: number; totalItems?: number; error?: string; rawTitles?: string[]; mappedTitles?: string[] }
+export const _searchPageDebug: { last: SearchPageDebug[]; postRank?: string[]; mergedBeforeRank?: string[] } = { last: [] }
 
 // ขอ 1 หน้า (Google cap ~20 ต่อ request แม้ขอ maxResults=40 — ตรวจสอบกับ API จริงแล้ว)
 async function callGoogleSearchPage(qParam: string, startIndex: number): Promise<GoogleBook[]> {
@@ -130,12 +130,14 @@ async function callGoogleSearchPage(qParam: string, startIndex: number): Promise
       _searchPageDebug.last.push(dbg)
       return []
     }
+    dbg.rawTitles = d.items.slice(0, 8).map((it: any) => it.volumeInfo?.title || '?')
     const out: GoogleBook[] = []
     for (const item of d.items) {
       const mapped = mapVolume(item)
       if (mapped) out.push(mapped)
     }
     dbg.mapped = out.length
+    dbg.mappedTitles = out.slice(0, 8).map(b => b.title)
     _searchPageDebug.last.push(dbg)
     return out
   } catch (err: any) {
@@ -169,8 +171,10 @@ export async function fetchGoogleBooksByTitle(query: string, limit: number = 10)
       merged.push(b)
     }
   }
+  _searchPageDebug.mergedBeforeRank = merged.slice(0, 12).map(b => b.title)
   // Re-rank: exact > prefix > substring — แก้ปัญหา Google ไม่ค่อย rank Thai ถูก
   const ranked = rankBooksByQuery(merged, query)
+  _searchPageDebug.postRank = ranked.slice(0, 12).map(b => b.title)
   return ranked.slice(0, limit)
 }
 
