@@ -501,23 +501,23 @@ function SellPage() {
                 <label className="label">รูปหน้าปก <span style={{ color: 'var(--red)' }}>*</span></label>
 
                 {coverPreview ? (
-                  <div style={{ position: 'relative', width: 130, height: 190, borderRadius: 10, overflow: 'hidden', background: 'var(--surface)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}>
+                  <div style={{ position: 'relative', width: '100%', maxWidth: 200, aspectRatio: '2 / 3', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)', boxShadow: '0 6px 18px rgba(0,0,0,0.15)' }}>
                     <img src={coverPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <button onClick={removeCover} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,.65)', border: 'none', borderRadius: '50%', width: 28, height: 28, color: 'white', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
+                    <button onClick={removeCover} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,.65)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: 12 }}>
-                    {/* portrait shape นำสายตาให้ user ถ่ายภาพหนังสือแนวตั้ง */}
+                    {/* portrait shape นำสายตาให้ user ถ่ายภาพหนังสือแนวตั้ง — 2:3 = book ratio มาตรฐาน */}
                     <label onClick={!user ? (e) => { e.preventDefault(); setShowLogin(true) } : undefined}
-                      style={{ width: 130, height: 190, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--primary-light)', border: '1.5px dashed var(--primary)', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--primary)', flexShrink: 0 }}>
+                      style={{ flex: 1, aspectRatio: '2 / 3', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'var(--primary-light)', border: '1.5px dashed var(--primary)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--primary)' }}>
                       {user && <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCoverChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />}
-                      <span style={{ fontSize: 32 }}>📷</span>
+                      <span style={{ fontSize: 38 }}>📷</span>
                       <span>ถ่ายรูป</span>
                     </label>
                     <label onClick={!user ? (e) => { e.preventDefault(); setShowLogin(true) } : undefined}
-                      style={{ width: 130, height: 190, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--ink2)', flexShrink: 0 }}>
+                      style={{ flex: 1, aspectRatio: '2 / 3', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--ink2)' }}>
                       {user && <input type="file" accept="image/*" ref={galleryInputRef} onChange={handleCoverChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />}
-                      <span style={{ fontSize: 32 }}>🖼️</span>
+                      <span style={{ fontSize: 38 }}>🖼️</span>
                       <span>คลังภาพ</span>
                     </label>
                   </div>
