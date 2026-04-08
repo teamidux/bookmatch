@@ -2,13 +2,13 @@
 // คู่ขนาน, merge by ISBN, ไม่มี auto-cache
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch, _strategyDebug } from '@/lib/search'
+import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/lib/search'
 
-export const runtime = 'nodejs'
+// Edge runtime: รันที่ edge ใกล้ user (Singapore สำหรับผู้ใช้ไทย) ไม่ใช่ที่
+// iad1 ตาม Hobby plan default — สำคัญเพราะ Google Books API geo-localize
+// ตาม caller IP, ถ้ารันที่ US จะได้แต่หนังสือไม่เกี่ยวกับหนังสือไทย
+export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
-// รัน function ที่ Singapore (ใกล้ผู้ใช้ไทยที่สุด) — Google Books API geo-localize
-// ตาม IP ของ caller, ถ้ารันที่ US จะได้ผลที่ไม่เกี่ยวกับหนังสือไทย
-export const preferredRegion = 'sin1'
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
@@ -46,12 +46,6 @@ export async function GET(req: NextRequest) {
     }),
     dbQuery,
   ])
-  // DEBUG ชั่วคราว — เปรียบเทียบ strategy
-  const _dbg = {
-    googleCount: google.length,
-    region: process.env.VERCEL_REGION || 'unknown',
-    strategies: _strategyDebug,
-  }
 
   // ดึง listings count + min_price จริงจาก listings table (ไม่ trust column ใน books)
   const bookIds = (dbBooks || []).map(b => b.id).filter(Boolean)
@@ -120,5 +114,13 @@ export async function GET(req: NextRequest) {
   const matchQuality: 'exact' | 'partial' | 'none' =
     results.length === 0 ? 'none' : isExact ? 'exact' : 'partial'
 
-  return NextResponse.json({ results, matchQuality, _dbg })
+  return NextResponse.json({
+    results,
+    matchQuality,
+    // DEBUG ชั่วคราว — verify edge runtime + region; ลบหลัง confirm
+    _dbg: {
+      googleCount: google.length,
+      region: process.env.VERCEL_REGION || (req.headers.get('x-vercel-id') || 'unknown'),
+    },
+  })
 }
