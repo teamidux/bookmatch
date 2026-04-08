@@ -42,9 +42,11 @@ export type Listing = {
 
 export type User = {
   id: string
-  phone: string
+  phone?: string | null
+  phone_verified_at?: string | null
+  line_user_id?: string | null
   display_name: string
-  avatar_url?: string
+  avatar_url?: string | null
   line_id?: string
   seller_type: 'individual' | 'store'
   store_name?: string
@@ -55,6 +57,7 @@ export type User = {
   is_verified: boolean
   is_pioneer: boolean
   pioneer_count: number
+  id_verified_at?: string | null
   created_at: string
 }
 
