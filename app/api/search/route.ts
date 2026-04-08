@@ -2,7 +2,7 @@
 // คู่ขนาน, merge by ISBN, ไม่มี auto-cache
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch, _strategyDebug } from '@/lib/search'
+import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/lib/search'
 
 // Edge runtime: รันที่ edge ใกล้ user (Singapore สำหรับผู้ใช้ไทย) ไม่ใช่ที่
 // iad1 ตาม Hobby plan default — สำคัญเพราะ Google Books API geo-localize
@@ -114,14 +114,5 @@ export async function GET(req: NextRequest) {
   const matchQuality: 'exact' | 'partial' | 'none' =
     results.length === 0 ? 'none' : isExact ? 'exact' : 'partial'
 
-  return NextResponse.json({
-    results,
-    matchQuality,
-    // DEBUG ชั่วคราว — verify edge runtime + region; ลบหลัง confirm
-    _dbg: {
-      googleCount: google.length,
-      region: process.env.VERCEL_REGION || (req.headers.get('x-vercel-id') || 'unknown'),
-      strategies: _strategyDebug,
-    },
-  })
+  return NextResponse.json({ results, matchQuality })
 }

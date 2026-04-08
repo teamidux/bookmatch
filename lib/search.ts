@@ -92,16 +92,14 @@ export function rankBooksByQuery<T extends { title?: string; author?: string }>(
     .map(({ _score, ...rest }: any) => rest)
 }
 
-// DEBUG ชั่วคราว — เก็บ raw + sample จาก Google เพื่อดูว่า sin1 IP คืนอะไร
-export const _strategyDebug: { [k: string]: { rawItems: number; sampleTitles: string[] } } = {}
-
-// ขอ 1 หน้า (Google cap ~20 ต่อ request แม้ขอ maxResults=40 — ตรวจสอบกับ API จริงแล้ว)
-async function callGoogleSearchPage(
-  qParam: string,
-  startIndex: number,
-  opts: { langRestrict?: string; strategyKey?: string } = {},
-): Promise<GoogleBook[]> {
+// ขอ 1 หน้า (Google cap ~20 ต่อ request แม้ขอ maxResults=40 — ตรวจสอบกับ API จริงแล้ว).
+// ถ้า GOOGLE_BOOKS_PROXY_URL set → call ผ่าน Thai proxy (real Thai IP) แทน
+// เพื่อแก้ปัญหา Google geo-localize ตาม caller IP (Vercel = sin1 ≠ Thailand)
+async function callGoogleSearchPage(qParam: string, startIndex: number): Promise<GoogleBook[]> {
   const apiKey = process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
+  const proxyUrl = process.env.GOOGLE_BOOKS_PROXY_URL
+  const proxyToken = process.env.GOOGLE_BOOKS_PROXY_TOKEN
+
   const params = new URLSearchParams({
     q: qParam,
     maxResults: '40',
@@ -109,9 +107,15 @@ async function callGoogleSearchPage(
     printType: 'books',
     orderBy: 'relevance',
   })
-  if (opts.langRestrict) params.set('langRestrict', opts.langRestrict)
   if (apiKey) params.set('key', apiKey)
-  const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
+
+  let url: string
+  if (proxyUrl && proxyToken) {
+    params.set('t', proxyToken)
+    url = `${proxyUrl}?${params.toString()}`
+  } else {
+    url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
+  }
 
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), 8000)
@@ -123,16 +127,7 @@ async function callGoogleSearchPage(
       return []
     }
     const d = await r.json()
-    const rawItems = d.items?.length || 0
-    if (opts.strategyKey) {
-      const cur = _strategyDebug[opts.strategyKey] || { rawItems: 0, sampleTitles: [] }
-      cur.rawItems += rawItems
-      if (cur.sampleTitles.length < 6 && d.items) {
-        cur.sampleTitles.push(...d.items.slice(0, 6 - cur.sampleTitles.length).map((it: any) => it.volumeInfo?.title || '?'))
-      }
-      _strategyDebug[opts.strategyKey] = cur
-    }
-    if (!rawItems) return []
+    if (!d.items?.length) return []
     const out: GoogleBook[] = []
     for (const item of d.items) {
       const mapped = mapVolume(item)
@@ -151,18 +146,14 @@ async function callGoogleSearchPage(
  * ดึง 3 หน้าขนานกัน (startIndex 0/20/40) เพื่อกวาดเล่มที่ Google ดัน rank ลงไปต่ำกว่า top 20
  * — ปัญหาคลาสสิกของหนังสือชุดเช่น Harry Potter ที่มีหลายเล่ม/หลายภาษา.
  *
- * NOTE: route caller (/api/search) ใช้ Edge runtime → รันที่ edge ใกล้ user
- * (Singapore สำหรับผู้ใช้ไทย) ทำให้ Google geo-localize เป็นเอเชียโดยอัตโนมัติ
+ * NOTE: ถ้าตั้ง GOOGLE_BOOKS_PROXY_URL → call ผ่าน Thai shared host proxy
+ * (real Thai IP) ดู infra/books-proxy.php และคู่มือ deploy
  */
 export async function fetchGoogleBooksByTitle(query: string, limit: number = 10): Promise<GoogleBook[]> {
-  for (const k of Object.keys(_strategyDebug)) delete _strategyDebug[k]
   const pages = await Promise.all([
-    // plain (no langRestrict) — เทียบ baseline
-    callGoogleSearchPage(query, 0, { strategyKey: 'plain' }),
-    callGoogleSearchPage(query, 20, { strategyKey: 'plain' }),
-    callGoogleSearchPage(query, 40, { strategyKey: 'plain' }),
-    // langRestrict=th — ทดสอบจาก Asia IP คราวนี้
-    callGoogleSearchPage(query, 0, { langRestrict: 'th', strategyKey: 'lang_th' }),
+    callGoogleSearchPage(query, 0),
+    callGoogleSearchPage(query, 20),
+    callGoogleSearchPage(query, 40),
   ])
   // Merge + dedupe by ISBN — เก็บ order ตาม Google relevance ก่อน rank ของเรา
   const seen = new Set<string>()
