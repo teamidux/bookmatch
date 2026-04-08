@@ -18,12 +18,18 @@ export async function GET(req: NextRequest) {
 
   // ค้น DB และ Google Books คู่ขนาน
   const escaped = q.replace(/[%_]/g, '\\$&')
+  // strip whitespace variant — กันกรณี user พิมพ์ "คิดใหญ่ไม่คิดเล็ก" แต่ DB เก็บ "คิดใหญ่ ไม่คิดเล็ก"
+  const escapedNoWs = escaped.replace(/\s+/g, '')
+  const orFilters = [`title.ilike.%${escaped}%`, `author.ilike.%${escaped}%`]
+  if (escapedNoWs !== escaped && escapedNoWs.length > 0) {
+    orFilters.push(`title.ilike.%${escapedNoWs}%`, `author.ilike.%${escapedNoWs}%`)
+  }
   const dbQuery = (async () => {
     try {
       const { data } = await supabase
         .from('books')
         .select('id, isbn, title, author, cover_url, wanted_count')
-        .or(`title.ilike.%${escaped}%,author.ilike.%${escaped}%`)
+        .or(orFilters.join(','))
         .limit(30)
       return data || []
     } catch {

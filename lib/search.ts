@@ -46,29 +46,43 @@ function mapVolume(item: any): GoogleBook | null {
   }
 }
 
+// ลบ whitespace ออกทั้งหมดเพื่อ compare แบบ space-insensitive
+// แก้ปัญหา "คิดใหญ่ไม่คิดเล็ก" (user) ≠ "คิดใหญ่ ไม่คิดเล็ก" (Google) ที่เป็น byte-wise mismatch
+function stripWs(s: string): string {
+  return s.replace(/\s+/g, '')
+}
+
 // Re-rank + filter: prefix match > substring > partial.
 // CRITICAL: ตัด books ที่ไม่มี query ใน title/author ออกเลย
 // (Google ส่ง fuzzy match บางทีไม่ตรง — กันแสดงเล่มที่ไม่เกี่ยว)
 export function rankBooksByQuery<T extends { title?: string; author?: string }>(books: T[], query: string): T[] {
   const q = query.toLowerCase().trim()
   if (!q) return books
+  const qNoWs = stripWs(q)
+
   return books
     .map(b => {
       const title = (b.title || '').toLowerCase()
+      const titleNoWs = stripWs(title)
       const author = (b.author || '').toLowerCase()
+      const authorNoWs = stripWs(author)
+
       let score = 0
-      if (title === q) score = 1000
-      else if (title.startsWith(q)) score = 500
+      if (title === q || titleNoWs === qNoWs) score = 1000
+      else if (title.startsWith(q) || titleNoWs.startsWith(qNoWs)) score = 500
       else if (title.includes(q)) {
-        // ใกล้ต้น title ยิ่งดี
         const idx = title.indexOf(q)
         score = 200 - Math.min(idx, 100)
-      } else if (author.includes(q)) {
+      } else if (titleNoWs.includes(qNoWs)) {
+        // หา position ใน no-ws title แล้วเอามาเทียบกับ original (รัช position)
+        const idx = titleNoWs.indexOf(qNoWs)
+        score = 180 - Math.min(idx, 100)
+      } else if (author.includes(q) || authorNoWs.includes(qNoWs)) {
         score = 50
       }
       return { ...b, _score: score }
     })
-    .filter((b: any) => b._score > 0)  // ตัดเล่มที่ไม่มี keyword จริง
+    .filter((b: any) => b._score > 0)
     .sort((a: any, b: any) => b._score - a._score)
     .map(({ _score, ...rest }: any) => rest)
 }
