@@ -110,7 +110,14 @@ export function BookCover({
   return (
     <div
       className="book-cover"
-      style={{ width: size, height: Math.round(size * 1.5) }}
+      style={{
+        width: size,
+        height: Math.round(size * 1.5),
+        background: '#E2E8F0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
       {src ? (
         <img
@@ -122,7 +129,10 @@ export function BookCover({
           }}
         />
       ) : (
-        <span style={{ fontSize: size * 0.4 }}>📗</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#64748B' }}>
+          <span style={{ fontSize: Math.max(18, size * 0.32) }}>📕</span>
+          {size >= 56 && <span style={{ fontSize: Math.max(10, size * 0.16), fontWeight: 500 }}>ไม่มีปก</span>}
+        </div>
       )}
     </div>
   )
