@@ -2,7 +2,7 @@
 // คู่ขนาน, merge by ISBN, auto-cache Google → DB หลัง rank ผ่าน
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch, _dbgLast } from '@/lib/search'
+import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/lib/search'
 
 // Edge runtime: รันที่ edge ใกล้ user (Singapore สำหรับผู้ใช้ไทย) ไม่ใช่ที่
 // iad1 ตาม Hobby plan default — สำคัญเพราะ Google Books API geo-localize
@@ -168,9 +168,5 @@ export async function GET(req: NextRequest) {
       })
   }
 
-  return NextResponse.json({
-    results,
-    matchQuality,
-    _dbg: { dbCount: (dbBooks||[]).length, googleCount: (google||[]).length, proxy: _dbgLast.call },
-  })
+  return NextResponse.json({ results, matchQuality })
 }
