@@ -182,16 +182,17 @@ export default function HomePage() {
 
             {/* Empty state — รอทั้ง DB และ Google เสร็จก่อน ไม่งั้นจะ flicker */}
             {query.trim() && !liveSearching && !googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6, padding: '20px 16px', textAlign: 'center' }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>
-                  ไม่พบ "{query}"
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6, padding: '24px 16px', textAlign: 'center' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
+                  ยังไม่พบหนังสือ "{query}"
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 14 }}>
-                  ลองค้นคำอื่น หรือสแกน barcode บนหนังสือ
+                <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16 }}>
+                  หนังสือเล่มนี้ยังไม่มีในระบบ<br />
+                  ลองพิมพ์ชื่อให้ครบ ใช้ ISBN หรือสแกน barcode
                 </div>
                 <button onClick={doSearch} style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 10, padding: '10px 16px', minHeight: 44, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: 'var(--primary)', cursor: 'pointer' }}>
-                  🔍 ค้นต่อในฐานข้อมูล →
+                  🔍 ค้นต่อในหน้าค้นหา →
                 </button>
               </div>
             )}

@@ -46,8 +46,9 @@ function mapVolume(item: any): GoogleBook | null {
   }
 }
 
-// Re-rank results: prefix match > substring > partial. Better than Google's
-// own relevance for Thai (Google tokenizes Thai poorly).
+// Re-rank + filter: prefix match > substring > partial.
+// CRITICAL: ตัด books ที่ไม่มี query ใน title/author ออกเลย
+// (Google ส่ง fuzzy match บางทีไม่ตรง — กันแสดงเล่มที่ไม่เกี่ยว)
 export function rankBooksByQuery<T extends { title?: string; author?: string }>(books: T[], query: string): T[] {
   const q = query.toLowerCase().trim()
   if (!q) return books
@@ -67,7 +68,8 @@ export function rankBooksByQuery<T extends { title?: string; author?: string }>(
       }
       return { ...b, _score: score }
     })
-    .sort((a, b) => (b as any)._score - (a as any)._score)
+    .filter((b: any) => b._score > 0)  // ตัดเล่มที่ไม่มี keyword จริง
+    .sort((a: any, b: any) => b._score - a._score)
     .map(({ _score, ...rest }: any) => rest)
 }
 

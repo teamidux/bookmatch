@@ -88,7 +88,12 @@ function SearchPage() {
           {!loading && results.length === 0 && googleResults.length === 0 && searched && query.trim() && (
             <div className="empty">
               <div className="empty-icon">🔍</div>
-              <div>ไม่พบหนังสือที่ตรงกับ "{query}"</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>
+                ยังไม่พบหนังสือ "{query}"
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16, maxWidth: 320, margin: '0 auto 16px' }}>
+                หนังสือเล่มนี้ยังไม่มีในระบบ ลองพิมพ์ชื่อให้ครบ ใช้ ISBN หรือสแกน barcode
+              </div>
             </div>
           )}
 
