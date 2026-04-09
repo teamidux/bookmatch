@@ -73,9 +73,12 @@ function SearchPage() {
       let mq = data1.matchQuality || 'none'
 
       // Step 2: ถ้า initial DB เจอน้อย → fallback ไป Google + auto-cache
+      // forceMode='all' = ผู้ใช้กดปุ่ม "ค้นหา" → deep search 5 pages parallel
+      // ไม่ force = live search → 1 page เบา ๆ
       if (initialMode === 'db' && allResults.length < FALLBACK_THRESHOLD) {
         setExpanding(true)
-        const r2 = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&mode=all`, { signal: ctrl.signal })
+        const deepPages = forceMode === 'all' ? 5 : 1
+        const r2 = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&mode=all&pages=${deepPages}`, { signal: ctrl.signal })
         const data2 = await r2.json()
         if (ctrl.signal.aborted) return
         allResults = data2.results || allResults

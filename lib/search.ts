@@ -181,6 +181,104 @@ export async function fetchGoogleBooksRaw(query: string): Promise<GoogleBook[]> 
 }
 
 /**
+ * Multi-page parallel fetch — ดึง N pages พร้อมกัน
+ * ใช้กับ "deep search" (กดปุ่มค้นหา) เพื่อเพิ่มโอกาสเจอเล่มที่มี ISBN
+ * เพราะ Thai book บน Google Books มี ISBN hit rate ต่ำ (~20%)
+ *
+ * pages=5 → 5 calls parallel, max ~200 raw items, ~40 mapped (มี ISBN)
+ * Quota cost: pages calls/search
+ */
+export async function fetchGoogleBooksMultiPage(query: string, pages: number = 5): Promise<{
+  books: GoogleBook[]
+  pagesDebug: Array<{ start: number; status: number | null; raw: number; mapped: number; error: string | null; ms: number }>
+}> {
+  const safePages = Math.max(1, Math.min(pages, 10))
+  const tasks = Array.from({ length: safePages }, (_, i) => {
+    const start = i * 40
+    return callGoogleSearchPageDebug(query, start)
+  })
+  const results = await Promise.all(tasks)
+
+  // Dedupe by ISBN — page หลังอาจซ้ำกับ page หน้า (Google บางทีทำ)
+  const seen = new Set<string>()
+  const merged: GoogleBook[] = []
+  for (const r of results) {
+    for (const b of r.books) {
+      if (!seen.has(b.isbn)) {
+        seen.add(b.isbn)
+        merged.push(b)
+      }
+    }
+  }
+
+  return {
+    books: merged,
+    pagesDebug: results.map(r => ({
+      start: r.startIndex,
+      status: r.httpStatus,
+      raw: r.rawCount,
+      mapped: r.mappedCount,
+      error: r.error,
+      ms: r.durationMs,
+    })),
+  }
+}
+
+// Internal helper — เหมือน callGoogleSearchPage แต่ return debug info ด้วย
+async function callGoogleSearchPageDebug(qParam: string, startIndex: number): Promise<{
+  books: GoogleBook[]
+  startIndex: number
+  httpStatus: number | null
+  rawCount: number
+  mappedCount: number
+  error: string | null
+  durationMs: number
+}> {
+  const apiKey = process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
+  const proxyUrl = process.env.GOOGLE_BOOKS_PROXY_URL
+  const proxyToken = process.env.GOOGLE_BOOKS_PROXY_TOKEN
+
+  const params = new URLSearchParams({
+    q: qParam,
+    maxResults: '40',
+    startIndex: String(startIndex),
+    printType: 'books',
+    orderBy: 'relevance',
+  })
+  if (apiKey) params.set('key', apiKey)
+
+  let url: string
+  if (proxyUrl && proxyToken) {
+    params.set('t', proxyToken)
+    url = `${proxyUrl}?${params.toString()}`
+  } else {
+    url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`
+  }
+
+  const start = Date.now()
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 10000)
+  try {
+    const r = await fetch(url, { signal: ctrl.signal })
+    clearTimeout(t)
+    if (!r.ok) {
+      return { books: [], startIndex, httpStatus: r.status, rawCount: 0, mappedCount: 0, error: `http_${r.status}`, durationMs: Date.now() - start }
+    }
+    const d = await r.json()
+    const rawItems = d?.items || []
+    const books: GoogleBook[] = []
+    for (const item of rawItems) {
+      const m = mapVolume(item)
+      if (m) books.push(m)
+    }
+    return { books, startIndex, httpStatus: r.status, rawCount: rawItems.length, mappedCount: books.length, error: null, durationMs: Date.now() - start }
+  } catch (err: any) {
+    clearTimeout(t)
+    return { books: [], startIndex, httpStatus: null, rawCount: 0, mappedCount: 0, error: err?.name === 'AbortError' ? 'timeout' : (err?.message || String(err)), durationMs: Date.now() - start }
+  }
+}
+
+/**
  * Debug variant — ไม่ catch อะไร, return ทุกอย่างที่เกิดขึ้น
  * ใช้สำหรับ inspect ว่า Google call fail ตรงไหน
  */

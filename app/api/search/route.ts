@@ -11,7 +11,7 @@
 // mode=all  → DB + Google + auto-cache — ใช้ตอน user explicit click "ค้นหา"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksRawDebug, normalizeForMatch } from '@/lib/search'
+import { fetchGoogleBooksRawDebug, fetchGoogleBooksMultiPage, normalizeForMatch } from '@/lib/search'
 
 // Edge runtime: รันที่ edge ใกล้ user (Singapore สำหรับผู้ใช้ไทย) ไม่ใช่ที่
 // iad1 ตาม Hobby plan default — สำคัญเพราะ Google Books API geo-localize
@@ -25,6 +25,9 @@ export async function GET(req: NextRequest) {
 
   const mode = req.nextUrl.searchParams.get('mode') === 'db' ? 'db' : 'all'
   const wantDebug = req.nextUrl.searchParams.get('debug') === '1'
+  // pages: จำนวน page Google ที่จะดึง (1=light/live, 5=deep/button) max 10
+  const pagesParam = parseInt(req.nextUrl.searchParams.get('pages') || '1', 10)
+  const pages = Math.max(1, Math.min(isNaN(pagesParam) ? 1 : pagesParam, 10))
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,13 +76,18 @@ export async function GET(req: NextRequest) {
   // ─────────────────────────────────────────────────────────────────
   // 2. GOOGLE QUERY (raw — ไม่ filter)
   // ─────────────────────────────────────────────────────────────────
+  // pages=1 → ใช้ debug version (1 call, มี sample_item ครบ)
+  // pages>1 → ใช้ multi-page parallel (deep search ตอนกดปุ่ม)
   const googlePromise = mode === 'db'
-    ? Promise.resolve({ books: [] as any[], debug: null as any })
-    : fetchGoogleBooksRawDebug(q)
+    ? Promise.resolve({ books: [] as any[], debug: null as any, pagesDebug: null as any })
+    : pages === 1
+      ? fetchGoogleBooksRawDebug(q).then(r => ({ books: r.books, debug: r.debug, pagesDebug: null as any }))
+      : fetchGoogleBooksMultiPage(q, pages).then(r => ({ books: r.books, debug: null as any, pagesDebug: r.pagesDebug }))
 
   const [googleResult, dbBooks] = await Promise.all([googlePromise, dbQuery])
   const googleRaw = googleResult.books
   const googleDebug = googleResult.debug
+  const pagesDebug = googleResult.pagesDebug
 
   // ─────────────────────────────────────────────────────────────────
   // 3. ดึง listings count + min_price จริงจาก listings table
@@ -199,6 +207,7 @@ export async function GET(req: NextRequest) {
       debug: {
         query: q,
         mode,
+        pages,
         google_raw_count: googleRaw.length,
         db_match_count: dbBooks.length,
         merged_count: results.length,
@@ -208,6 +217,7 @@ export async function GET(req: NextRequest) {
         google_isbns: googleRaw.map((b: any) => b.isbn),
         db_isbns: Array.from(dbIsbnSet),
         google: googleDebug,
+        pages_breakdown: pagesDebug,
       },
     }),
   })
