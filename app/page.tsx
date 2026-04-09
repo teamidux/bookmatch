@@ -26,10 +26,12 @@ export default function HomePage() {
 
   useEffect(() => { loadData() }, [])
 
-  // Live search — DB only (mode=db), ฟรี ไม่กิน Google quota
-  // ถ้า DB results < 5 → แสดงปุ่ม "ค้นในคลังทั้งหมด" ให้ user click เพื่อ trigger Google
+  // Live search — 3+ chars → DB ก่อน → ถ้าเจอน้อย (< 3) auto-fallback ไป Google
+  // ทุก search ที่ trigger Google = auto-cache เข้า DB → user ช่วยโต catalog
+  // Debounce 350ms กัน burst quota จากการพิมพ์เร็ว
   useEffect(() => {
-    if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); setGoogleLoading(false); return }
+    const trimmed = query.trim()
+    if (!trimmed) { setLiveResults([]); setGoogleLiveResults([]); setGoogleLoading(false); return }
 
     // ถ้า user paste ISBN-13 ที่ valid → auto-redirect ไปหน้า book
     const digits = query.replace(/[^0-9]/g, '')
@@ -38,50 +40,58 @@ export default function HomePage() {
       return
     }
 
+    // Min 3 chars ก่อน trigger ใดๆ
+    if (trimmed.length < 3) {
+      setLiveResults([])
+      setGoogleLiveResults([])
+      return
+    }
+
     let cancelled = false
     const t = setTimeout(async () => {
-      const q = query.trim()
+      const q = trimmed
       setLiveSearching(true)
       setGoogleLoading(false)
-      setGoogleLiveResults([])
+      const FALLBACK_THRESHOLD = 3
 
       try {
-        const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=db`)
-        const { results, matchQuality: mq } = await r.json()
+        // Step 1: ดึง DB ก่อน (ฟรี ไว)
+        const r1 = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=db`)
+        const { results: dbResults, matchQuality: mq1 } = await r1.json()
         if (cancelled) return
-        const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
-        const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5)
+
+        // ถ้า DB เจอเยอะแล้ว (>= 3) → จบ ไม่ต้อง call Google
+        if ((dbResults || []).length >= FALLBACK_THRESHOLD) {
+          const withListings = (dbResults || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
+          const noListings = (dbResults || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5 - withListings.length)
+          setLiveResults(withListings)
+          setGoogleLiveResults(noListings)
+          setMatchQuality(mq1 || 'none')
+          setLiveSearching(false)
+          return
+        }
+
+        // Step 2: DB เจอน้อย → fallback ไปดึง Google + auto-cache
+        setGoogleLoading(true)
+        const r2 = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=all`)
+        const { results: allResults, matchQuality: mq2 } = await r2.json()
+        if (cancelled) return
+        const withListings = (allResults || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
+        const noListings = (allResults || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5 - withListings.length)
         setLiveResults(withListings)
         setGoogleLiveResults(noListings)
-        setMatchQuality(mq || 'none')
+        setMatchQuality(mq2 || 'none')
       } catch {
         if (!cancelled) { setLiveResults([]); setGoogleLiveResults([]); setMatchQuality('none') }
       } finally {
-        if (!cancelled) setLiveSearching(false)
+        if (!cancelled) {
+          setLiveSearching(false)
+          setGoogleLoading(false)
+        }
       }
-    }, 180)
+    }, 350)
     return () => { cancelled = true; clearTimeout(t) }
   }, [query])
-
-  // Manual expand search — call mode=all เพื่อดึงจาก Google + auto-cache
-  const expandSearch = async () => {
-    const q = query.trim()
-    if (!q || googleLoading) return
-    setGoogleLoading(true)
-    try {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=all`)
-      const { results, matchQuality: mq } = await r.json()
-      const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
-      const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5)
-      setLiveResults(withListings)
-      setGoogleLiveResults(noListings)
-      setMatchQuality(mq || 'none')
-    } catch {
-      // silent — keep existing results
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
 
   const loadData = async () => {
     const [recentRes, { data: wanted }] = await Promise.all([
@@ -156,54 +166,24 @@ export default function HomePage() {
             {/* Live results dropdown */}
             {query.trim() && !liveSearching && (liveResults.length > 0 || googleLiveResults.length > 0) && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6 }}>
-                {liveResults.length > 0 && (
-                  <div style={{ padding: '10px 14px 6px', fontSize: 12, fontWeight: 700, color: 'var(--green)', background: '#F0FDF4', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    ✓ มีในระบบ มีคนลงขาย
-                  </div>
-                )}
-                {liveResults.map((b, i) => (
-                  <button key={b.id} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
-                    style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: '1px solid var(--border-light)', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
-                    <BookCover isbn={b.isbn} title={b.title} size={44} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
-                      {b.author && <div style={{ fontSize: 13, fontWeight: 500, color: '#555555', lineHeight: 1.5, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.author}</div>}
-                    </div>
-                    <span style={{ color: 'var(--primary)', fontSize: 14, fontWeight: 600, flexShrink: 0 }}>›</span>
-                  </button>
-                ))}
-                {googleLiveResults.length > 0 && (
-                  <>
-                    <div style={{ padding: '12px 14px 8px', background: 'var(--surface)' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.04em' }}>
-                        {matchQuality === 'exact' ? '📖 พบหนังสือ ยังไม่มีคนลงขาย' : '📚 ผลใกล้เคียง'}
+                {/* รวมเป็น list เดียว — with listings ก่อน, no listings ตาม (แต่ไม่มี section header) */}
+                {[...liveResults, ...googleLiveResults].map((b: any) => {
+                  const hasListing = (b.active_listings_count || 0) > 0
+                  return (
+                    <button key={b.isbn} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
+                      style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: '1px solid var(--border-light)', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
+                      <BookCover isbn={b.isbn} title={b.title} size={44} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                        {b.author && <div style={{ fontSize: 13, fontWeight: 500, color: '#555555', lineHeight: 1.5, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.author}</div>}
+                        {hasListing && b.min_price && (
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginTop: 2 }}>฿{b.min_price} · {b.active_listings_count} คนขาย</div>
+                        )}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2, lineHeight: 1.5 }}>
-                        {matchQuality === 'exact'
-                          ? 'กด "ต้องการเล่มนี้" เพื่อรับแจ้งเตือนเมื่อมีคนลง'
-                          : `เล่มที่มีคำว่า "${query}" — ไม่ใช่? ลองพิมพ์ให้ครบ`}
-                      </div>
-                    </div>
-                    {googleLiveResults.map((b, i) => (
-                      <button key={b.isbn} onClick={() => { router.push(`/book/${b.isbn}`); setQuery(''); setLiveResults([]); setGoogleLiveResults([]) }}
-                        style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'white', border: 'none', borderBottom: '1px solid var(--border-light)', padding: '12px 14px', cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left', width: '100%' }}>
-                        <BookCover isbn={b.isbn} title={b.title} size={44} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
-                          {b.author && <div style={{ fontSize: 13, fontWeight: 500, color: '#555555', lineHeight: 1.5, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.author}</div>}
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink3)', flexShrink: 0 }}>🔔</span>
-                      </button>
-                    ))}
-                  </>
-                )}
-                {/* ปุ่มขยายค้นหา — แสดงเมื่อผลรวมน้อยกว่า 5 (ขอเพิ่มจากคลังใหญ่) */}
-                {(liveResults.length + googleLiveResults.length) < 5 && (
-                  <button onClick={expandSearch} disabled={googleLoading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '14px 16px', background: googleLoading ? 'var(--surface)' : '#FEF3C7', border: 'none', borderTop: '1px solid var(--border-light)', fontFamily: 'Kanit', fontSize: 14, color: googleLoading ? 'var(--ink3)' : '#92400E', fontWeight: 600, cursor: googleLoading ? 'default' : 'pointer', textAlign: 'left', minHeight: 48 }}>
-                    <span>{googleLoading ? '⏳ กำลังค้นในคลัง...' : '📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)'}</span>
-                    {!googleLoading && <span style={{ fontSize: 16 }}>→</span>}
-                  </button>
-                )}
+                      <span style={{ color: hasListing ? 'var(--green)' : 'var(--ink3)', fontSize: 14, fontWeight: 600, flexShrink: 0 }}>›</span>
+                    </button>
+                  )
+                })}
                 <button onClick={doSearch} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '14px 16px', background: 'var(--primary)', border: 'none', fontFamily: 'Kanit', fontSize: 15, color: 'white', fontWeight: 600, cursor: 'pointer', textAlign: 'left', minHeight: 48 }}>
                   <span>🔍 ดูผลทั้งหมดสำหรับ "{query}"</span>
                   <span style={{ fontSize: 18, fontWeight: 700 }}>→</span>
@@ -211,20 +191,16 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Empty state — รอทั้ง DB และ Google เสร็จก่อน ไม่งั้นจะ flicker */}
-            {query.trim() && !liveSearching && !googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
+            {/* Empty state — query >= 3 chars แล้วยังไม่เจออะไร (auto-fetched DB+Google แล้ว) */}
+            {query.trim().length >= 3 && !liveSearching && !googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6, padding: '24px 16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
-                  ไม่พบ "{query}" ในระบบด่วน
+                  ไม่พบหนังสือ "{query}"
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16 }}>
-                  ลองค้นในคลังหลัก 200,000+ เล่ม<br />
-                  หรือพิมพ์ชื่อให้ครบ / ใช้ ISBN
+                <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>
+                  ลองพิมพ์ชื่อให้ครบ ใช้ ISBN<br />หรือสแกน barcode
                 </div>
-                <button onClick={expandSearch} style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 10, padding: '12px 20px', minHeight: 48, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: '#92400E', cursor: 'pointer' }}>
-                  📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)
-                </button>
               </div>
             )}
 

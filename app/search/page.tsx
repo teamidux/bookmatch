@@ -34,43 +34,57 @@ function SearchPage() {
     if (q) { doSearch(q); setSearched(true) }
   }, [searchParams])
 
-  // debounced live search — DB only, ฟรี ไม่กิน Google quota
+  // debounced live search — DB → ถ้าน้อย auto-fallback Google
   useEffect(() => {
-    if (!query.trim()) { setResults([]); setSearched(false); return }
-    const t = setTimeout(() => { doSearch(query); setSearched(true) }, 220)
+    const trimmed = query.trim()
+    if (!trimmed) { setResults([]); setGoogleResults([]); setSearched(false); return }
+    if (trimmed.length < 3) { setResults([]); setGoogleResults([]); return }
+    const t = setTimeout(() => { doSearch(trimmed); setSearched(true) }, 350)
     return () => clearTimeout(t)
   }, [query])
 
-  const doSearch = async (q: string, mode: 'db' | 'all' = 'db') => {
+  const doSearch = async (q: string, forceMode?: 'all') => {
     if (!q.trim()) return
-    if (mode === 'db') setLoading(true)
-    else setExpanding(true)
+    setLoading(true)
+    const FALLBACK_THRESHOLD = 3
     try {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&mode=${mode}`)
-      const { results, matchQuality: mq } = await r.json()
-      // แยกตามว่ามีคนขายมั้ย
-      const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0)
-      const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0)
+      // Step 1: DB ก่อน (เว้นแต่ user force mode=all เช่นกดปุ่ม "ค้นหา")
+      const initialMode = forceMode || 'db'
+      const r1 = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&mode=${initialMode}`)
+      const data1 = await r1.json()
+      let allResults = data1.results || []
+      let mq = data1.matchQuality || 'none'
+
+      // Step 2: ถ้า initial DB เจอน้อย → fallback ไป Google + auto-cache
+      if (initialMode === 'db' && allResults.length < FALLBACK_THRESHOLD) {
+        setExpanding(true)
+        const r2 = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&mode=all`)
+        const data2 = await r2.json()
+        allResults = data2.results || allResults
+        mq = data2.matchQuality || mq
+        setExpanding(false)
+      }
+
+      const withListings = allResults.filter((b: any) => (b.active_listings_count || 0) > 0)
+      const noListings = allResults.filter((b: any) => (b.active_listings_count || 0) === 0)
       setResults(withListings)
       setGoogleResults(noListings)
-      setMatchQuality(mq || 'none')
+      setMatchQuality(mq)
     } catch {
-      if (mode === 'db') {
-        setResults([])
-        setGoogleResults([])
-        setMatchQuality('none')
-      }
+      setResults([])
+      setGoogleResults([])
+      setMatchQuality('none')
     } finally {
       setLoading(false)
       setExpanding(false)
     }
   }
 
-  const expandSearch = () => doSearch(query, 'all')
-
   const handleSubmit = () => {
     if (!query.trim()) return
-    router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+    // กด "ค้นหา" → force mode=all เสมอ (ดึงเต็มที่)
+    doSearch(query, 'all')
+    setSearched(true)
   }
 
   return (
@@ -98,90 +112,49 @@ function SearchPage() {
             <div className="empty">
               <div className="empty-icon">🔍</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>
-                ไม่พบ "{query}" ในระบบด่วน
+                ไม่พบหนังสือ "{query}"
               </div>
               <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16, maxWidth: 320, margin: '0 auto 16px' }}>
-                ลองค้นในคลังหลัก 200,000+ เล่ม
+                ลองพิมพ์ชื่อให้ครบ ใช้ ISBN หรือสแกน barcode
               </div>
-              <button
-                onClick={expandSearch}
-                disabled={expanding}
-                style={{ background: expanding ? 'var(--surface)' : '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: '14px 24px', minHeight: 52, fontFamily: 'Kanit', fontSize: 15, fontWeight: 600, color: expanding ? 'var(--ink3)' : '#92400E', cursor: expanding ? 'default' : 'pointer' }}
-              >
-                {expanding ? '⏳ กำลังค้นในคลัง...' : '📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)'}
-              </button>
             </div>
           )}
 
-          {!loading && results.length > 0 && (
-            <div style={{ padding: '4px 0 12px', fontSize: 13, fontWeight: 700, color: 'var(--green)', letterSpacing: '0.02em' }}>
-              ✓ มีในระบบ มีคนลงขาย ({results.length})
+          {!loading && (results.length + googleResults.length) > 0 && (
+            <div style={{ padding: '4px 0 12px', fontSize: 13, fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.02em' }}>
+              พบ {results.length + googleResults.length} เล่ม
+              {expanding && <span style={{ marginLeft: 8, color: 'var(--ink3)', fontWeight: 500 }}>· กำลังค้นเพิ่ม...</span>}
             </div>
           )}
 
-          {results.map(b => (
-            <Link key={b.id} href={`/book/${b.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="card">
-                <div className="book-card">
-                  <BookCover isbn={b.isbn} title={b.title} size={60} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
-                    <div className="book-author">{b.author}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      {(b as any).min_price ? <span className="price">฿{(b as any).min_price}</span> : <span style={{ fontSize: 12, color: 'var(--ink3)' }}>ยังไม่มีคนขาย</span>}
-                      {(b as any).count > 0 && <span style={{ fontSize: 11, color: 'var(--ink3)' }}>{(b as any).count} คนขาย</span>}
-                      {b.wanted_count > 0 && <span className="badge badge-blue">🔔 {b.wanted_count} คนรอซื้อ</span>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-
-          {!loading && googleResults.length > 0 && (
-            <>
-              <div style={{ padding: '20px 0 12px' }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#121212', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
-                  {matchQuality === 'exact'
-                    ? `📖 พบหนังสือ ยังไม่มีคนลงขาย (${googleResults.length})`
-                    : `📚 ผลใกล้เคียง (${googleResults.length})`}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4, lineHeight: 1.6 }}>
-                  {matchQuality === 'exact'
-                    ? 'กด "ต้องการเล่มนี้" — เราจะแจ้งเตือนเมื่อมีคนลงขาย'
-                    : `หนังสือที่มีคำว่า "${query}" ในชื่อเรื่อง — ไม่ใช่เล่มที่ต้องการ? ลองพิมพ์ชื่อให้ครบ`}
-                </div>
-              </div>
-              {googleResults.map(b => (
-                <Link key={b.isbn} href={`/book/${b.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div className="card" style={{ opacity: 0.85 }}>
-                    <div className="book-card">
-                      <BookCover isbn={b.isbn} title={b.title} size={60} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
-                        <div className="book-author">{b.author}</div>
-                        <span style={{ fontSize: 11, color: 'var(--ink3)' }}>ยังไม่มีคนขาย · กด Wantlist เพื่อรับแจ้งเตือน</span>
+          {/* รวม with listings + no listings เป็น list เดียว — listings ก่อน */}
+          {[...results, ...(googleResults as any[])].map((b: any) => {
+            const hasListing = (b.active_listings_count || 0) > 0
+            return (
+              <Link key={b.isbn} href={`/book/${b.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="card">
+                  <div className="book-card">
+                    <BookCover isbn={b.isbn} title={b.title} size={60} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
+                      <div className="book-author">{b.author}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {hasListing && b.min_price ? (
+                          <>
+                            <span className="price">฿{b.min_price}</span>
+                            <span style={{ fontSize: 11, color: 'var(--ink3)' }}>{b.active_listings_count} คนขาย</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--ink3)' }}>ยังไม่มีคนขาย</span>
+                        )}
+                        {b.wanted_count > 0 && <span className="badge badge-blue">🔔 {b.wanted_count} คนรอซื้อ</span>}
                       </div>
                     </div>
                   </div>
-                </Link>
-              ))}
-            </>
-          )}
-
-          {/* ปุ่มขยายค้นหา — แสดงเมื่อ total < 5 และยังไม่ expanding */}
-          {!loading && (results.length + googleResults.length) > 0 && (results.length + googleResults.length) < 5 && searched && (
-            <div style={{ marginTop: 20, padding: '0 4px' }}>
-              <button
-                onClick={expandSearch}
-                disabled={expanding}
-                style={{ width: '100%', background: expanding ? 'var(--surface)' : '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: '14px 16px', minHeight: 52, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: expanding ? 'var(--ink3)' : '#92400E', cursor: expanding ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <span>{expanding ? '⏳ กำลังค้นในคลัง...' : '📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)'}</span>
-                {!expanding && <span style={{ fontSize: 16 }}>→</span>}
-              </button>
-            </div>
-          )}
+                </div>
+              </Link>
+            )
+          })}
         </div>
         <div style={{ height: 12 }} />
       </div>

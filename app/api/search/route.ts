@@ -34,14 +34,17 @@ export async function GET(req: NextRequest) {
   const variants: string[] = [escaped]
   if (escapedNoWs !== escaped && escapedNoWs.length > 0) variants.push(escapedNoWs)
 
+  // SELECT รวม view_count เพื่อใช้ sort หนังสือยอดนิยมขึ้นบน
+  // (silent ignore ถ้า column ไม่มี — Postgres จะ error, fallback ไม่ใส่)
+  const SELECT_COLS = 'id, isbn, title, author, cover_url, wanted_count, view_count'
   const dbQuery = (async () => {
     try {
       const queries: any[] = []
       for (let i = 0; i < variants.length; i++) {
         const v = variants[i]
         queries.push(
-          supabase.from('books').select('id, isbn, title, author, cover_url, wanted_count').ilike('title', `%${v}%`).limit(20),
-          supabase.from('books').select('id, isbn, title, author, cover_url, wanted_count').ilike('author', `%${v}%`).limit(10),
+          supabase.from('books').select(SELECT_COLS).ilike('title', `%${v}%`).limit(20),
+          supabase.from('books').select(SELECT_COLS).ilike('author', `%${v}%`).limit(10),
         )
       }
       const results: any[] = await Promise.all(queries)
@@ -102,6 +105,7 @@ export async function GET(req: NextRequest) {
       active_listings_count: lm.count,
       min_price: lm.min_price,
       wanted_count: b.wanted_count || 0,
+      view_count: (b as any).view_count || 0,
       source: 'db' as const,
     })
   }
@@ -116,6 +120,7 @@ export async function GET(req: NextRequest) {
       active_listings_count: 0,
       min_price: null,
       wanted_count: 0,
+      view_count: 0,
       source: 'google' as const,
     })
   }
@@ -124,11 +129,15 @@ export async function GET(req: NextRequest) {
   const allBooks = Array.from(byIsbn.values())
   const ranked = rankBooksByQuery(allBooks, q)
 
-  // 2. แยกเป็น 2 กลุ่ม: มีคนขาย vs ไม่มี — แต่ละกลุ่มยังเรียงตาม relevance
-  const withListings = ranked.filter(b => (b.active_listings_count || 0) > 0)
-  const noListings = ranked.filter(b => (b.active_listings_count || 0) === 0)
+  // 2. แยกเป็น 2 กลุ่ม: มีคนขาย vs ไม่มี
+  // ภายในกลุ่ม เรียงตาม view_count desc (เล่มยอดนิยมขึ้นบน) แทน relevance order
+  // เพราะ rank filter ก่อนหน้าตัดเล่มไม่เกี่ยวออกแล้ว → ที่เหลือถือว่า relevant
+  // เพียงพอที่จะให้ popularity เป็น primary signal
+  const sortByPopular = (a: any, b: any) => (b.view_count || 0) - (a.view_count || 0)
+  const withListings = ranked.filter(b => (b.active_listings_count || 0) > 0).sort(sortByPopular)
+  const noListings = ranked.filter(b => (b.active_listings_count || 0) === 0).sort(sortByPopular)
 
-  // เล่มมีคนขายก่อน → เล่มไม่มีคนขายตามมา (ทั้งคู่ระดับ relevance ภายในกลุ่ม)
+  // เล่มมีคนขายก่อน → เล่มไม่มีคนขายตามมา
   const results = [...withListings, ...noListings]
 
   // 3. ตรวจคุณภาพ match ของ top result — แยก 'exact' (ตรง/prefix) vs 'partial' (substring)
