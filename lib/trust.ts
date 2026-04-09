@@ -1,0 +1,142 @@
+// Trust mission logic — compute completion + tier + badge from user object
+//
+// 5 items, each = 20% completion:
+//   1. login_line     → user มี id (always true ถ้า logged in)
+//   2. line_id        → users.line_id is not null
+//   3. phone_verified → users.phone_verified_at is not null
+//   4. id_verified    → users.id_verified_at is not null
+//   5. oa_friend      → users.line_oa_friend_at is not null
+//
+// Tier badge ตาม count completed:
+//   0: ไม่มี badge
+//   1: 🆕 ผู้ใช้ใหม่
+//   2: 🔰 มือใหม่
+//   3: ⭐ ผู้ใช้ทั่วไป (ฟ้าอ่อน)
+//   4: 🔵 Trusted (ฟ้าเข้ม)
+//   5: 🟢 Verified Pro ✨ (เขียว)
+
+import type { User } from './supabase'
+
+export type TrustItemKey =
+  | 'login_line'
+  | 'line_id'
+  | 'phone_verified'
+  | 'id_verified'
+  | 'oa_friend'
+
+export type TrustItemStatus = 'done' | 'pending' | 'todo'
+
+export type TrustItem = {
+  key: TrustItemKey
+  status: TrustItemStatus
+  title: string
+  benefit: string
+  icon: string
+  weight: number // % ที่ item นี้คิด
+}
+
+export type TrustTier = {
+  level: 0 | 1 | 2 | 3 | 4 | 5
+  label: string
+  shortLabel: string  // ใช้ใน listing card
+  emoji: string
+  color: string       // hex
+  bgColor: string     // hex
+}
+
+export type TrustScore = {
+  count: number       // completed items
+  total: number       // 5
+  percent: number     // 0-100
+  items: TrustItem[]
+  tier: TrustTier
+}
+
+export const TRUST_TIERS: TrustTier[] = [
+  { level: 0, label: 'ผู้ใช้ใหม่',     shortLabel: 'ใหม่',     emoji: '🆕', color: '#94A3B8', bgColor: '#F1F5F9' },
+  { level: 1, label: 'มือใหม่',         shortLabel: 'มือใหม่', emoji: '🔰', color: '#64748B', bgColor: '#F1F5F9' },
+  { level: 2, label: 'ผู้ใช้ทั่วไป',    shortLabel: 'ทั่วไป',  emoji: '⭐', color: '#0891B2', bgColor: '#ECFEFF' },
+  { level: 3, label: 'ยืนยันแล้ว',      shortLabel: '✓ Verified', emoji: '✓', color: '#0369A1', bgColor: '#E0F2FE' },
+  { level: 4, label: 'Trusted Seller',  shortLabel: '🔵 Trusted', emoji: '🔵', color: '#1D4ED8', bgColor: '#DBEAFE' },
+  { level: 5, label: 'Verified Pro ✨', shortLabel: '🟢 Pro',  emoji: '🟢', color: '#15803D', bgColor: '#DCFCE7' },
+]
+
+/**
+ * คำนวณ trust score จาก user object
+ */
+export function computeTrustScore(user: Partial<User> | null | undefined): TrustScore {
+  if (!user) {
+    return {
+      count: 0,
+      total: 5,
+      percent: 0,
+      items: [],
+      tier: TRUST_TIERS[0],
+    }
+  }
+
+  const u = user as any
+  const items: TrustItem[] = [
+    {
+      key: 'login_line',
+      status: u.id ? 'done' : 'todo',
+      title: 'Login ด้วย LINE',
+      benefit: 'เข้าสู่ระบบเรียบร้อย',
+      icon: '💚',
+      weight: 20,
+    },
+    {
+      key: 'line_id',
+      status: u.line_id ? 'done' : 'todo',
+      title: 'ใส่ LINE ID ของคุณ',
+      benefit: 'ผู้ซื้อกด Add LINE คุณได้ทันที 1 คลิก',
+      icon: '🆔',
+      weight: 20,
+    },
+    {
+      key: 'phone_verified',
+      status: u.phone_verified_at ? 'done' : 'todo',
+      title: 'ยืนยันเบอร์โทร',
+      benefit: 'ป้าย "ยืนยันแล้ว" — ผู้ซื้อมั่นใจกว่า · 30 วินาที',
+      icon: '📱',
+      weight: 20,
+    },
+    {
+      key: 'id_verified',
+      status: u.id_verified_at
+        ? 'done'
+        : u.id_verify_submitted_at
+        ? 'pending'
+        : 'todo',
+      title: 'ยืนยันตัวตน',
+      benefit: 'บัตรประชาชน + สมุดบัญชี — ป้าย Verified Pro',
+      icon: '🪪',
+      weight: 20,
+    },
+    {
+      key: 'oa_friend',
+      status: u.line_oa_friend_at ? 'done' : 'todo',
+      title: 'รับแจ้งเตือนผ่าน LINE',
+      benefit: 'Add @BookMatch — แจ้งเตือนทุกครั้งที่หนังสือมีคนลง',
+      icon: '🔔',
+      weight: 20,
+    },
+  ]
+
+  const count = items.filter(i => i.status === 'done').length
+  const percent = Math.round((count / items.length) * 100)
+  const tier = TRUST_TIERS[Math.min(count, TRUST_TIERS.length - 1) as 0 | 1 | 2 | 3 | 4 | 5]
+
+  return {
+    count,
+    total: items.length,
+    percent,
+    items,
+    tier,
+  }
+}
+
+/** เลือก tier label สั้นสำหรับแสดงใน listing card / search result */
+export function getShortBadge(user: Partial<User> | null | undefined): TrustTier {
+  return computeTrustScore(user).tier
+}

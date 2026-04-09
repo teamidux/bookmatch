@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, Listing, User } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, CondBadge, SkeletonList, useToast, Toast } from '@/components/ui'
+import { Nav, BottomNav, BookCover, CondBadge, SkeletonList, useToast, Toast, TrustBadge } from '@/components/ui'
 
 interface PageProps {
   params: { id: string }
@@ -278,17 +278,11 @@ export default function SellerPage({ params }: PageProps) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, fontWeight: 700, color: 'white', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: 4 }}>{seller?.display_name}</div>
-            {(seller as any)?.phone_verified_at && (seller as any)?.phone && (
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,.85)', marginBottom: 6, lineHeight: 1.5 }}>
-                📱 {(seller as any).phone.slice(0, 3)}-xxx-{(seller as any).phone.slice(-4)}
-              </div>
-            )}
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', marginBottom: 8, lineHeight: 1.5 }}>
               ขายไปแล้ว {seller?.sold_count || 0} ครั้ง
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {(seller as any)?.id_verified_at && <span className="badge" style={{ background: '#10B981', color: 'white' }}>✅ ยืนยันตัวตน</span>}
-              {(seller as any)?.phone_verified_at && !(seller as any)?.id_verified_at && <span className="badge" style={{ background: 'rgba(255,255,255,.25)', color: 'white' }}>📱 ยืนยันเบอร์</span>}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TrustBadge user={seller} size="md" />
               {seller?.is_pioneer && <span className="badge" style={{ background: 'rgba(255,255,255,.2)', color: 'white' }}>🏆 ผู้บุกเบิก</span>}
             </div>
           </div>

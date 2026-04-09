@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase, Book, Listing, fetchBookByISBN, CONDITIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, CondBadge, useToast, Toast, SkeletonList } from '@/components/ui'
+import { Nav, BottomNav, BookCover, CondBadge, useToast, Toast, SkeletonList, TrustBadge } from '@/components/ui'
 import { parseLineId } from '@/lib/line-id'
 
 export default function BookDetailClient({ isbn, initialBook }: { isbn: string; initialBook?: Partial<Book> | null }) {
@@ -388,11 +388,11 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: isStore ? '#FFF7ED' : 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{isStore ? '🏪' : '👤'}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <Link href={`/seller/${l.seller_id}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
                       {sellerName}
                     </Link>
-                    {l.users?.is_verified && <span className="badge badge-blue">✓ Verified</span>}
+                    <TrustBadge user={l.users} size="sm" />
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>
                     {`ขายแล้ว ${l.users?.sold_count || 0} · ยืนยัน ${l.users?.confirmed_count || 0} ครั้ง`}

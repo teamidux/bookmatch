@@ -706,3 +706,397 @@ export function PageLoading() {
     </>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Trust Mission card — gamified profile completeness
+// ─────────────────────────────────────────────────────────────────────────
+
+import { computeTrustScore, type TrustItemKey, type TrustItem } from '@/lib/trust'
+
+export function TrustBadge({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md' | 'lg' }) {
+  const { tier, count } = computeTrustScore(user)
+  if (!user || count === 0) return null
+  const fontSize = size === 'lg' ? 13 : size === 'md' ? 12 : 11
+  const padding = size === 'lg' ? '6px 12px' : size === 'md' ? '5px 10px' : '3px 8px'
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      background: tier.bgColor,
+      color: tier.color,
+      borderRadius: 6,
+      padding,
+      fontSize,
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+    }}>
+      {tier.shortLabel}
+    </span>
+  )
+}
+
+export function TrustMission({
+  user,
+  onAction,
+}: {
+  user: any
+  onAction: (key: TrustItemKey) => void
+}) {
+  const { count, total, percent, tier, items } = computeTrustScore(user)
+  const isComplete = count === total
+
+  return (
+    <div style={{
+      background: 'white',
+      border: '1px solid var(--border)',
+      borderRadius: 16,
+      padding: '18px 16px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    }}>
+      {/* Header: title + tier */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 16, fontWeight: 700, color: '#121212', letterSpacing: '-0.01em' }}>
+            🎯 ภารกิจสร้างความน่าเชื่อถือ
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 2 }}>
+            ทำครบเพื่อขายไวขึ้น
+          </div>
+        </div>
+        {count > 0 && (
+          <div style={{
+            background: tier.bgColor,
+            color: tier.color,
+            borderRadius: 8,
+            padding: '6px 12px',
+            fontSize: 12,
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+          }}>
+            {tier.emoji} {tier.label}
+          </div>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{count}/{total} ภารกิจ</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: tier.color }}>{percent}%</span>
+        </div>
+        <div style={{
+          width: '100%',
+          height: 8,
+          background: '#F1F5F9',
+          borderRadius: 999,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            width: `${percent}%`,
+            height: '100%',
+            background: isComplete ? '#22C55E' : `linear-gradient(90deg, ${tier.color}aa, ${tier.color})`,
+            borderRadius: 999,
+            transition: 'width .4s ease',
+          }} />
+        </div>
+      </div>
+
+      {/* Items list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {items.map((item) => (
+          <TrustItemRow key={item.key} item={item} onClick={() => onAction(item.key)} />
+        ))}
+      </div>
+
+      {/* Footer reward callout */}
+      {!isComplete && (
+        <div style={{
+          marginTop: 14,
+          padding: '10px 12px',
+          background: '#FFFBEB',
+          border: '1px solid #FDE68A',
+          borderRadius: 10,
+          fontSize: 12,
+          color: '#78350F',
+          lineHeight: 1.6,
+        }}>
+          🏆 <b>ทำครบ 100%</b> → ป้าย <b>Verified Pro ✨</b> + ขายไวกว่าผู้ขายทั่วไป 2-3 เท่า
+        </div>
+      )}
+      {isComplete && (
+        <div style={{
+          marginTop: 14,
+          padding: '12px',
+          background: '#DCFCE7',
+          border: '1px solid #86EFAC',
+          borderRadius: 10,
+          fontSize: 13,
+          color: '#15803D',
+          fontWeight: 600,
+          textAlign: 'center',
+        }}>
+          🎉 ภารกิจครบทั้งหมดแล้ว — Verified Pro ✨
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TrustItemRow({ item, onClick }: { item: TrustItem; onClick: () => void }) {
+  const isDone = item.status === 'done'
+  const isPending = item.status === 'pending'
+  const clickable = !isDone && !isPending
+
+  return (
+    <div
+      onClick={clickable ? onClick : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+        background: isDone ? '#F0FDF4' : isPending ? '#FFFBEB' : '#FAFAFA',
+        border: `1px solid ${isDone ? '#BBF7D0' : isPending ? '#FDE68A' : 'var(--border-light)'}`,
+        borderRadius: 12,
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'all .15s',
+      }}
+      onMouseOver={(e) => { if (clickable) (e.currentTarget as HTMLElement).style.background = '#F0F9FF' }}
+      onMouseOut={(e) => { if (clickable) (e.currentTarget as HTMLElement).style.background = '#FAFAFA' }}
+    >
+      {/* Status icon */}
+      <div style={{
+        width: 32,
+        height: 32,
+        borderRadius: '50%',
+        background: isDone ? '#22C55E' : isPending ? '#F59E0B' : 'white',
+        border: isDone ? 'none' : `2px solid ${isPending ? '#F59E0B' : '#CBD5E1'}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        color: isDone || isPending ? 'white' : 'transparent',
+        fontSize: 16,
+        fontWeight: 700,
+      }}>
+        {isDone ? '✓' : isPending ? '⏳' : ''}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 14,
+          fontWeight: 700,
+          color: isDone ? '#15803D' : isPending ? '#92400E' : '#121212',
+          lineHeight: 1.4,
+          marginBottom: 2,
+        }}>
+          <span style={{ marginRight: 6 }}>{item.icon}</span>
+          {item.title}
+        </div>
+        <div style={{
+          fontSize: 12,
+          color: isDone ? '#166534' : isPending ? '#B45309' : 'var(--ink3)',
+          lineHeight: 1.5,
+        }}>
+          {isPending ? 'รอตรวจสอบ ~24 ชั่วโมง' : item.benefit}
+        </div>
+      </div>
+
+      {/* Action indicator */}
+      {clickable && (
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#3B82F6', flexShrink: 0 }}>
+          +{item.weight}% →
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// IdentityVerifyWizard — 2-step photo capture (ID card + bank book)
+// ─────────────────────────────────────────────────────────────────────────
+
+export function IdentityVerifyWizard({
+  onClose,
+  onDone,
+}: {
+  onClose: () => void
+  onDone?: () => void
+}) {
+  const [step, setStep] = useState<1 | 2>(1)
+  const [idCardFile, setIdCardFile] = useState<File | null>(null)
+  const [idCardPreview, setIdCardPreview] = useState<string>('')
+  const [bankFile, setBankFile] = useState<File | null>(null)
+  const [bankPreview, setBankPreview] = useState<string>('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const idInputRef = useRef<HTMLInputElement>(null)
+  const bankInputRef = useRef<HTMLInputElement>(null)
+  const { reloadUser } = useAuth()
+
+  const handlePhoto = (file: File | null, type: 'id' | 'bank') => {
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    if (type === 'id') {
+      setIdCardFile(file)
+      setIdCardPreview(url)
+    } else {
+      setBankFile(file)
+      setBankPreview(url)
+    }
+  }
+
+  const submit = async () => {
+    if (!idCardFile || !bankFile) {
+      setError('กรุณาถ่ายรูปครบทั้ง 2 อย่าง')
+      return
+    }
+    setSubmitting(true)
+    setError('')
+    try {
+      const fd = new FormData()
+      fd.append('id_card', idCardFile)
+      fd.append('bank_book', bankFile)
+      const r = await fetch('/api/user/identity-verify', { method: 'POST', body: fd })
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}))
+        throw new Error(body.message || body.error || 'ส่งไม่สำเร็จ')
+      }
+      await reloadUser()
+      onDone?.()
+      onClose()
+    } catch (e: any) {
+      setError(e?.message || 'ส่งไม่สำเร็จ')
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.72)', zIndex: 200, display: 'flex', alignItems: 'flex-end', overflowY: 'auto' }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', padding: '24px 20px 36px', width: '100%', maxWidth: 480, margin: '20px auto 0' }}>
+        {/* Header + step indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, fontWeight: 700, color: '#121212' }}>ยืนยันตัวตน</div>
+            <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 2 }}>ขั้นตอน {step}/2</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 22 }}>
+          <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#1D4ED8' }} />
+          <div style={{ flex: 1, height: 4, borderRadius: 2, background: step === 2 ? '#1D4ED8' : '#E2E8F0' }} />
+        </div>
+
+        {step === 1 ? (
+          <>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#121212', marginBottom: 4 }}>📇 ถ่ายบัตรประชาชน</div>
+            <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16 }}>
+              วางบัตรในกรอบ — ถ่ายให้เห็นชัดทั้ง 4 มุม
+            </div>
+
+            {/* ID card preview / capture area — landscape ratio */}
+            <div style={{ position: 'relative', aspectRatio: '8.6 / 5.4', background: '#0F172A', borderRadius: 12, marginBottom: 14, overflow: 'hidden' }}>
+              {idCardPreview ? (
+                <img src={idCardPreview} alt="ID card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ position: 'absolute', inset: 12, border: '2px dashed rgba(255,255,255,.5)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontSize: 32 }}>📇</span>
+                  <span style={{ color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600 }}>วางบัตรในกรอบนี้</span>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={idInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => handlePhoto(e.target.files?.[0] || null, 'id')}
+              style={{ display: 'none' }}
+            />
+            <button
+              className="btn"
+              onClick={() => idInputRef.current?.click()}
+              style={{ marginBottom: 8, background: idCardFile ? 'var(--surface)' : 'var(--primary)', color: idCardFile ? 'var(--ink2)' : 'white', border: idCardFile ? '1px solid var(--border)' : 'none' }}
+            >
+              {idCardFile ? '🔄 ถ่ายใหม่' : '📷 เปิดกล้อง'}
+            </button>
+
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#78350F', lineHeight: 1.6 }}>
+              💡 <b>เคล็ดลับ:</b> ถ่ายในที่สว่าง · ไม่สะท้อนแสง · เห็นตัวอักษรชัด
+            </div>
+
+            <button
+              className="btn"
+              onClick={() => setStep(2)}
+              disabled={!idCardFile}
+              style={{ marginBottom: 8 }}
+            >
+              ขั้นต่อไป →
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#121212', marginBottom: 4 }}>💰 ถ่ายหน้าสมุดบัญชี</div>
+            <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16 }}>
+              ถ่ายหน้าที่มี <b>ชื่อบัญชี</b> ตรงกับบัตรประชาชน
+            </div>
+
+            <div style={{ position: 'relative', aspectRatio: '3 / 4', background: '#0F172A', borderRadius: 12, marginBottom: 14, overflow: 'hidden', maxWidth: 280, margin: '0 auto 14px' }}>
+              {bankPreview ? (
+                <img src={bankPreview} alt="Bank book" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ position: 'absolute', inset: 12, border: '2px dashed rgba(255,255,255,.5)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontSize: 32 }}>💰</span>
+                  <span style={{ color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>ถ่ายหน้าที่มีชื่อบัญชี</span>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={bankInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => handlePhoto(e.target.files?.[0] || null, 'bank')}
+              style={{ display: 'none' }}
+            />
+            <button
+              className="btn"
+              onClick={() => bankInputRef.current?.click()}
+              style={{ marginBottom: 8, background: bankFile ? 'var(--surface)' : 'var(--primary)', color: bankFile ? 'var(--ink2)' : 'white', border: bankFile ? '1px solid var(--border)' : 'none' }}
+            >
+              {bankFile ? '🔄 ถ่ายใหม่' : '📷 เปิดกล้อง'}
+            </button>
+
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#78350F', lineHeight: 1.6 }}>
+              💡 ปิดเลขบัญชีได้ ขอแค่ <b>ชื่อ</b>เห็นชัด — ตรงกับบัตรประชาชน
+            </div>
+
+            {error && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 13, color: '#991B1B' }}>
+                ⚠️ {error}
+              </div>
+            )}
+
+            <button className="btn" onClick={submit} disabled={!bankFile || submitting} style={{ marginBottom: 8 }}>
+              {submitting ? 'กำลังส่ง...' : '✓ ส่งให้ตรวจสอบ'}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setStep(1)} disabled={submitting}>
+              ← ย้อนกลับ
+            </button>
+          </>
+        )}
+
+        <div style={{ fontSize: 11, color: 'var(--ink3)', textAlign: 'center', marginTop: 16, lineHeight: 1.6 }}>
+          🔒 ข้อมูลของคุณปลอดภัย — ใช้ตรวจสอบตัวตนเท่านั้น<br />
+          แอดมินจะตรวจภายใน 24 ชั่วโมง
+        </div>
+      </div>
+    </div>
+  )
+}

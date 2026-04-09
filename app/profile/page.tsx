@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase, Listing } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, PhoneVerifyModal, IdVerifyModal, useToast, Toast } from '@/components/ui'
+import { Nav, BottomNav, BookCover, PhoneVerifyModal, useToast, Toast, TrustMission, IdentityVerifyWizard } from '@/components/ui'
 import { parseLineId } from '@/lib/line-id'
+import type { TrustItemKey } from '@/lib/trust'
 
 export default function ProfilePage() {
   const { user, logout, updateUser, syncUser, loginWithLine } = useAuth()
@@ -14,7 +15,7 @@ export default function ProfilePage() {
   const [listings, setListings] = useState<Listing[]>([])
   // showLogin removed — login goes directly to LINE OAuth
   const [showPhoneVerify, setShowPhoneVerify] = useState(false)
-  const [showIdVerify, setShowIdVerify] = useState(false)
+  const [showIdentityWizard, setShowIdentityWizard] = useState(false)
   const [confirmSoldId, setConfirmSoldId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -204,7 +205,7 @@ export default function ProfilePage() {
       <Nav />
       <Toast msg={msg} />
       {showPhoneVerify && <PhoneVerifyModal onClose={() => setShowPhoneVerify(false)} onDone={() => setShowPhoneVerify(false)} />}
-      {showIdVerify && <IdVerifyModal onClose={() => setShowIdVerify(false)} onDone={() => setShowIdVerify(false)} />}
+      {showIdentityWizard && <IdentityVerifyWizard onClose={() => setShowIdentityWizard(false)} onDone={() => show('ส่งเอกสารเรียบร้อย รอตรวจสอบ ✓')} />}
 
       {confirmSoldId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -386,84 +387,29 @@ export default function ProfilePage() {
           </div>
         </Link>
 
-        {/* Verification status — show actions for not-yet-verified */}
+        {/* Trust Mission card — gamified verification (5 items × 20%) */}
         <div style={{ padding: '14px 16px 0' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink2)', marginBottom: 10, letterSpacing: '0.02em' }}>การยืนยันตัวตน</div>
-
-          {/* LINE ID — สำหรับให้ผู้ซื้อ Add */}
-          {user.line_id ? (
-            <div style={{ background: '#F0FFF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <span style={{ fontSize: 22 }}>💚</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#15803D' }}>LINE ID</div>
-                <div style={{ fontSize: 12, color: 'var(--ink3)', wordBreak: 'break-all' }}>{user.line_id}</div>
-              </div>
-              <button
-                onClick={() => setShowLineConfirm(true)}
-                style={{ background: 'white', border: '1px solid #BBF7D0', borderRadius: 8, padding: '6px 12px', color: '#15803D', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
-              >
-                เปลี่ยน
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowLineConfirm(true)}
-              style={{ width: '100%', background: '#FEF3C7', border: '1.5px solid #FDE68A', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 22 }}>💚</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#92400E' }}>เพิ่ม LINE ID</div>
-                <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>เพื่อให้ผู้ซื้อ Add LINE คุณได้ทันที</div>
-              </div>
-              <span style={{ fontSize: 18, color: '#92400E' }}>›</span>
-            </button>
-          )}
-
-          {(user as any).phone_verified_at ? (
-            <div style={{ background: 'var(--green-bg)', border: '1px solid #BBF7D0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <span style={{ fontSize: 22 }}>📱</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#15803D' }}>ยืนยันเบอร์โทรแล้ว</div>
-                <div style={{ fontSize: 12, color: 'var(--ink3)' }}>{user.phone}</div>
-              </div>
-              <span style={{ fontSize: 18, color: '#15803D' }}>✓</span>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowPhoneVerify(true)}
-              style={{ width: '100%', background: '#FEF3C7', border: '1.5px solid #FDE68A', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 22 }}>📱</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#92400E' }}>ยืนยันเบอร์โทร</div>
-                <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>จำเป็นสำหรับการลงประกาศ</div>
-              </div>
-              <span style={{ fontSize: 18, color: '#92400E' }}>›</span>
-            </button>
-          )}
-
-          {(user as any).id_verified_at ? (
-            <div style={{ background: 'var(--green-bg)', border: '1px solid #BBF7D0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 22 }}>🪪</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#15803D' }}>ยืนยันตัวตนแล้ว</div>
-                <div style={{ fontSize: 12, color: 'var(--ink3)' }}>Badge สีเขียวบนโปรไฟล์</div>
-              </div>
-              <span style={{ fontSize: 18, color: '#15803D' }}>✓</span>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowIdVerify(true)}
-              style={{ width: '100%', background: 'white', border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 22 }}>🪪</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>ยืนยันตัวตน (ไม่บังคับ)</div>
-                <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 2 }}>เพิ่ม Badge ความน่าเชื่อถือบนโปรไฟล์</div>
-              </div>
-              <span style={{ fontSize: 18, color: 'var(--ink3)' }}>›</span>
-            </button>
-          )}
+          <TrustMission user={user} onAction={(key: TrustItemKey) => {
+            switch (key) {
+              case 'line_id':
+                if (user.line_id) setShowLineConfirm(true)  // เปลี่ยน → re-auth
+                else { setNewLineId(''); setEditingLineId(true) }  // ตั้งครั้งแรก → form ตรง
+                break
+              case 'phone_verified':
+                setShowPhoneVerify(true)
+                break
+              case 'id_verified':
+                setShowIdentityWizard(true)
+                break
+              case 'oa_friend':
+                // เปิด LINE OA add link — user จะถูก redirect ไป LINE app
+                window.open('https://line.me/R/ti/p/@943nzbhk', '_blank')
+                break
+              case 'login_line':
+                // already done — no action
+                break
+            }
+          }} />
         </div>
 
         {listings.length > 0 && (

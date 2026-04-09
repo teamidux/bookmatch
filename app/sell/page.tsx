@@ -261,8 +261,8 @@ function SellPage() {
 
   const submit = async () => {
     if (!user) { goLogin(); return }
-    // ผู้ขายต้อง verify เบอร์ก่อนลงประกาศได้ (ครั้งเดียวตลอดอายุบัญชี)
-    if (!user.phone_verified_at) { setShowPhoneVerify(true); return }
+    // Phone verify ไม่บังคับแล้ว — เป็น mission item ใน profile
+    // ผู้ขาย verified จะได้ badge + ขายไวกว่า (gamified incentive)
     if (!fetchedBook?.title && !manualTitle) { show('กรุณาดึงข้อมูลหนังสือก่อน'); return }
     if (!coverFile) { show('กรุณาใส่รูปหน้าปก'); return }
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { show('กรุณาใส่ราคาที่ถูกต้อง'); return }
