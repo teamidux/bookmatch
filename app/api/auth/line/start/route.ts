@@ -31,11 +31,9 @@ export async function GET(req: NextRequest) {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
-    // Bot Link Feature: แสดงปุ่ม "Add @Bookmatch as friend" หลัง authorize
-    // - normal:     แสดง checkbox ให้ user เลือก (ไม่ default)
-    // - aggressive: หน้าใหม่หลัง authorize เน้นให้ add (default-checked)
-    // ต้องมี OA channel link กับ LINE Login channel ใน Console ก่อน
-    bot_prompt: 'aggressive',
+    // Note: ไม่ใส่ bot_prompt ที่นี่ — Add OA prompt จะถูกแสดงในหน้า /wanted
+    // เพราะ user ที่อยาก notification คือ "ผู้ซื้อ" (ใช้ wanted list)
+    // ไม่ใช่ผู้ขายที่แค่ login มาประกาศ → แสดง prompt ตอน login = annoy คนผิด context
   })
   const lineUrl = `https://access.line.me/oauth2/v2.1/authorize?${params.toString()}`
   return NextResponse.redirect(lineUrl)
