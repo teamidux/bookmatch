@@ -292,7 +292,7 @@ export default function HomePage() {
             <div className="empty">
               <div className="empty-icon">📚</div>
               <div style={{ marginBottom: 16 }}>ยังไม่มีหนังสือในระบบ</div>
-              <Link href="/sell"><button className="btn" style={{ maxWidth: 240, margin: '0 auto', display: 'block' }}>เพิ่มเล่มเพื่อแบ่งปัน</button></Link>
+              <Link href="/sell"><button className="btn" style={{ maxWidth: 200, margin: '0 auto', display: 'block' }}>ลงขายเป็นคนแรก</button></Link>
             </div>
           )}
           {recentListings.map((l: any) => (

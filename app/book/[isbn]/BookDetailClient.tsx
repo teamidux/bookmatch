@@ -195,7 +195,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
           <div style={{ background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 12, padding: '16px 18px' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 4 }}>คุณมีหนังสือเล่มนี้อยู่ไหม?</div>
             <div style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 14, lineHeight: 1.7 }}>
-              เพิ่มเพื่อแบ่งปันกับชุมชนนักอ่าน — ให้เล่มที่คุณอ่านจบแล้ว ได้ส่งต่อให้คนอื่น
+              ลงขายและเพิ่มข้อมูลหนังสือเล่มนี้เข้าระบบ — เป็นคนแรกที่ขาย โอกาสขายได้เร็วมาก
             </div>
             <Link href={`/sell?isbn=${isbn}`}>
               <button className="btn" style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
@@ -371,7 +371,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               <div style={{ background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 12, padding: '16px 18px', marginBottom: 14 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 4 }}>คุณมีหนังสือเล่มนี้อยู่ไหม?</div>
                 <div style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 14, lineHeight: 1.7 }}>
-                  มีคนรอซื้ออยู่แล้ว — ลงขายเพื่อแบ่งปัน ให้คนที่รออยู่ได้อ่าน
+                  มีคนรอซื้ออยู่แล้ว — เป็นคนแรกที่ลงขาย โอกาสขายได้เร็วมาก
                 </div>
                 <Link href={`/sell?isbn=${isbn}`}>
                   <button className="btn" style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
