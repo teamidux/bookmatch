@@ -1,12 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase, Listing } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, LoginModal, PhoneVerifyModal, IdVerifyModal, useToast, Toast } from '@/components/ui'
+import { parseLineId } from '@/lib/line-id'
 
 export default function ProfilePage() {
-  const { user, logout, updateUser, syncUser } = useAuth()
+  const { user, logout, updateUser, syncUser, loginWithLine } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [listings, setListings] = useState<Listing[]>([])
   const [showLogin, setShowLogin] = useState(false)
   const [showPhoneVerify, setShowPhoneVerify] = useState(false)
@@ -15,12 +19,28 @@ export default function ProfilePage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
-  const [editLine, setEditLine] = useState('')
+  // editLine ตัดออก — LINE ID มี flow แยก (re-auth required)
   const [editSellerType, setEditSellerType] = useState<'individual' | 'store'>('individual')
   const [editStoreName, setEditStoreName] = useState('')
   const [saving, setSaving] = useState(false)
   const [query, setQuery] = useState('')
+  // LINE ID edit (separate from main edit modal)
+  const [showLineConfirm, setShowLineConfirm] = useState(false)  // confirm re-auth dialog
+  const [editingLineId, setEditingLineId] = useState(false)       // หลัง re-auth — เปิด form
+  const [newLineId, setNewLineId] = useState('')
+  const [lineError, setLineError] = useState('')
+  const [savingLine, setSavingLine] = useState(false)
   const { msg, show } = useToast()
+
+  // ตรวจ ?reauth=line param → user เพิ่ง re-auth สำเร็จ → เปิด LINE edit form
+  useEffect(() => {
+    if (searchParams.get('reauth') === 'line') {
+      setEditingLineId(true)
+      setNewLineId(user?.line_id || '')
+      // ลบ param ออกจาก URL (history clean)
+      router.replace('/profile')
+    }
+  }, [searchParams, user, router])
 
   // เข้าร่วมเมื่อ — แสดงเป็นข้อความสั้นๆ
   const memberSince = (createdAt?: string): string => {
@@ -35,7 +55,6 @@ export default function ProfilePage() {
 
   const startEdit = () => {
     setEditName(user?.display_name || '')
-    setEditLine(user?.line_id || '')
     setEditSellerType(user?.seller_type || 'individual')
     setEditStoreName(user?.store_name || '')
     setEditing(true)
@@ -50,7 +69,7 @@ export default function ProfilePage() {
       await updateUser({
         // ถ้าเป็นร้านค้า ให้ sync display_name = store_name เพื่อให้ชื่อที่แสดงตรงกันทุกที่
         display_name: editSellerType === 'store' ? editStoreName.trim() : editName.trim(),
-        line_id: editLine.trim() || undefined,
+        // line_id ไม่ได้แก้ที่นี่ — มี flow แยก (re-auth)
         seller_type: editSellerType,
         store_name: storeName,
       })
@@ -60,6 +79,36 @@ export default function ProfilePage() {
       show(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
     } finally {
       setSaving(false)
+    }
+  }
+
+  // เริ่ม re-auth flow เพื่อเปลี่ยน LINE ID
+  const startLineReauth = () => {
+    setShowLineConfirm(false)
+    // redirect ไป LINE OAuth → callback จะตั้ง bm_line_reauth cookie แล้ว redirect กลับ
+    loginWithLine('/profile?reauth=line')
+  }
+
+  // Save LINE ID หลัง re-auth
+  const saveLineId = async () => {
+    setLineError('')
+    const trimmed = newLineId.trim()
+    if (trimmed) {
+      const parsed = parseLineId(trimmed)
+      if (!parsed) {
+        setLineError('LINE ID ต้องเป็น 4-20 ตัวอักษร (a-z, 0-9, จุด ขีด ขีดเส้นใต้)')
+        return
+      }
+    }
+    setSavingLine(true)
+    try {
+      await updateUser({ line_id: trimmed || (null as any) } as any)
+      setEditingLineId(false)
+      show('เปลี่ยน LINE ID แล้ว ✓')
+    } catch (e: any) {
+      setLineError(e?.message || 'บันทึกไม่สำเร็จ')
+    } finally {
+      setSavingLine(false)
     }
   }
 
@@ -180,6 +229,53 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Confirm re-auth dialog ก่อนเปลี่ยน LINE ID */}
+      {showLineConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }}>
+            <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 12 }}>🔒</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 10, textAlign: 'center' }}>ยืนยันด้วย LINE</div>
+            <div style={{ fontSize: 13, color: 'var(--ink2)', marginBottom: 20, lineHeight: 1.7, textAlign: 'center' }}>
+              เพื่อความปลอดภัย ระบบจะให้คุณ<br />
+              login LINE อีกครั้งก่อนเปลี่ยน LINE ID
+            </div>
+            <button onClick={startLineReauth} style={{ width: '100%', background: '#06C755', border: 'none', borderRadius: 12, padding: '14px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 15, cursor: 'pointer', marginBottom: 8 }}>
+              💚 ยืนยันด้วย LINE
+            </button>
+            <button className="btn btn-ghost" onClick={() => setShowLineConfirm(false)}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
+
+      {/* LINE ID edit form (หลัง re-auth) */}
+      {editingLineId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }}>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 6 }}>เปลี่ยน LINE ID</div>
+            <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 16 }}>✓ ยืนยัน LINE สำเร็จ</div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>LINE ID ใหม่</label>
+              <input
+                className="search-input"
+                style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }}
+                value={newLineId}
+                onChange={e => { setNewLineId(e.target.value); setLineError('') }}
+                placeholder="เช่น somchai_books"
+                autoFocus
+              />
+              <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 6 }}>
+                💡 4-20 ตัวอักษร (a-z, 0-9, จุด ขีด ขีดเส้นใต้)
+              </div>
+              {lineError && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>⚠️ {lineError}</div>}
+            </div>
+            <button className="btn" style={{ marginBottom: 8 }} onClick={saveLineId} disabled={savingLine}>
+              {savingLine ? 'กำลังบันทึก...' : '✓ บันทึก'}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setEditingLineId(false)} disabled={savingLine}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
+
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}>
@@ -190,10 +286,6 @@ export default function ProfilePage() {
                 <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ" />
               </div>
             )}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>Line ID</label>
-              <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editLine} onChange={e => setEditLine(e.target.value)} placeholder="@lineid หรือ lineid" />
-            </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 8 }}>ประเภทผู้ขาย</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -281,6 +373,35 @@ export default function ProfilePage() {
         {/* Verification status — show actions for not-yet-verified */}
         <div style={{ padding: '14px 16px 0' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink2)', marginBottom: 10, letterSpacing: '0.02em' }}>การยืนยันตัวตน</div>
+
+          {/* LINE ID — สำหรับให้ผู้ซื้อ Add */}
+          {user.line_id ? (
+            <div style={{ background: '#F0FFF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <span style={{ fontSize: 22 }}>💚</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#15803D' }}>LINE ID</div>
+                <div style={{ fontSize: 12, color: 'var(--ink3)', wordBreak: 'break-all' }}>{user.line_id}</div>
+              </div>
+              <button
+                onClick={() => setShowLineConfirm(true)}
+                style={{ background: 'white', border: '1px solid #BBF7D0', borderRadius: 8, padding: '6px 12px', color: '#15803D', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+              >
+                เปลี่ยน
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowLineConfirm(true)}
+              style={{ width: '100%', background: '#FEF3C7', border: '1.5px solid #FDE68A', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer', fontFamily: 'Kanit', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: 22 }}>💚</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#92400E' }}>เพิ่ม LINE ID</div>
+                <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>เพื่อให้ผู้ซื้อ Add LINE คุณได้ทันที</div>
+              </div>
+              <span style={{ fontSize: 18, color: '#92400E' }}>›</span>
+            </button>
+          )}
 
           {(user as any).phone_verified_at ? (
             <div style={{ background: 'var(--green-bg)', border: '1px solid #BBF7D0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>

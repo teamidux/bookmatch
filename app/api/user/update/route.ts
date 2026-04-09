@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { parseLineId } from '@/lib/line-id'
 
 const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,9 +15,40 @@ export async function POST(req: NextRequest) {
   // อนุญาตแค่ field ที่ user แก้ได้เองเท่านั้น
   const allowed: Record<string, unknown> = {}
   if (typeof data.display_name === 'string') allowed.display_name = data.display_name.trim()
-  if (data.line_id !== undefined) allowed.line_id = typeof data.line_id === 'string' ? data.line_id.trim() || null : null
   if (data.seller_type === 'individual' || data.seller_type === 'store') allowed.seller_type = data.seller_type
   if (data.store_name !== undefined) allowed.store_name = typeof data.store_name === 'string' ? data.store_name.trim() || null : null
+
+  // line_id: ต้องผ่าน 2 layers
+  // 1. Format ต้อง valid (parseLineId)
+  // 2. ถ้าต่างจากค่าเดิม → ต้องมี reauth cookie (ผ่าน LINE OAuth re-verify)
+  if (data.line_id !== undefined) {
+    const supabase = getSupabase()
+    const { data: current } = await supabase.from('users').select('line_id').eq('id', userId).maybeSingle()
+    const currentLineId = current?.line_id || null
+
+    let newLineId: string | null = null
+    if (typeof data.line_id === 'string' && data.line_id.trim()) {
+      const parsed = parseLineId(data.line_id)
+      if (!parsed) {
+        return NextResponse.json({ error: 'invalid_line_id', message: 'LINE ID ต้องเป็น 4-20 ตัวอักษร (a-z, 0-9, จุด ขีด ขีดเส้นใต้)' }, { status: 400 })
+      }
+      newLineId = parsed.raw
+    }
+
+    // ถ้าค่าเปลี่ยนจริง → ต้องมี reauth cookie
+    if (newLineId !== currentLineId) {
+      const reauthCookie = cookies().get('bm_line_reauth')?.value
+      if (!reauthCookie || reauthCookie !== '1') {
+        return NextResponse.json({
+          error: 'reauth_required',
+          message: 'การเปลี่ยน LINE ID ต้องยืนยันด้วย LINE อีกครั้ง',
+        }, { status: 403 })
+      }
+      // ใช้แล้วลบทันที (one-time)
+      cookies().delete('bm_line_reauth')
+    }
+    allowed.line_id = newLineId
+  }
 
   if (Object.keys(allowed).length === 0) return NextResponse.json({ error: 'no valid fields' }, { status: 400 })
 

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { supabase, Book, Listing, fetchBookByISBN, CONDITIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, CondBadge, LoginModal, useToast, Toast, SkeletonList } from '@/components/ui'
+import { parseLineId } from '@/lib/line-id'
 
 export default function BookDetailClient({ isbn, initialBook }: { isbn: string; initialBook?: Partial<Book> | null }) {
   const { user } = useAuth()
@@ -143,8 +144,12 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
   }
 
   const contactPhone = contactListing ? /^(\+?66|0)[0-9\s\-]{7,12}$/.test(contactListing.contact?.trim() || '') : false
+  // ตรวจว่า contact field เป็น LINE ID มั้ย → ถ้าใช่ มีปุ่ม Add LINE
+  const contactLineInfo = contactListing && !contactPhone ? parseLineId(contactListing.contact || '') : null
+  // LINE ID จาก profile (ถ้ามี และต่างจาก contact field)
   const contactProfileLine = contactListing?.users?.line_id?.trim() || ''
-  const showProfileLine = contactProfileLine && contactProfileLine !== (contactListing?.contact?.trim() || '')
+  const profileLineInfo = contactProfileLine ? parseLineId(contactProfileLine) : null
+  const showProfileLine = !!profileLineInfo && profileLineInfo.raw !== contactLineInfo?.raw
 
   const prices = listings.map(l => l.price)
   const minP = prices.length ? Math.min(...prices) : null
@@ -236,31 +241,51 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               {contactListing.users?.is_verified && <span className="badge badge-blue" style={{ marginTop: 4, display: 'inline-block' }}>✓ Verified</span>}
             </div>
 
-            <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 16px', marginBottom: showProfileLine ? 10 : 16 }}>
-              <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 6 }}>{contactPhone ? '📞 เบอร์โทร' : '💬 ช่องทางติดต่อ'}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, wordBreak: 'break-all' }}>{contactListing.contact}</div>
-                {contactPhone ? (
-                  <a href={`tel:${contactListing.contact.replace(/\s/g, '')}`} style={{ flexShrink: 0, background: 'var(--primary)', borderRadius: 8, padding: '8px 14px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-                    โทรเลย
-                  </a>
-                ) : (
-                  <button onClick={() => navigator.clipboard.writeText(contactListing.contact).then(() => show('คัดลอกแล้ว'))} style={{ flexShrink: 0, background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 8, padding: '8px 14px', color: 'var(--primary)', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                    คัดลอก
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {showProfileLine && (
-              <div style={{ background: '#F0FFF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-                <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 6 }}>💚 Line ID</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, wordBreak: 'break-all' }}>{contactProfileLine}</div>
-                  <button onClick={() => navigator.clipboard.writeText(contactProfileLine).then(() => show('คัดลอก Line ID แล้ว'))} style={{ flexShrink: 0, background: '#22C55E', border: 'none', borderRadius: 8, padding: '8px 14px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+            {/* Main contact: phone, LINE, หรือ generic text */}
+            {contactLineInfo ? (
+              <div style={{ background: '#F0FFF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: '14px 16px', marginBottom: showProfileLine ? 10 : 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 6 }}>💚 LINE ID</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, wordBreak: 'break-all', color: '#15803D' }}>{contactLineInfo.display}</div>
+                  <button onClick={() => navigator.clipboard.writeText(contactLineInfo.raw).then(() => show('คัดลอก LINE ID แล้ว'))} style={{ flexShrink: 0, background: 'white', border: '1px solid #BBF7D0', borderRadius: 8, padding: '8px 14px', color: '#15803D', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                     คัดลอก
                   </button>
                 </div>
+                <a href={contactLineInfo.addUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: '#06C755', border: 'none', borderRadius: 10, padding: '12px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, textDecoration: 'none', boxShadow: '0 2px 6px rgba(6,199,85,.25)' }}>
+                  💚 เพิ่มเพื่อนใน LINE
+                </a>
+              </div>
+            ) : (
+              <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 16px', marginBottom: showProfileLine ? 10 : 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 6 }}>{contactPhone ? '📞 เบอร์โทร' : '💬 ช่องทางติดต่อ'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, wordBreak: 'break-all' }}>{contactListing.contact}</div>
+                  {contactPhone ? (
+                    <a href={`tel:${contactListing.contact.replace(/\s/g, '')}`} style={{ flexShrink: 0, background: 'var(--primary)', borderRadius: 8, padding: '8px 14px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+                      โทรเลย
+                    </a>
+                  ) : (
+                    <button onClick={() => navigator.clipboard.writeText(contactListing.contact).then(() => show('คัดลอกแล้ว'))} style={{ flexShrink: 0, background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 8, padding: '8px 14px', color: 'var(--primary)', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                      คัดลอก
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Profile LINE ID (รองจาก contact field) — แสดงถ้าต่างจาก contact ที่กรอก */}
+            {showProfileLine && profileLineInfo && (
+              <div style={{ background: '#F0FFF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 6 }}>💚 LINE สำรอง (จากโปรไฟล์)</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, wordBreak: 'break-all', color: '#15803D' }}>{profileLineInfo.display}</div>
+                  <button onClick={() => navigator.clipboard.writeText(profileLineInfo.raw).then(() => show('คัดลอก LINE ID แล้ว'))} style={{ flexShrink: 0, background: 'white', border: '1px solid #BBF7D0', borderRadius: 8, padding: '8px 14px', color: '#15803D', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                    คัดลอก
+                  </button>
+                </div>
+                <a href={profileLineInfo.addUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: '#06C755', border: 'none', borderRadius: 10, padding: '12px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, textDecoration: 'none', boxShadow: '0 2px 6px rgba(6,199,85,.25)' }}>
+                  💚 เพิ่มเพื่อนใน LINE
+                </a>
               </div>
             )}
 

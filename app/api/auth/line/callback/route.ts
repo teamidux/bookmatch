@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
   const { data: existing } = await sb.from('users').select('*').eq('line_user_id', lineUserId).maybeSingle()
 
   let userId: string
+  let needsOnboarding = false
   if (existing) {
     userId = existing.id
     // Refresh display name + avatar if changed
@@ -86,6 +87,8 @@ export async function GET(req: NextRequest) {
       .from('users')
       .update({ display_name: existing.display_name || displayName, avatar_url: pictureUrl })
       .eq('id', userId)
+    // ถ้า user เก่ายังไม่ได้ตั้ง line_id (user ที่ signup มาก่อนมี onboarding) → ก็ส่งไป onboarding
+    if (!existing.line_id) needsOnboarding = true
   } else {
     const { data: newUser, error } = await sb
       .from('users')
@@ -101,6 +104,7 @@ export async function GET(req: NextRequest) {
       .single()
     if (error || !newUser) return redirectError('user_create_failed')
     userId = newUser.id
+    needsOnboarding = true // user ใหม่ → ส่งไป onboarding LINE ID
   }
 
   // Create session
@@ -108,6 +112,26 @@ export async function GET(req: NextRequest) {
     ua: req.headers.get('user-agent') || undefined,
     ip: req.headers.get('x-forwarded-for') || undefined,
   })
+
+  // Reauth flow: user มาเปลี่ยน LINE ID → set cookie ให้ /api/user/update ผ่าน
+  // (next จะมี ?reauth=line ติดมา จาก profile page)
+  const isReauth = savedState.next?.includes('reauth=line')
+  if (isReauth) {
+    cookies().set('bm_line_reauth', '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 600, // 10 นาที — user มีเวลาพอที่จะ save
+      path: '/',
+    })
+  }
+
+  // First-time login (หรือ user เก่าที่ยังไม่มี line_id) → /onboarding ก่อน next
+  // Skip onboarding ถ้าเป็น reauth flow (user แค่กำลังเปลี่ยน LINE ID)
+  if (needsOnboarding && !isReauth) {
+    const next = encodeURIComponent(savedState.next || '/')
+    return NextResponse.redirect(`${siteUrl}/onboarding?next=${next}`)
+  }
 
   return NextResponse.redirect(`${siteUrl}${savedState.next || '/'}`)
 }

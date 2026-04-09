@@ -142,7 +142,9 @@ function SellPage() {
   }, [manualTitle, notFoundMode])
 
   useEffect(() => {
-    if (user?.phone) setContact(user.phone)
+    // Pre-fill contact: priority = LINE ID > phone (LINE สำคัญที่สุดเพราะมีปุ่ม Add)
+    if (user?.line_id) setContact(user.line_id)
+    else if (user?.phone) setContact(user.phone)
     const isbnParam = searchParams.get('isbn')
     if (isbnParam) fetchBook(isbnParam)
   }, [user])
