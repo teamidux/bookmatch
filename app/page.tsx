@@ -26,7 +26,8 @@ export default function HomePage() {
 
   useEffect(() => { loadData() }, [])
 
-  // Live search — single /api/search call
+  // Live search — DB only (mode=db), ฟรี ไม่กิน Google quota
+  // ถ้า DB results < 5 → แสดงปุ่ม "ค้นในคลังทั้งหมด" ให้ user click เพื่อ trigger Google
   useEffect(() => {
     if (!query.trim()) { setLiveResults([]); setGoogleLiveResults([]); setGoogleLoading(false); return }
 
@@ -45,11 +46,9 @@ export default function HomePage() {
       setGoogleLiveResults([])
 
       try {
-        const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+        const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=db`)
         const { results, matchQuality: mq } = await r.json()
         if (cancelled) return
-        // แยก: เล่มที่มีคนขาย (เด่น) vs เล่มจาก Google (ยังไม่มีคนขาย)
-        // ตัด preview ในหน้า home — กดปุ่ม "ดูผลทั้งหมด" จะไป /search ที่ไม่มี cap
         const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
         const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5)
         setLiveResults(withListings)
@@ -63,6 +62,26 @@ export default function HomePage() {
     }, 180)
     return () => { cancelled = true; clearTimeout(t) }
   }, [query])
+
+  // Manual expand search — call mode=all เพื่อดึงจาก Google + auto-cache
+  const expandSearch = async () => {
+    const q = query.trim()
+    if (!q || googleLoading) return
+    setGoogleLoading(true)
+    try {
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=all`)
+      const { results, matchQuality: mq } = await r.json()
+      const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0).slice(0, 3)
+      const noListings = (results || []).filter((b: any) => (b.active_listings_count || 0) === 0).slice(0, 5)
+      setLiveResults(withListings)
+      setGoogleLiveResults(noListings)
+      setMatchQuality(mq || 'none')
+    } catch {
+      // silent — keep existing results
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   const loadData = async () => {
     const [recentRes, { data: wanted }] = await Promise.all([
@@ -178,6 +197,13 @@ export default function HomePage() {
                     ))}
                   </>
                 )}
+                {/* ปุ่มขยายค้นหา — แสดงเมื่อผลรวมน้อยกว่า 5 (ขอเพิ่มจากคลังใหญ่) */}
+                {(liveResults.length + googleLiveResults.length) < 5 && (
+                  <button onClick={expandSearch} disabled={googleLoading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '14px 16px', background: googleLoading ? 'var(--surface)' : '#FEF3C7', border: 'none', borderTop: '1px solid var(--border-light)', fontFamily: 'Kanit', fontSize: 14, color: googleLoading ? 'var(--ink3)' : '#92400E', fontWeight: 600, cursor: googleLoading ? 'default' : 'pointer', textAlign: 'left', minHeight: 48 }}>
+                    <span>{googleLoading ? '⏳ กำลังค้นในคลัง...' : '📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)'}</span>
+                    {!googleLoading && <span style={{ fontSize: 16 }}>→</span>}
+                  </button>
+                )}
                 <button onClick={doSearch} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '14px 16px', background: 'var(--primary)', border: 'none', fontFamily: 'Kanit', fontSize: 15, color: 'white', fontWeight: 600, cursor: 'pointer', textAlign: 'left', minHeight: 48 }}>
                   <span>🔍 ดูผลทั้งหมดสำหรับ "{query}"</span>
                   <span style={{ fontSize: 18, fontWeight: 700 }}>→</span>
@@ -190,14 +216,14 @@ export default function HomePage() {
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 8px 28px rgba(0,0,0,.18)', zIndex: 50, overflow: 'hidden', marginTop: 6, padding: '24px 16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
-                  ยังไม่พบหนังสือ "{query}"
+                  ไม่พบ "{query}" ในระบบด่วน
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16 }}>
-                  หนังสือเล่มนี้ยังไม่มีในระบบ<br />
-                  ลองพิมพ์ชื่อให้ครบ ใช้ ISBN หรือสแกน barcode
+                  ลองค้นในคลังหลัก 200,000+ เล่ม<br />
+                  หรือพิมพ์ชื่อให้ครบ / ใช้ ISBN
                 </div>
-                <button onClick={doSearch} style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 10, padding: '10px 16px', minHeight: 44, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: 'var(--primary)', cursor: 'pointer' }}>
-                  🔍 ค้นต่อในหน้าค้นหา →
+                <button onClick={expandSearch} style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 10, padding: '12px 20px', minHeight: 48, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: '#92400E', cursor: 'pointer' }}>
+                  📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)
                 </button>
               </div>
             )}

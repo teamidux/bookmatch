@@ -1,5 +1,7 @@
-// Unified search — DB (สำหรับ marketplace data) + Google Books (สำหรับ catalog)
-// คู่ขนาน, merge by ISBN, auto-cache Google → DB หลัง rank ผ่าน
+// Unified search — DB + Google Books
+// mode=db   → query เฉพาะ DB (default สำหรับ live search, ฟรี ไม่กิน Google quota)
+// mode=all  → query DB + Google parallel + auto-cache ทุกเล่มที่ valid (เฉพาะตอน user
+//             explicit click "ค้นในคลังทั้งหมด")
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/lib/search'
@@ -13,6 +15,10 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
   if (!q || q.length < 1) return NextResponse.json({ results: [] })
+
+  // mode: 'db' = DB only (live search), 'all' = DB + Google + auto-cache
+  // default 'all' เพื่อ backward compat — frontend ที่ใหม่จะส่ง mode=db ตอน live search
+  const mode = req.nextUrl.searchParams.get('mode') === 'db' ? 'db' : 'all'
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,13 +62,15 @@ export async function GET(req: NextRequest) {
       return []
     }
   })()
-  const [google, dbBooks] = await Promise.all([
-    fetchGoogleBooksByTitle(q, 20).catch((err: any) => {
-      console.error('[search] google fail:', err?.message || err)
-      return [] as any[]
-    }),
-    dbQuery,
-  ])
+  // mode=db: ข้าม Google ทั้งหมด → ฟรี ไม่กิน quota
+  // mode=all: ดึง Google ขนานกับ DB
+  const googlePromise = mode === 'db'
+    ? Promise.resolve([] as any[])
+    : fetchGoogleBooksByTitle(q, 20).catch((err: any) => {
+        console.error('[search] google fail:', err?.message || err)
+        return [] as any[]
+      })
+  const [google, dbBooks] = await Promise.all([googlePromise, dbQuery])
 
   // ดึง listings count + min_price จริงจาก listings table (ไม่ trust column ใน books)
   const bookIds = (dbBooks || []).map(b => b.id).filter(Boolean)
@@ -131,17 +139,16 @@ export async function GET(req: NextRequest) {
   const matchQuality: 'exact' | 'partial' | 'none' =
     results.length === 0 ? 'none' : isExact ? 'exact' : 'partial'
 
-  // 4. AUTO-CACHE — เก็บเล่ม Google ที่ผ่าน rank แล้วและยังไม่อยู่ใน DB
-  // ครั้งต่อไปจะ hit DB ทันที ไม่ต้องพึ่ง Google geo อีก ระยะยาว DB จะสะสม
-  // หนังสือยอดนิยมตาม demand จริงจาก user search
+  // 4. AUTO-CACHE — เก็บ "ทุก" เล่มจาก Google ที่มี ISBN valid (ไม่ filter ด้วย rank)
+  // เหตุผล: Google คืน 20 เล่ม/call ที่อาจไม่ relevant กับ query ปัจจุบัน
+  // แต่อาจ relevant กับ query อื่นในอนาคต — เก็บไว้ใน DB ฟรี ลด Google call ระยะยาว
+  // (Storage ~500 bytes/เล่ม × 20 เล่ม/call = 10KB/call → free tier 500MB ใช้นาน)
   const dbIsbnSet = new Set((dbBooks || []).map((b: any) => b.isbn).filter(Boolean))
-  const rankedIsbns = new Set(ranked.map((b: any) => b.isbn))
   const toCache = (google || [])
     .filter((b: any) =>
       b.isbn &&
       /^(978|979)\d{10}$/.test(b.isbn) &&
       !dbIsbnSet.has(b.isbn) &&
-      rankedIsbns.has(b.isbn) &&
       b.title
     )
     .map((b: any) => ({

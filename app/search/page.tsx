@@ -23,6 +23,7 @@ function SearchPage() {
   const [results, setResults] = useState<Book[]>([])
   const [googleResults, setGoogleResults] = useState<GoogleBook[]>([])
   const [loading, setLoading] = useState(false)
+  const [expanding, setExpanding] = useState(false)
   const [matchQuality, setMatchQuality] = useState<'exact' | 'partial' | 'none'>('none')
   const [searched, setSearched] = useState(false)
 
@@ -33,19 +34,19 @@ function SearchPage() {
     if (q) { doSearch(q); setSearched(true) }
   }, [searchParams])
 
-  // debounced live search — ยิง query หลังพิมพ์หยุด 220ms
+  // debounced live search — DB only, ฟรี ไม่กิน Google quota
   useEffect(() => {
     if (!query.trim()) { setResults([]); setSearched(false); return }
     const t = setTimeout(() => { doSearch(query); setSearched(true) }, 220)
     return () => clearTimeout(t)
   }, [query])
 
-  const doSearch = async (q: string) => {
+  const doSearch = async (q: string, mode: 'db' | 'all' = 'db') => {
     if (!q.trim()) return
-    setLoading(true)
-    setGoogleResults([])
+    if (mode === 'db') setLoading(true)
+    else setExpanding(true)
     try {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`)
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&mode=${mode}`)
       const { results, matchQuality: mq } = await r.json()
       // แยกตามว่ามีคนขายมั้ย
       const withListings = (results || []).filter((b: any) => (b.active_listings_count || 0) > 0)
@@ -54,13 +55,18 @@ function SearchPage() {
       setGoogleResults(noListings)
       setMatchQuality(mq || 'none')
     } catch {
-      setResults([])
-      setGoogleResults([])
-      setMatchQuality('none')
+      if (mode === 'db') {
+        setResults([])
+        setGoogleResults([])
+        setMatchQuality('none')
+      }
     } finally {
       setLoading(false)
+      setExpanding(false)
     }
   }
+
+  const expandSearch = () => doSearch(query, 'all')
 
   const handleSubmit = () => {
     if (!query.trim()) return
@@ -92,11 +98,18 @@ function SearchPage() {
             <div className="empty">
               <div className="empty-icon">🔍</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>
-                ยังไม่พบหนังสือ "{query}"
+                ไม่พบ "{query}" ในระบบด่วน
               </div>
               <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 16, maxWidth: 320, margin: '0 auto 16px' }}>
-                หนังสือเล่มนี้ยังไม่มีในระบบ ลองพิมพ์ชื่อให้ครบ ใช้ ISBN หรือสแกน barcode
+                ลองค้นในคลังหลัก 200,000+ เล่ม
               </div>
+              <button
+                onClick={expandSearch}
+                disabled={expanding}
+                style={{ background: expanding ? 'var(--surface)' : '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: '14px 24px', minHeight: 52, fontFamily: 'Kanit', fontSize: 15, fontWeight: 600, color: expanding ? 'var(--ink3)' : '#92400E', cursor: expanding ? 'default' : 'pointer' }}
+              >
+                {expanding ? '⏳ กำลังค้นในคลัง...' : '📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)'}
+              </button>
             </div>
           )}
 
@@ -154,6 +167,20 @@ function SearchPage() {
                 </Link>
               ))}
             </>
+          )}
+
+          {/* ปุ่มขยายค้นหา — แสดงเมื่อ total < 5 และยังไม่ expanding */}
+          {!loading && (results.length + googleResults.length) > 0 && (results.length + googleResults.length) < 5 && searched && (
+            <div style={{ marginTop: 20, padding: '0 4px' }}>
+              <button
+                onClick={expandSearch}
+                disabled={expanding}
+                style={{ width: '100%', background: expanding ? 'var(--surface)' : '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: '14px 16px', minHeight: 52, fontFamily: 'Kanit', fontSize: 14, fontWeight: 600, color: expanding ? 'var(--ink3)' : '#92400E', cursor: expanding ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <span>{expanding ? '⏳ กำลังค้นในคลัง...' : '📚 ค้นในคลังทั้งหมด (200,000+ เล่ม)'}</span>
+                {!expanding && <span style={{ fontSize: 16 }}>→</span>}
+              </button>
+            </div>
           )}
         </div>
         <div style={{ height: 12 }} />
