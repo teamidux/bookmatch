@@ -1,10 +1,17 @@
 // Unified search — DB + Google Books
-// mode=db   → query เฉพาะ DB (default สำหรับ live search, ฟรี ไม่กิน Google quota)
-// mode=all  → query DB + Google parallel + auto-cache ทุกเล่มที่ valid (เฉพาะตอน user
-//             explicit click "ค้นในคลังทั้งหมด")
+//
+// หลักการ (รื้อใหม่ — KISS):
+//   1. DB ค้นด้วย ilike substring บน title/author + variant ที่ตัดช่องว่าง
+//   2. Google ดึงดิบ 40 เล่ม ไม่ filter อะไรทั้งนั้น
+//   3. Merge by ISBN — DB ก่อน (มี marketplace data) → Google ตามลำดับที่ Google คืน
+//   4. Sort: เล่มที่มีคนขายขึ้นบน (ตาม listing count desc) → ที่ไม่มีตามมา (preserve order)
+//   5. Auto-cache: เก็บทุกเล่มจาก Google raw เข้า DB (ไม่ตัดด้วย rank)
+//
+// mode=db   → query เฉพาะ DB (ฟรี ไม่กิน Google quota) — ใช้กับ live search
+// mode=all  → DB + Google + auto-cache — ใช้ตอน user explicit click "ค้นหา"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleBooksByTitle, rankBooksByQuery, normalizeForMatch } from '@/lib/search'
+import { fetchGoogleBooksRaw, normalizeForMatch } from '@/lib/search'
 
 // Edge runtime: รันที่ edge ใกล้ user (Singapore สำหรับผู้ใช้ไทย) ไม่ใช่ที่
 // iad1 ตาม Hobby plan default — สำคัญเพราะ Google Books API geo-localize
@@ -16,8 +23,6 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
   if (!q || q.length < 1) return NextResponse.json({ results: [] })
 
-  // mode: 'db' = DB only (live search), 'all' = DB + Google + auto-cache
-  // default 'all' เพื่อ backward compat — frontend ที่ใหม่จะส่ง mode=db ตอน live search
   const mode = req.nextUrl.searchParams.get('mode') === 'db' ? 'db' : 'all'
 
   const supabase = createClient(
@@ -25,17 +30,17 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  // ค้น DB และ Google Books คู่ขนาน
-  // ใช้ 2 separate queries แทน .or() — supabase-js OR filter มี edge case
-  // กับ Thai chars บน HTTP/PostgREST ที่ทำให้ query บางตัว return 0 ทั้งที่
-  // SQL ILIKE ปกติทำงานได้ (verified with ขุนช้างขุนแผน case)
+  // ─────────────────────────────────────────────────────────────────
+  // 1. DB QUERY
+  // ─────────────────────────────────────────────────────────────────
+  // Variant 1: query ตามที่ user พิมพ์ (escape % และ _ ที่เป็น wildcard)
+  // Variant 2: ตัดช่องว่างทั้งหมด — รองรับ "คิดใหญ่ ไม่คิดเล็ก" vs "คิดใหญ่ไม่คิดเล็ก"
+  // ใช้ separate queries แทน .or() — supabase-js OR filter มี edge case กับ Thai chars
   const escaped = q.replace(/[%_]/g, '\\$&')
   const escapedNoWs = escaped.replace(/\s+/g, '')
   const variants: string[] = [escaped]
   if (escapedNoWs !== escaped && escapedNoWs.length > 0) variants.push(escapedNoWs)
 
-  // SELECT รวม view_count เพื่อใช้ sort หนังสือยอดนิยมขึ้นบน
-  // (silent ignore ถ้า column ไม่มี — Postgres จะ error, fallback ไม่ใส่)
   const SELECT_COLS = 'id, isbn, title, author, cover_url, wanted_count, view_count'
   const dbQuery = (async () => {
     try {
@@ -43,8 +48,8 @@ export async function GET(req: NextRequest) {
       for (let i = 0; i < variants.length; i++) {
         const v = variants[i]
         queries.push(
-          supabase.from('books').select(SELECT_COLS).ilike('title', `%${v}%`).limit(20),
-          supabase.from('books').select(SELECT_COLS).ilike('author', `%${v}%`).limit(10),
+          supabase.from('books').select(SELECT_COLS).ilike('title', `%${v}%`).limit(50),
+          supabase.from('books').select(SELECT_COLS).ilike('author', `%${v}%`).limit(20),
         )
       }
       const results: any[] = await Promise.all(queries)
@@ -55,9 +60,7 @@ export async function GET(req: NextRequest) {
           if (!b.id || seen.has(b.id)) continue
           seen.add(b.id)
           merged.push(b)
-          if (merged.length >= 30) break
         }
-        if (merged.length >= 30) break
       }
       return merged
     } catch (err: any) {
@@ -65,17 +68,22 @@ export async function GET(req: NextRequest) {
       return []
     }
   })()
-  // mode=db: ข้าม Google ทั้งหมด → ฟรี ไม่กิน quota
-  // mode=all: ดึง Google ขนานกับ DB
+
+  // ─────────────────────────────────────────────────────────────────
+  // 2. GOOGLE QUERY (raw — ไม่ filter)
+  // ─────────────────────────────────────────────────────────────────
   const googlePromise = mode === 'db'
     ? Promise.resolve([] as any[])
-    : fetchGoogleBooksByTitle(q, 20).catch((err: any) => {
+    : fetchGoogleBooksRaw(q).catch((err: any) => {
         console.error('[search] google fail:', err?.message || err)
         return [] as any[]
       })
-  const [google, dbBooks] = await Promise.all([googlePromise, dbQuery])
 
-  // ดึง listings count + min_price จริงจาก listings table (ไม่ trust column ใน books)
+  const [googleRaw, dbBooks] = await Promise.all([googlePromise, dbQuery])
+
+  // ─────────────────────────────────────────────────────────────────
+  // 3. ดึง listings count + min_price จริงจาก listings table
+  // ─────────────────────────────────────────────────────────────────
   const bookIds = (dbBooks || []).map(b => b.id).filter(Boolean)
   const listingMap: Record<string, { count: number; min_price: number }> = {}
   if (bookIds.length > 0) {
@@ -91,7 +99,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Merge by ISBN — DB ก่อน (มี marketplace data) แล้วเติมด้วย Google
+  // ─────────────────────────────────────────────────────────────────
+  // 4. MERGE — DB ก่อน, Google ตามลำดับที่ Google คืน
+  // ─────────────────────────────────────────────────────────────────
   const byIsbn = new Map<string, any>()
 
   for (const b of dbBooks) {
@@ -110,8 +120,8 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  for (const b of google) {
-    if (byIsbn.has(b.isbn)) continue
+  for (const b of googleRaw) {
+    if (!b.isbn || byIsbn.has(b.isbn)) continue
     byIsbn.set(b.isbn, {
       isbn: b.isbn,
       title: b.title,
@@ -125,41 +135,33 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // 1. Rank by relevance (prefix > substring) — แก้ปัญหา Google ranking
+  // ─────────────────────────────────────────────────────────────────
+  // 5. SORT — listings ก่อน → ที่ไม่มีตาม
+  // ─────────────────────────────────────────────────────────────────
   const allBooks = Array.from(byIsbn.values())
-  const ranked = rankBooksByQuery(allBooks, q)
+  const withListings = allBooks
+    .filter(b => (b.active_listings_count || 0) > 0)
+    .sort((a, b) => (b.active_listings_count - a.active_listings_count) || ((b.view_count || 0) - (a.view_count || 0)))
+  const noListings = allBooks.filter(b => (b.active_listings_count || 0) === 0)
+  // noListings ไม่ sort — preserve ลำดับจาก DB→Google เดิม (Google มี relevance order ของตัวเอง)
 
-  // 2. แยกเป็น 2 กลุ่ม: มีคนขาย vs ไม่มี
-  // ภายในกลุ่ม เรียงตาม view_count desc (เล่มยอดนิยมขึ้นบน) แทน relevance order
-  // เพราะ rank filter ก่อนหน้าตัดเล่มไม่เกี่ยวออกแล้ว → ที่เหลือถือว่า relevant
-  // เพียงพอที่จะให้ popularity เป็น primary signal
-  const sortByPopular = (a: any, b: any) => (b.view_count || 0) - (a.view_count || 0)
-  const withListings = ranked.filter(b => (b.active_listings_count || 0) > 0).sort(sortByPopular)
-  const noListings = ranked.filter(b => (b.active_listings_count || 0) === 0).sort(sortByPopular)
-
-  // เล่มมีคนขายก่อน → เล่มไม่มีคนขายตามมา
   const results = [...withListings, ...noListings]
 
-  // 3. ตรวจคุณภาพ match ของ top result — แยก 'exact' (ตรง/prefix) vs 'partial' (substring)
-  // ใช้ normalize ตัวเดียวกับ rank เพื่อให้ "แฮร์รี่" vs "แฮรี่" ถือเป็น exact ด้วย
-  const topNorm = normalizeForMatch(results[0]?.title || '')
+  // ─────────────────────────────────────────────────────────────────
+  // 6. MATCH QUALITY — exact (ตรง/prefix) vs partial (substring) — สำหรับ UI label
+  // ─────────────────────────────────────────────────────────────────
   const qNorm = normalizeForMatch(q)
+  const topNorm = normalizeForMatch(results[0]?.title || '')
   const isExact = !!qNorm && (topNorm === qNorm || topNorm.startsWith(qNorm))
   const matchQuality: 'exact' | 'partial' | 'none' =
     results.length === 0 ? 'none' : isExact ? 'exact' : 'partial'
 
-  // 4. AUTO-CACHE — เก็บ "ทุก" เล่มจาก Google ที่มี ISBN valid (ไม่ filter ด้วย rank)
-  // เหตุผล: Google คืน 20 เล่ม/call ที่อาจไม่ relevant กับ query ปัจจุบัน
-  // แต่อาจ relevant กับ query อื่นในอนาคต — เก็บไว้ใน DB ฟรี ลด Google call ระยะยาว
-  // (Storage ~500 bytes/เล่ม × 20 เล่ม/call = 10KB/call → free tier 500MB ใช้นาน)
+  // ─────────────────────────────────────────────────────────────────
+  // 7. AUTO-CACHE — เก็บทุกเล่มจาก Google raw เข้า DB (ไม่ filter strict)
+  // ─────────────────────────────────────────────────────────────────
   const dbIsbnSet = new Set((dbBooks || []).map((b: any) => b.isbn).filter(Boolean))
-  const toCache = (google || [])
-    .filter((b: any) =>
-      b.isbn &&
-      /^(978|979)\d{10}$/.test(b.isbn) &&
-      !dbIsbnSet.has(b.isbn) &&
-      b.title
-    )
+  const toCache = (googleRaw || [])
+    .filter((b: any) => b.isbn && b.title && !dbIsbnSet.has(b.isbn))
     .map((b: any) => ({
       isbn: b.isbn,
       // NFC normalize — กัน Thai unicode bug (composed/decomposed sara am)
@@ -171,18 +173,39 @@ export async function GET(req: NextRequest) {
       source: 'google_books',
     }))
 
-  // ต้องมี service role key ถึงจะ insert ได้ (anon key โดน RLS block)
   const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  let cachedCount = 0
+  let cacheError: string | null = null
   if (hasServiceRole && toCache.length > 0) {
-    // Fire-and-forget — Edge runtime continues briefly after response
-    // ถ้า cache fail ไม่กระทบ user experience (DB upsert ignore duplicates)
-    supabase
+    // Await จริง — เพื่อให้ debug stats สะท้อนผลจริงใน response
+    const { data: upserted, error } = await supabase
       .from('books')
       .upsert(toCache, { onConflict: 'isbn', ignoreDuplicates: true })
-      .then(({ error }: any) => {
-        if (error) console.error('[search] cache fail:', error.message)
-      })
+      .select('isbn')
+    if (error) {
+      cacheError = error.message
+      console.error('[search] cache fail:', error.message)
+    } else {
+      cachedCount = (upserted || []).length
+    }
+  } else if (!hasServiceRole) {
+    cacheError = 'no_service_role_key'
   }
 
-  return NextResponse.json({ results, matchQuality })
+  return NextResponse.json({
+    results,
+    matchQuality,
+    debug: {
+      query: q,
+      mode,
+      google_raw_count: googleRaw.length,
+      db_match_count: dbBooks.length,
+      merged_count: results.length,
+      to_cache_count: toCache.length,
+      cached_count: cachedCount,
+      cache_error: cacheError,
+      google_isbns: googleRaw.map((b: any) => b.isbn),
+      db_isbns: Array.from(dbIsbnSet),
+    },
+  })
 }
