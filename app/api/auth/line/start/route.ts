@@ -31,6 +31,11 @@ export async function GET(req: NextRequest) {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
+    // Bot Link Feature: แสดงปุ่ม "Add @Bookmatch as friend" หลัง authorize
+    // - normal:     แสดง checkbox ให้ user เลือก (ไม่ default)
+    // - aggressive: หน้าใหม่หลัง authorize เน้นให้ add (default-checked)
+    // ต้องมี OA channel link กับ LINE Login channel ใน Console ก่อน
+    bot_prompt: 'aggressive',
   })
   const lineUrl = `https://access.line.me/oauth2/v2.1/authorize?${params.toString()}`
   return NextResponse.redirect(lineUrl)
