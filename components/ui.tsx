@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth'
+import { computeTrustScore, type TrustItemKey, type TrustItem } from '@/lib/trust'
 
 // resize รูปก่อนส่ง barcode scan — แก้ปัญหา iPhone (EXIF rotation + ภาพใหญ่เกิน / HEIC)
 export function resizeForScan(file: File, maxPx = 1920): Promise<File> {
@@ -709,9 +710,8 @@ export function PageLoading() {
 
 // ─────────────────────────────────────────────────────────────────────────
 // Trust Mission card — gamified profile completeness
+// (computeTrustScore + types imported at top of file)
 // ─────────────────────────────────────────────────────────────────────────
-
-import { computeTrustScore, type TrustItemKey, type TrustItem } from '@/lib/trust'
 
 export function TrustBadge({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md' | 'lg' }) {
   const { tier, count } = computeTrustScore(user)
