@@ -7,8 +7,9 @@ import { Nav, BottomNav, BookCover, useToast, Toast, SkeletonList } from '@/comp
 import { registerSW, getPushState, subscribePush, unsubscribePush } from '@/lib/push'
 
 export default function WantedPage() {
-  const { user, loginWithLine } = useAuth()
+  const { user, loginWithLine, reloadUser } = useAuth()
   const [items, setItems] = useState<Wanted[]>([])
+  const [refreshingOa, setRefreshingOa] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pushState, setPushState] = useState<'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading'>('loading')
   const swReg = useRef<ServiceWorkerRegistration | null>(null)
@@ -131,10 +132,35 @@ export default function WantedPage() {
                   fontSize: 14,
                   textDecoration: 'none',
                   boxShadow: '0 2px 6px rgba(6,199,85,.3)',
+                  marginBottom: 8,
                 }}
               >
                 💚 เพิ่มเพื่อนใน LINE
               </a>
+
+              {/* ปุ่ม refresh — สำหรับ user ที่ add แล้วต้องการเช็คทันที */}
+              <button
+                onClick={async () => {
+                  setRefreshingOa(true)
+                  await reloadUser()
+                  setTimeout(() => setRefreshingOa(false), 300)
+                }}
+                disabled={refreshingOa}
+                style={{
+                  width: '100%',
+                  background: 'white',
+                  border: '1px solid #6EE7B7',
+                  borderRadius: 10,
+                  padding: '10px 16px',
+                  color: '#047857',
+                  fontFamily: 'Kanit',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                {refreshingOa ? 'กำลังตรวจสอบ...' : '✓ Add แล้ว ตรวจสอบสถานะ'}
+              </button>
             </div>
           )}
 
