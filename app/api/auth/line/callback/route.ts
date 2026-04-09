@@ -116,10 +116,13 @@ export async function GET(req: NextRequest) {
   }
 
   // Create session
-  await createSession(userId, {
+  const sessionResult = await createSession(userId, {
     ua: req.headers.get('user-agent') || undefined,
     ip: req.headers.get('x-forwarded-for') || undefined,
   })
+  if (sessionResult.error) {
+    return redirectError(`session_failed:${sessionResult.error}`)
+  }
 
   // Reauth flow: user มาเปลี่ยน LINE ID → set cookie ให้ /api/user/update ผ่าน
   // (next จะมี ?reauth=line ติดมา จาก profile page)

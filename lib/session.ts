@@ -13,16 +13,20 @@ function admin() {
   )
 }
 
-export async function createSession(userId: string, opts?: { ua?: string; ip?: string }): Promise<string> {
+export async function createSession(userId: string, opts?: { ua?: string; ip?: string }): Promise<{ token: string; error?: string }> {
   const token = randomBytes(32).toString('hex')
   const expires = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000)
-  await admin().from('sessions').insert({
+  const { error } = await admin().from('sessions').insert({
     token,
     user_id: userId,
     expires_at: expires.toISOString(),
     user_agent: opts?.ua || null,
     ip: opts?.ip || null,
   })
+  if (error) {
+    console.error('[session] insert error:', error)
+    return { token, error: `${error.code || ''}:${(error.message || '').slice(0, 100)}` }
+  }
   cookies().set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: true,
@@ -30,7 +34,7 @@ export async function createSession(userId: string, opts?: { ua?: string; ip?: s
     path: '/',
     maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
   })
-  return token
+  return { token }
 }
 
 export async function getSessionUser(): Promise<any | null> {
