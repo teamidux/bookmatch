@@ -106,6 +106,9 @@ async function callGoogleSearchPage(qParam: string, startIndex: number): Promise
     startIndex: String(startIndex),
     printType: 'books',
     orderBy: 'relevance',
+    // projection=lite ลด response size ~50% — เราใช้แค่ title/author/isbn/cover/lang
+    // ไม่ต้องการ description/categories/rating ใน search (detail page ดึง full ทีหลัง)
+    projection: 'lite',
   })
   if (apiKey) params.set('key', apiKey)
 
