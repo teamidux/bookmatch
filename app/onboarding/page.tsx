@@ -147,9 +147,9 @@ export default function OnboardingPage() {
             ยังไม่ใส่ตอนนี้
           </button>
 
-          <div style={{ fontSize: 12, color: 'var(--ink3)', textAlign: 'center', marginTop: 18, lineHeight: 1.6 }}>
-            เปลี่ยนภายหลังได้ที่หน้า Profile<br />
-            (จะต้องยืนยันด้วย LINE อีกครั้งเพื่อความปลอดภัย)
+          <div style={{ fontSize: 14, color: '#475569', textAlign: 'center', marginTop: 20, lineHeight: 1.7, fontWeight: 500 }}>
+            เปลี่ยนภายหลังได้ที่หน้า <b>Profile</b><br />
+            <span style={{ fontSize: 13, color: 'var(--ink3)' }}>(จะต้องยืนยันด้วย LINE อีกครั้งเพื่อความปลอดภัย)</span>
           </div>
         </div>
       </div>

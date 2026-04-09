@@ -262,7 +262,18 @@ export default function SellerPage({ params }: PageProps) {
         <Link href="/" className="back-btn">← กลับ</Link>
 
         <div style={{ background: 'var(--primary)', padding: '20px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)', flexShrink: 0 }}>{seller?.seller_type === 'store' ? '🏪' : '👤'}</div>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)', flexShrink: 0, overflow: 'hidden' }}>
+            {(seller as any)?.avatar_url ? (
+              <img
+                src={(seller as any).avatar_url}
+                alt={seller?.display_name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+            ) : (
+              seller?.seller_type === 'store' ? '🏪' : '👤'
+            )}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, fontWeight: 700, color: 'white', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: 4 }}>{seller?.display_name}</div>
             {(seller as any)?.phone_verified_at && (seller as any)?.phone && (

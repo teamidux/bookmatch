@@ -314,7 +314,18 @@ export default function ProfilePage() {
 
       <div className="page">
         <div style={{ background: 'var(--primary)', padding: '24px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)' }}>{user.seller_type === 'store' ? '🏪' : '👤'}</div>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '2px solid rgba(255,255,255,.3)', overflow: 'hidden', flexShrink: 0 }}>
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.display_name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+            ) : (
+              user.seller_type === 'store' ? '🏪' : '👤'
+            )}
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, color: 'white', marginBottom: 3 }}>
               {user.seller_type === 'store' && user.store_name ? user.store_name : user.display_name}
