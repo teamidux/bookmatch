@@ -6,13 +6,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
   const [allowed, setAllowed] = useState<boolean | null>(null)
 
+  // noindex — กัน search engine / AI crawlers
   useEffect(() => {
-    // noindex — กัน search engine / AI crawlers
     const meta = document.createElement('meta')
     meta.name = 'robots'
     meta.content = 'noindex, nofollow, noarchive'
     document.head.appendChild(meta)
-    return () => { document.head.removeChild(meta) }
+    return () => { try { document.head.removeChild(meta) } catch {} }
+  }, [])
+
+  // Override body max-width สำหรับ admin (ปกติ 480px สำหรับ mobile)
+  useEffect(() => {
+    document.body.style.maxWidth = '100%'
+    return () => { document.body.style.maxWidth = '' }
   }, [])
 
   useEffect(() => {
@@ -36,12 +42,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </div>
     )
   }
-
-  // Override body max-width สำหรับ admin (ปกติ 480px สำหรับ mobile)
-  useEffect(() => {
-    document.body.style.maxWidth = '100%'
-    return () => { document.body.style.maxWidth = '' }
-  }, [])
 
   return (
     <div style={{ width: '100%', maxWidth: 1200, margin: '0 auto', minHeight: '100vh', padding: '0 24px', boxSizing: 'border-box' }}>
