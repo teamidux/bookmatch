@@ -47,7 +47,7 @@ export type TrustScore = {
 export const TRUST_TIERS: Record<string, TrustTier> = {
   member:     { level: 0, label: 'สมาชิก',              shortLabel: '👤 สมาชิก',            emoji: '👤', color: '#64748B', bgColor: '#F1F5F9' },
   phone:      { level: 1, label: 'ลงทะเบียนมือถือแล้ว',   shortLabel: '📱 ลงทะเบียนแล้ว',    emoji: '📱', color: '#0891B2', bgColor: '#ECFEFF' },
-  verified:   { level: 2, label: 'Verified Seller',     shortLabel: '🛡️ Verified Seller',  emoji: '🛡️', color: '#15803D', bgColor: '#DCFCE7' },
+  verified:   { level: 2, label: 'Verified Seller',     shortLabel: '🛡️ Verified Seller',  emoji: '🛡️', color: '#1D4ED8', bgColor: '#DBEAFE' },
 }
 
 export function computeTrustScore(user: Partial<User> | null | undefined): TrustScore {
