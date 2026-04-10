@@ -15,6 +15,10 @@ export default function ProfilePage() {
   const [listings, setListings] = useState<Listing[]>([])
   // showLogin removed — login goes directly to LINE OAuth
   const [showPhoneVerify, setShowPhoneVerify] = useState(false)
+  const [showContact, setShowContact] = useState(false)
+  const [contactMsg, setContactMsg] = useState('')
+  const [contactSending, setContactSending] = useState(false)
+  const [contactSent, setContactSent] = useState(false)
   const [showIdentityWizard, setShowIdentityWizard] = useState(false)
   const [confirmSoldId, setConfirmSoldId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -216,6 +220,61 @@ export default function ProfilePage() {
       <Nav />
       <Toast msg={msg} />
       {showPhoneVerify && <PhoneVerifyModal onClose={() => setShowPhoneVerify(false)} onDone={() => setShowPhoneVerify(false)} />}
+
+      {showContact && (
+        <div onClick={() => { setShowContact(false); setContactSent(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 36px', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>💬 ติดต่อเรา</div>
+            <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>แจ้งปัญหา เสนอแนะ หรือสอบถาม</div>
+
+            {contactSent ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#15803D', marginBottom: 6 }}>ส่งข้อความแล้ว</div>
+                <div style={{ fontSize: 13, color: 'var(--ink3)' }}>เราจะตอบกลับโดยเร็วที่สุด</div>
+                <button className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => { setShowContact(false); setContactSent(false); setContactMsg('') }}>ปิด</button>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={contactMsg}
+                  onChange={e => setContactMsg(e.target.value)}
+                  placeholder="พิมพ์ข้อความ..."
+                  maxLength={2000}
+                  rows={4}
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', fontSize: 14, fontFamily: 'Kanit', resize: 'vertical', marginBottom: 4 }}
+                />
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 14, textAlign: 'right' }}>{contactMsg.length}/2000</div>
+                <button
+                  className="btn"
+                  disabled={contactSending || contactMsg.trim().length < 5}
+                  onClick={async () => {
+                    setContactSending(true)
+                    try {
+                      const r = await fetch('/api/contact', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: contactMsg }),
+                      })
+                      if (r.ok) {
+                        setContactSent(true)
+                      } else {
+                        const body = await r.json().catch(() => ({}))
+                        show(body.error || 'ส่งไม่สำเร็จ')
+                      }
+                    } catch { show('ส่งไม่สำเร็จ') }
+                    finally { setContactSending(false) }
+                  }}
+                  style={{ marginBottom: 8 }}
+                >
+                  {contactSending ? 'กำลังส่ง...' : 'ส่งข้อความ'}
+                </button>
+                <button className="btn btn-ghost" onClick={() => setShowContact(false)}>ยกเลิก</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {showIdentityWizard && <IdentityVerifyWizard onClose={() => setShowIdentityWizard(false)} onDone={() => show('ส่งเอกสารเรียบร้อย รอตรวจสอบ ✓')} />}
 
       {confirmSoldId && (
@@ -509,6 +568,11 @@ export default function ProfilePage() {
               <span style={{ color: 'var(--ink3)' }}>›</span>
             </div>
           </Link>
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setShowContact(true)}>
+            <span style={{ fontSize: 20 }}>💬</span>
+            <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>ติดต่อเรา / แจ้งปัญหา</div></div>
+            <span style={{ color: 'var(--ink3)' }}>›</span>
+          </div>
           <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={logout}>
             <span style={{ fontSize: 20 }}>🚪</span>
             <div style={{ fontSize: 14, fontWeight: 600 }}>ออกจากระบบ</div>

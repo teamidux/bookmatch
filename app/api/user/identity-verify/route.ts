@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSessionUser } from '@/lib/session'
+import { pushLineText } from '@/lib/line-bot'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -80,6 +81,19 @@ export async function POST(req: NextRequest) {
     if (updateErr) {
       console.error('[identity-verify] update error:', updateErr)
       return NextResponse.json({ error: 'update_failed', message: updateErr.message }, { status: 500 })
+    }
+
+    // LINE notify admin — มีคนส่งเอกสารมาใหม่
+    const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+    if (adminIds.length > 0) {
+      const { data: admins } = await sb
+        .from('users')
+        .select('line_user_id')
+        .in('id', adminIds)
+        .not('line_user_id', 'is', null)
+      for (const a of admins || []) {
+        pushLineText(a.line_user_id, `🪪 มีคนส่งเอกสารยืนยันตัวตน\n\nชื่อ: ${user.display_name || '—'}\n\nตรวจสอบได้ที่\nbookmatch.app/tomga/verify`).catch(() => {})
+      }
     }
 
     return NextResponse.json({
