@@ -71,10 +71,11 @@ export async function POST(req: NextRequest) {
   }
 
   const message = `BookMatch รหัสยืนยัน: ${code} (ใช้ภายใน ${OTP_TTL_MIN} นาที)`
+  console.log('[OTP] sending to', cleaned, 'code:', code)
   const smsRes = await sendSMS(cleaned, message)
+  console.log('[OTP] result:', JSON.stringify(smsRes))
   if (!smsRes.ok) {
-    console.error('[OTP send]', smsRes.error)
-    return NextResponse.json({ error: 'sms_failed' }, { status: 500 })
+    return NextResponse.json({ error: 'sms_failed', detail: smsRes.error }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, expires_in: OTP_TTL_MIN * 60 })
