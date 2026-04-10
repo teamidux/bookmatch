@@ -72,8 +72,8 @@ export default function OnboardingPage() {
               ใส่ LINE ID ของคุณ
             </div>
             <div style={{ fontSize: 16, color: '#475569', lineHeight: 1.65, fontWeight: 500 }}>
-              เพื่อให้ผู้ซื้อกดเพิ่มเพื่อน<br />
-              <span style={{ color: '#06C755', fontWeight: 700 }}>ติดต่อคุณได้ทันที</span>
+              ใช้ติดต่อระหว่างผู้ซื้อ–ผู้ขาย<br />
+              <span style={{ color: '#06C755', fontWeight: 700 }}>ไม่ต้องเปิดเบอร์โทร</span>
             </div>
           </div>
 
@@ -83,9 +83,9 @@ export default function OnboardingPage() {
               ทำไมต้องใส่?
             </div>
             <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.75 }}>
-              ✓ ผู้ซื้อกด <b>เพิ่มเพื่อนใน LINE</b> คุณได้ทันที 1 คลิก<br />
-              ✓ ไม่ต้องกรอกซ้ำทุกครั้งที่ลงประกาศ<br />
-              ✓ ปลอดภัย — เราไม่แสดงเบอร์โทรของคุณ
+              ✓ <b>ลงขาย:</b> ผู้ซื้อ Add LINE คุณได้ใน 1 คลิก<br />
+              ✓ <b>หาซื้อ:</b> ส่ง LINE ID ให้ผู้ขายได้ทันที ไม่ต้องพิมพ์<br />
+              ✓ ปลอดภัย — ไม่ต้องเปิดเบอร์โทรให้คนแปลกหน้า
             </div>
           </div>
 

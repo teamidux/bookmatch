@@ -263,16 +263,16 @@ export default function HomePage() {
 
         <div className="stats-bar">
           <div className="stat">
-            <div className="stat-n">200,000+</div>
-            <div className="stat-l">หนังสือ</div>
+            <div className="stat-n" style={{ fontSize: 24 }}>📦</div>
+            <div className="stat-l">ลงขายง่าย</div>
           </div>
           <div className="stat">
-            <div className="stat-n" style={{ fontSize: 24 }}>🤝</div>
-            <div className="stat-l">ซื้อขายง่าย</div>
+            <div className="stat-n" style={{ fontSize: 24 }}>✅</div>
+            <div className="stat-l">ซื้อสบายใจ</div>
           </div>
           <div className="stat">
             <div className="stat-n" style={{ fontSize: 24 }}>🔔</div>
-            <div className="stat-l">LINE แจ้งเตือน</div>
+            <div className="stat-l">แจ้งเตือนเมื่อเจอหนังสือที่ต้องการ</div>
           </div>
         </div>
 

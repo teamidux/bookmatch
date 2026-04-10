@@ -164,24 +164,6 @@ export default function WantedPage() {
             </div>
           )}
 
-          {pushState !== 'unsupported' && pushState !== 'loading' && (
-            <div style={{ background: pushState === 'subscribed' ? 'var(--green-bg)' : 'var(--primary-light)', border: `1px solid ${pushState === 'subscribed' ? '#BBF7D0' : '#BFDBFE'}`, borderRadius: 12, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: pushState === 'subscribed' ? 'var(--green)' : 'var(--primary-dark)' }}>
-                  {pushState === 'subscribed' ? '🔔 การแจ้งเตือนเปิดอยู่' : pushState === 'denied' ? '🔕 การแจ้งเตือนถูกบล็อก' : '🔔 รับการแจ้งเตือนทันที'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>
-                  {pushState === 'subscribed' ? 'คุณจะได้รับแจ้งเมื่อมีหนังสือที่ต้องการ' : pushState === 'denied' ? 'เปิดใน Settings > Safari/Chrome > Notifications' : 'แจ้งเตือนเมื่อมีคนลงขายหนังสือที่คุณรอ'}
-                </div>
-              </div>
-              {pushState !== 'denied' && (
-                <button onClick={togglePush} style={{ background: pushState === 'subscribed' ? 'white' : 'var(--primary)', border: `1px solid ${pushState === 'subscribed' ? '#BBF7D0' : 'transparent'}`, borderRadius: 8, padding: '7px 14px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 12, color: pushState === 'subscribed' ? 'var(--ink2)' : 'white', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {pushState === 'subscribed' ? 'ปิด' : 'เปิด'}
-                </button>
-              )}
-            </div>
-          )}
-
           {loading && <SkeletonList count={3} />}
 
           {!loading && items.length === 0 && (

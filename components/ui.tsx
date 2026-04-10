@@ -140,27 +140,38 @@ export function BookCover({
 }
 
 export function InAppBanner() {
-  const [show, setShow] = useState(false)
-  const [isLine, setIsLine] = useState(false)
+  const [fallback, setFallback] = useState(false)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const ua = navigator.userAgent
-    const lineUA = /Line\//.test(ua)
-    if (lineUA || /FBAN|FBAV|Instagram/.test(ua)) {
-      setShow(true)
-      setIsLine(lineUA)
+    const isLine = /Line\//.test(ua)
+    const isInApp = isLine || /FBAN|FBAV|Instagram/.test(ua)
+    // iPhone: detect non-Safari browsers (Chrome, Firefox, etc.) — they all contain "CriOS", "FxiOS", etc.
+    const isIPhone = /iPhone/.test(ua)
+    const isNotSafari = isIPhone && (/CriOS|FxiOS|OPiOS|EdgiOS/.test(ua))
+
+    if (!isInApp && !isNotSafari) return // Safari บน iPhone หรือ desktop — ไม่ต้องทำอะไร
+
+    // LINE in-app → auto-redirect ด้วย openExternalBrowser=1
+    if (isLine) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('openExternalBrowser', '1')
+      window.location.href = url.toString()
+      return
     }
+
+    // FB/IG in-app → ลอง intent scheme เปิด Safari
+    if (isInApp && isIPhone) {
+      window.location.href = `x-safari-${window.location.href}`
+      // fallback ถ้า intent ไม่ทำงาน
+      setTimeout(() => setFallback(true), 1500)
+      return
+    }
+
+    // Chrome/Firefox บน iPhone → แสดง fallback banner ให้ copy link ไปเปิด Safari
+    setFallback(true)
   }, [])
-
-  if (!show) return null
-
-  // LINE มี query param พิเศษ — ถ้าเจอ ?openExternalBrowser=1 จะเปิด URL ในเบราว์เซอร์ของระบบทันที
-  const openInExternalBrowser = () => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('openExternalBrowser', '1')
-    window.location.href = url.toString()
-  }
 
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href)
@@ -168,53 +179,34 @@ export function InAppBanner() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  if (!fallback) return null
+
   return (
     <div className="inapp-banner">
       <span style={{ fontSize: 20 }}>⚠️</span>
       <div style={{ flex: 1, fontSize: 13, lineHeight: 1.5 }}>
-        <strong>{isLine ? 'เปิดในเบราว์เซอร์' : 'เปิดใน Chrome'}</strong>
+        <strong>เปิดใน Safari</strong>
         <br />
-        เพื่อใช้กล้องสแกน ISBN ได้
+        เพื่อใช้งานกล้องและ Login ได้สมบูรณ์
       </div>
-      {isLine ? (
-        <button
-          onClick={openInExternalBrowser}
-          style={{
-            background: '#D97706',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 14px',
-            minHeight: 44,
-            fontFamily: 'Kanit',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          เปิดเบราว์เซอร์
-        </button>
-      ) : (
-        <button
-          onClick={copyLink}
-          style={{
-            background: '#D97706',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 14px',
-            minHeight: 44,
-            fontFamily: 'Kanit',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {copied ? '✓ คัดลอกแล้ว' : 'Copy Link'}
-        </button>
-      )}
+      <button
+        onClick={copyLink}
+        style={{
+          background: '#D97706',
+          color: 'white',
+          border: 'none',
+          borderRadius: 8,
+          padding: '10px 14px',
+          minHeight: 44,
+          fontFamily: 'Kanit',
+          fontWeight: 700,
+          fontSize: 13,
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {copied ? '✓ คัดลอกแล้ว' : 'Copy Link'}
+      </button>
     </div>
   )
 }
@@ -731,7 +723,8 @@ export function TrustBadge({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md
       fontWeight: 700,
       whiteSpace: 'nowrap',
     }}>
-      {tier.shortLabel}
+      <span style={{ fontSize: fontSize + 1 }}>{tier.emoji}</span>
+      {tier.shortLabel.replace(/^[🆕🔰⭐✓🔵🟢]\s*/, '')}
     </span>
   )
 }
@@ -821,7 +814,7 @@ export function TrustMission({
           color: '#78350F',
           lineHeight: 1.6,
         }}>
-          🏆 <b>ทำครบ 100%</b> → ป้าย <b>Verified Pro ✨</b> + ขายไวกว่าผู้ขายทั่วไป 2-3 เท่า
+          🏆 <b>ทำครบ 100%</b> รับป้าย <b>Verified Pro ✨</b> — ลูกค้าเชื่อมั่น ปิดดีลเร็วขึ้น
         </div>
       )}
       {isComplete && (

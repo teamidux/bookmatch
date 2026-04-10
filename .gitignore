@@ -30,3 +30,7 @@ FOUNDER_NOTES.md
 NOTES.md
 CONTEXT.md
 *.private.md
+
+# scraped data & import scripts — ห้าม push เด็ดขาด
+data/
+scripts/
