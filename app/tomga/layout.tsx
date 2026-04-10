@@ -37,9 +37,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     )
   }
 
-  // Desktop-friendly layout — ไม่จำกัด max-width
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', minHeight: '100vh' }}>
+    <div style={{ width: '100%', maxWidth: 1200, margin: '0 auto', minHeight: '100vh', padding: '0 16px', boxSizing: 'border-box' }}>
       {children}
     </div>
   )
