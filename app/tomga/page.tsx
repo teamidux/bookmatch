@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Nav } from '@/components/ui'
 
 type DashData = {
   totals: { books: number; users: number; activeListings: number; activeWanted: number }
@@ -47,7 +46,10 @@ export default function AdminPage() {
 
   return (
     <>
-      <Nav />
+      <nav className="nav">
+        <Link href="/tomga" className="nav-logo">Book<span>Match</span> <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500, marginLeft: 6 }}>Admin</span></Link>
+        <Link href="/" style={{ fontSize: 13, color: '#64748B', textDecoration: 'none', fontFamily: 'Kanit' }}>← กลับหน้าเว็บ</Link>
+      </nav>
       <div style={{ padding: '32px 0 80px' }}>
 
         {/* Header */}
