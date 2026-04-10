@@ -328,6 +328,13 @@ function SellPage() {
       })
       if (listErr) throw new Error(listErr.message)
 
+      // แจ้งเตือนคนที่ตามหาเล่มนี้ (fire-and-forget ไม่ block UX)
+      fetch('/api/notify/wanted-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book_id: bookId, price: parseFloat(price), isbn: currentIsbn }),
+      }).catch(() => {})
+
       show('ลงขายเรียบร้อยแล้ว 🎉')
       // เช็คว่าควรแสดง popup เชิญลงทะเบียนไหม
       const needsLineId = !user.line_id
