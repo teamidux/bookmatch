@@ -352,7 +352,7 @@ export default function HomePage() {
                       <div className="book-title">{b.title}</div>
                       {b.author && <div className="book-author">{b.author}</div>}
                       <div style={{ marginTop: 8 }}>
-                        <span className="badge badge-blue">🙋 {b.wanted_count} คนรอซื้อ</span>
+                        <span className="badge badge-blue">🔔 {b.wanted_count} คนตามหา</span>
                       </div>
                     </div>
                   </div>

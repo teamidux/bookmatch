@@ -61,7 +61,7 @@ export function BottomNav() {
   const tabs = [
     { href: '/', icon: '🏠', label: 'หน้าแรก' },
     { href: '/sell', icon: '📚', label: 'ลงขาย' },
-    { href: '/wanted', icon: '🔔', label: 'Wanted' },
+    { href: '/wanted', icon: '🔔', label: 'ตามหา' },
     { href: '/profile', icon: '👤', label: 'โปรไฟล์' },
   ]
   return (

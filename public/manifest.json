@@ -13,6 +13,6 @@
   ],
   "shortcuts": [
     { "name": "ลงขาย", "url": "/sell", "icons": [{ "src": "/api/icon?size=192", "sizes": "192x192" }] },
-    { "name": "Wanted List", "url": "/wanted", "icons": [{ "src": "/api/icon?size=192", "sizes": "192x192" }] }
+    { "name": "ตามหา", "url": "/wanted", "icons": [{ "src": "/api/icon?size=192", "sizes": "192x192" }] }
   ]
 }

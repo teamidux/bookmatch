@@ -105,7 +105,7 @@ export default function MarketPage() {
                             letterSpacing: '0.02em',
                           }}
                         >
-                          🙋 {book.wanted_count} คนรอซื้อ
+                          🔔 {book.wanted_count} คนตามหา
                         </span>
                         {book.active_listings_count > 0 ? (
                           <span style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>

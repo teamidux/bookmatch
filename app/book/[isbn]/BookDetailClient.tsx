@@ -121,7 +121,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       const newCount = Math.max(0, (book.wanted_count || 1) - 1)
       setIsWanted(false)
       setBook(b => b ? { ...b, wanted_count: newCount } : b)
-      show('ลบออกจาก Wanted List แล้ว')
+      show('ลบออกจากรายการตามหาแล้ว')
     } else {
       setShowWantedForm(true)
     }
@@ -143,7 +143,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
     setIsWanted(true)
     setBook(b => b ? { ...b, wanted_count: newCount } : b)
     setShowWantedForm(false)
-    show('เพิ่มใน Wanted List แล้ว 🔔')
+    show('เพิ่มในรายการตามหาแล้ว 🔔')
   }
 
   const contactPhone = contactListing ? /^(\+?66|0)[0-9\s\-]{7,12}$/.test(contactListing.contact?.trim() || '') : false
@@ -215,7 +215,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       {showWantedForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowWantedForm(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 480, margin: '0 auto' }}>
-            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 4 }}>เพิ่มใน Wanted List</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 4 }}>ตามหาเล่มนี้</div>
             <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>เราจะแจ้งเตือนเมื่อมีคนลงขายเล่มนี้</div>
             <div className="form-group">
               <label className="label">ราคาสูงสุดที่ยอมจ่าย (ไม่บังคับ)</label>
@@ -224,7 +224,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
                 <input className="input" type="number" value={wantedPrice} onChange={e => setWantedPrice(e.target.value)} placeholder="เช่น 200" />
               </div>
             </div>
-            <button className="btn" onClick={confirmWanted}>เพิ่มใน Wanted List 🔔</button>
+            <button className="btn" onClick={confirmWanted}>เพิ่มในรายการตามหา 🔔</button>
             <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setShowWantedForm(false)}>ยกเลิก</button>
           </div>
         </div>
@@ -332,7 +332,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             <div style={{ fontSize: 12, color: '#BFDBFE', fontWeight: 600, letterSpacing: '0.02em', marginTop: 4, marginBottom: 12 }}>ISBN: {isbn}</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={toggleWanted} style={{ background: isWanted ? 'white' : 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, padding: '10px 14px', minHeight: 44, fontFamily: 'Kanit', fontWeight: 600, fontSize: 13, color: isWanted ? 'var(--primary)' : 'white', cursor: 'pointer' }}>
-                {isWanted ? '🔔 อยู่ใน Wanted' : '🔔 ต้องการเล่มนี้'}
+                {isWanted ? '🔔 กำลังตามหา' : '🔔 ตามหาเล่มนี้'}
               </button>
               <Link href={`/sell?isbn=${isbn}`}>
                 <button style={{ background: 'white', border: 'none', borderRadius: 10, padding: '10px 14px', minHeight: 44, fontFamily: 'Kanit', fontWeight: 600, fontSize: 13, color: 'var(--primary)', cursor: 'pointer' }}>
@@ -348,7 +348,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             <div style={{ textAlign: 'center' }}><div className="price">฿{minP}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>ต่ำสุด</div></div>
             <div style={{ textAlign: 'center' }}><div className="price">฿{avgP}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>กลาง</div></div>
             <div style={{ textAlign: 'center' }}><div className="price">฿{maxP}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>สูงสุด</div></div>
-            <div style={{ textAlign: 'center' }}><div className="price">{book.wanted_count || 0}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>คนรอซื้อ</div></div>
+            <div style={{ textAlign: 'center' }}><div className="price">{book.wanted_count || 0}</div><div style={{ fontSize: 11, color: 'var(--ink3)' }}>คนตามหา</div></div>
           </div>
         )}
 
@@ -364,7 +364,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
                 <span style={{ fontSize: 22, flexShrink: 0 }}>📭</span>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#713F12' }}>ยังไม่มีผู้ลงขายตอนนี้</div>
-                  <div style={{ fontSize: 12, color: '#92400E', marginTop: 2 }}>กด "ต้องการเล่มนี้" เพื่อรับแจ้งเตือนเมื่อมีคนนำมาขาย</div>
+                  <div style={{ fontSize: 12, color: '#92400E', marginTop: 2 }}>กด "ตามหาเล่มนี้" เพื่อรับแจ้งเตือนเมื่อมีคนนำมาขาย</div>
                 </div>
               </div>
 

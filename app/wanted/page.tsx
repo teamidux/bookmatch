@@ -60,7 +60,7 @@ export default function WantedPage() {
   const remove = async (id: string) => {
     await supabase.from('wanted').delete().eq('id', id)
     setItems(prev => prev.filter(w => w.id !== id))
-    show('ลบออกจาก Wanted List แล้ว')
+    show('ลบออกจากรายการตามหาแล้ว')
   }
 
   if (!user) return (
@@ -68,7 +68,7 @@ export default function WantedPage() {
       <Nav />
       <div style={{ padding: '48px 20px', textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔔</div>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Wanted List</div>
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>รายการที่คุณตามหา</div>
         <div style={{ fontSize: 14, color: 'var(--ink3)', marginBottom: 24 }}>เข้าสู่ระบบเพื่อเพิ่มหนังสือที่ต้องการ</div>
         <button
           className="btn"
@@ -88,7 +88,7 @@ export default function WantedPage() {
       <Toast msg={msg} />
       <div className="page">
         <div style={{ padding: '16px 16px 0' }}>
-          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, marginBottom: 4 }}>Wanted List</div>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, marginBottom: 4 }}>รายการที่คุณตามหา</div>
           <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>เราจะแจ้งเตือนเมื่อมีคนลงขายหนังสือที่คุณต้องการ</div>
 
           {/* LINE OA Add CTA — แสดงถ้า user ยังไม่ add @Bookmatch เป็นเพื่อน */}
@@ -108,7 +108,7 @@ export default function WantedPage() {
                     รับแจ้งเตือนผ่าน LINE
                   </div>
                   <div style={{ fontSize: 12.5, color: '#047857', lineHeight: 1.6 }}>
-                    Add <b>@Bookmatch</b> เป็นเพื่อน → เราจะส่งข้อความหาคุณทุกครั้งที่หนังสือใน Wanted List มีคนลงขาย
+                    Add <b>@Bookmatch</b> เป็นเพื่อน → เราจะส่งข้อความหาคุณทุกครั้งที่หนังสือที่คุณตามหามีคนลงขาย
                   </div>
                 </div>
               </div>

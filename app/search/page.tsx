@@ -230,7 +230,7 @@ function SearchPage() {
                         ) : (
                           <span style={{ fontSize: 12, color: 'var(--ink3)' }}>ยังไม่มีคนขาย</span>
                         )}
-                        {b.wanted_count > 0 && <span className="badge badge-blue">🔔 {b.wanted_count} คนรอซื้อ</span>}
+                        {b.wanted_count > 0 && <span className="badge badge-blue">🔔 {b.wanted_count} คนตามหา</span>}
                       </div>
                     </div>
                   </div>

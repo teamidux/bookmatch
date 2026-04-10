@@ -506,7 +506,7 @@ export default function ProfilePage() {
           <Link href="/wanted" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 20 }}>🔔</span>
-              <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>Wanted List</div></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>รายการที่คุณตามหา</div></div>
               <span style={{ color: 'var(--ink3)' }}>›</span>
             </div>
           </Link>
