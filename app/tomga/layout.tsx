@@ -37,8 +37,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     )
   }
 
+  // Override body max-width สำหรับ admin (ปกติ 480px สำหรับ mobile)
+  useEffect(() => {
+    document.body.style.maxWidth = '100%'
+    return () => { document.body.style.maxWidth = '' }
+  }, [])
+
   return (
-    <div style={{ width: '100%', maxWidth: 1200, margin: '0 auto', minHeight: '100vh', padding: '0 16px', boxSizing: 'border-box' }}>
+    <div style={{ width: '100%', maxWidth: 1200, margin: '0 auto', minHeight: '100vh', padding: '0 24px', boxSizing: 'border-box' }}>
       {children}
     </div>
   )
