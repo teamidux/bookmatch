@@ -86,28 +86,20 @@ export function BottomNav() {
 }
 
 export function LoginButton({ onClick }: { onClick: () => void }) {
-  const [agreed, setAgreed] = useState(false)
+  // Clickwrap consent — ไม่มี checkbox แล้ว
+  // user คลิกปุ่ม login = ยอมรับเงื่อนไขโดยอัตโนมัติ (legally binding ตาม PDPA)
   return (
     <div style={{ maxWidth: 280, margin: '0 auto' }}>
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', marginBottom: 14 }}>
-        <input
-          type="checkbox"
-          checked={agreed}
-          onChange={e => setAgreed(e.target.checked)}
-          style={{ marginTop: 3, width: 16, height: 16, accentColor: '#06C755', flexShrink: 0 }}
-        />
-        <span style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
-          ฉันยอมรับ <a href="/terms" target="_blank" rel="noopener" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>ข้อตกลงการใช้บริการ</a>
-        </span>
-      </label>
       <button
         className="btn"
-        disabled={!agreed}
         onClick={onClick}
-        style={{ width: '100%', background: agreed ? '#06C755' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+        style={{ width: '100%', background: '#06C755', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
       >
         💚 เข้าสู่ระบบด้วย LINE
       </button>
+      <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
+        การ login ถือว่ายอมรับ <a href="/terms" target="_blank" rel="noopener" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>ข้อตกลงการใช้บริการ</a>
+      </div>
     </div>
   )
 }
