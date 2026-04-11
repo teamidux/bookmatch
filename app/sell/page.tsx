@@ -332,7 +332,7 @@ function SellPage() {
       fetch('/api/notify/wanted-match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ book_id: bookId, price: parseFloat(price), isbn: currentIsbn }),
+        body: JSON.stringify({ book_id: bookId, seller_id: user.id, price: parseFloat(price), isbn: currentIsbn }),
       }).catch(() => {})
 
       show('ลงขายเรียบร้อยแล้ว 🎉')

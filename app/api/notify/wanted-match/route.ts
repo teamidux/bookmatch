@@ -17,8 +17,8 @@ function db() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { book_id, price, isbn } = await req.json()
-    if (!book_id) return NextResponse.json({ ok: true, sent: 0 })
+    const { book_id, seller_id, price, isbn } = await req.json()
+    if (!book_id || !seller_id) return NextResponse.json({ ok: true, sent: 0 })
 
     const sb = db()
 
@@ -32,47 +32,55 @@ export async function POST(req: NextRequest) {
 
     const bookIsbn = isbn || book.isbn
 
-    // หาคนที่ตามหาเล่มนี้
+    // หาคนที่ตามหาเล่มนี้ (ไม่รวม seller เองถ้า seller เคยตามหา)
     const { data: wanted } = await sb
       .from('wanted')
       .select('user_id')
       .eq('book_id', book_id)
       .eq('status', 'waiting')
+      .neq('user_id', seller_id)
     if (!wanted?.length) return NextResponse.json({ ok: true, sent: 0 })
 
     const userIds = wanted.map(w => w.user_id)
 
+    // Dedup: เช็คว่าเคยแจ้ง (user, book, seller) ไปแล้วหรือยัง
+    // ถ้าเคยแล้ว → skip (seller เดิมลงเล่มเดิม ไม่ต้องแจ้งซ้ำ)
+    const { data: alreadyNotified } = await sb
+      .from('wanted_notifications')
+      .select('user_id')
+      .eq('book_id', book_id)
+      .eq('seller_id', seller_id)
+      .in('user_id', userIds)
+    const notifiedSet = new Set((alreadyNotified || []).map(r => r.user_id))
+    const freshUserIds = userIds.filter(id => !notifiedSet.has(id))
+    if (!freshUserIds.length) return NextResponse.json({ ok: true, sent: 0, skipped: userIds.length })
+
     // ดึงเฉพาะคนที่ add OA แล้ว (ไม่งั้นส่งไปก็ fail + เสียเครดิต)
-    // ต้องมีทั้ง line_user_id + line_oa_friend_at
     const { data: users } = await sb
       .from('users')
       .select('id, display_name, line_user_id')
-      .in('id', userIds)
+      .in('id', freshUserIds)
       .not('line_user_id', 'is', null)
       .not('line_oa_friend_at', 'is', null)
 
     let sent = 0
-    const notifiedUserIds: string[] = []
+    const logRows: { user_id: string; book_id: string; seller_id: string }[] = []
     for (const u of users || []) {
       const msg = `📚 หนังสือที่คุณตามหามีคนลงขายแล้ว!\n\n"${book.title}"\nราคา ฿${price || '—'}\n\nดูรายละเอียด:\nbookmatch.app/book/${bookIsbn}`
       const result = await pushLineText(u.line_user_id, msg)
       if (result.success) {
         sent++
-        notifiedUserIds.push(u.id)
+        logRows.push({ user_id: u.id, book_id, seller_id })
       }
     }
 
-    // ลบ wanted row ของคนที่แจ้งเตือนสำเร็จ — กัน spam ข้อความซ้ำ
-    // ถ้า user ดูแล้วไม่ถูกใจ seller → ไปกด "🔔 ตามหาเล่มนี้" ใหม่ที่หน้า book ได้
-    if (notifiedUserIds.length) {
-      await sb
-        .from('wanted')
-        .delete()
-        .eq('book_id', book_id)
-        .in('user_id', notifiedUserIds)
+    // Log ว่าแจ้งไปแล้ว — ครั้งหน้า seller เดิมลงเล่มเดิม จะ skip
+    // Seller คนใหม่มาลง → คนละ row → แจ้งได้
+    if (logRows.length) {
+      await sb.from('wanted_notifications').insert(logRows)
     }
 
-    return NextResponse.json({ ok: true, sent, total_wanted: wanted.length })
+    return NextResponse.json({ ok: true, sent, total_wanted: wanted.length, skipped: notifiedSet.size })
   } catch (e: any) {
     console.error('[notify/wanted-match]', e?.message)
     return NextResponse.json({ ok: true, sent: 0 }) // ไม่ให้ error block UX
