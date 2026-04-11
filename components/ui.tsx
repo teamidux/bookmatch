@@ -1043,19 +1043,44 @@ export function TrustMission({
         ))}
       </div>
 
-      {/* Footer reward callout */}
+      {/* Footer reward callout — โชว์ badge จริงเป็น preview */}
       {!isComplete && (
         <div style={{
           marginTop: 14,
-          padding: '10px 12px',
+          padding: '12px 14px',
           background: '#FFFBEB',
           border: '1px solid #FDE68A',
           borderRadius: 10,
           fontSize: 12,
           color: '#78350F',
           lineHeight: 1.6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flexWrap: 'wrap',
         }}>
-          🏆 <b>ทำครบ</b> รับป้าย <b>🛡️ Verified Seller</b> — ลูกค้าเชื่อมั่น ปิดดีลเร็วขึ้น
+          <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🏆</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <b>ทำครบ</b> รับป้าย{' '}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              background: TRUST_TIERS.verified.bgColor,
+              color: TRUST_TIERS.verified.color,
+              borderRadius: 999,
+              padding: '3px 10px',
+              fontSize: 11,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              verticalAlign: 'middle',
+              lineHeight: 1,
+            }}>
+              <ShieldIcon size={12} color={TRUST_TIERS.verified.color} />
+              Verified Seller
+            </span>
+            {' '}— ลูกค้าเชื่อมั่น ปิดดีลเร็วขึ้น
+          </span>
         </div>
       )}
       {isComplete && (
