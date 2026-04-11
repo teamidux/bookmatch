@@ -563,7 +563,7 @@ export default function ProfilePage() {
           }} />
         </div>
 
-        {listings.length > 0 && (
+        {listings.length >= 5 && (
           <div style={{ padding: '10px 16px 0' }}>
             <input
               className="input"
