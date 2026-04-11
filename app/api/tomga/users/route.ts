@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
   if (!adminId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const { userId, action, reason } = await req.json()
-  if (!userId || !['ban', 'unban', 'soft_delete', 'delete_avatar'].includes(action)) {
+  if (!userId || !['ban', 'unban', 'soft_delete', 'delete_avatar', 'reset_verify'].includes(action)) {
     return NextResponse.json({ error: 'invalid params' }, { status: 400 })
   }
   if (userId === adminId) {
@@ -187,6 +187,15 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   } else if (action === 'delete_avatar') {
     const { error } = await db.from('users').update({ avatar_url: null }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'reset_verify') {
+    // Reset phone + ID verify — สำหรับ test / admin กู้คืนกรณี user verify ผิดข้อมูล
+    const { error } = await db.from('users').update({
+      phone: null,
+      phone_verified_at: null,
+      id_verified_at: null,
+      id_verify_submitted_at: null,
+    }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

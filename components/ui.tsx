@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 import { computeTrustScore, type TrustItemKey, type TrustItem } from '@/lib/trust'
@@ -403,6 +403,7 @@ export function PhoneVerifyModal({
   const [cooldown, setCooldown] = useState(0)
   const { msg, show } = useToast()
   const { reloadUser, syncUser } = useAuth()
+  const router = useRouter()
   const confirmationRef = useRef<any>(null)
   const recaptchaRef = useRef<any>(null)
 
@@ -500,8 +501,9 @@ export function PhoneVerifyModal({
       if (data.phone_verified_at) {
         syncUser({ phone: data.phone, phone_verified_at: data.phone_verified_at })
       }
-      // Background refetch ให้ user state ตรง DB 100%
-      reloadUser().catch(() => {})
+      // Await reloadUser + router.refresh — force ทุกอย่าง re-fetch จาก DB
+      await reloadUser()
+      router.refresh()
 
       // เข้าสู่ success state — โชว์ celebration effect
       setStep('success')

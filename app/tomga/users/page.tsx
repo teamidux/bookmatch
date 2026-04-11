@@ -66,7 +66,7 @@ function AdminUsersPage() {
     return () => clearTimeout(t)
   }, [q])
 
-  const doAction = async (userId: string, action: 'ban' | 'unban' | 'soft_delete' | 'delete_avatar', reason?: string) => {
+  const doAction = async (userId: string, action: 'ban' | 'unban' | 'soft_delete' | 'delete_avatar' | 'reset_verify', reason?: string) => {
     setActing(userId)
     try {
       await fetch('/api/tomga/users', {
@@ -244,6 +244,16 @@ function AdminUsersPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {!u.deleted_at && !u.banned_at && (u.phone_verified_at || u.id_verified_at) && (
+                  <button
+                    onClick={() => { if (confirm(`Reset verify ของ "${u.display_name}"?\n\nจะลบ: เบอร์โทร, ยืนยันเบอร์, ยืนยันตัวตน\n→ user ต้อง verify ใหม่\nใช้สำหรับ test หรือแก้ไขข้อมูลผิด`)) doAction(u.id, 'reset_verify') }}
+                    disabled={acting === u.id}
+                    title="Reset verify (test)"
+                    style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
+                  >
+                    🔄 Reset verify
+                  </button>
+                )}
                 {!u.deleted_at && !u.banned_at && u.avatar_url && (
                   <button
                     onClick={() => { if (confirm(`ลบรูป profile ของ "${u.display_name}"?\n\nรูปจะถูก reset เป็น default → user ต้องอัปโหลดใหม่เอง\nใช้กรณีรูปไม่เหมาะสม`)) doAction(u.id, 'delete_avatar') }}
