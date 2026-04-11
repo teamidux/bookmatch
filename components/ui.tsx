@@ -921,6 +921,45 @@ export function TrustMission({
   const { count, total, percent, tier, items } = computeTrustScore(user)
   const isComplete = count === total
 
+  // ครบทุกข้อแล้ว → โชว์ compact success card แทน checklist เต็ม ๆ
+  if (isComplete) {
+    return (
+      <div style={{
+        background: 'linear-gradient(135deg, #ECFDF5 0%, #DBEAFE 100%)',
+        border: '1px solid #BFDBFE',
+        borderRadius: 16,
+        padding: '16px 18px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+      }}>
+        <div style={{
+          width: 48,
+          height: 48,
+          borderRadius: '50%',
+          background: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 24,
+          flexShrink: 0,
+          border: `2px solid ${tier.color}`,
+        }}>
+          {tier.emoji}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 15, fontWeight: 700, color: '#0F172A', marginBottom: 2 }}>
+            ภารกิจสร้างความน่าเชื่อถือ ✓
+          </div>
+          <div style={{ fontSize: 13, color: tier.color, fontWeight: 600 }}>
+            {tier.label} — ลูกค้ามั่นใจในตัวคุณเต็มที่
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{
       background: 'white',
