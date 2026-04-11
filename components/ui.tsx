@@ -58,44 +58,17 @@ export function Nav() {
 
 export function BottomNav() {
   const pathname = usePathname()
-  // 3 tabs + FAB ตรงกลางสำหรับ "ลงขาย" (primary action)
-  // ลด mis-tap + ทำให้ลงขายเด่นชัด (Material Design pattern)
+  // 4 tabs ใน nav strip — "ลงขาย" อยู่ขวาสุด มี styling เด่นกว่าตัวอื่น
+  // (ไม่ใช้ FAB ลอยเพราะบัง content)
   const tabs = [
     { href: '/', icon: '🏠', label: 'หน้าแรก' },
     { href: '/wanted', icon: '🔔', label: 'ตามหา' },
     { href: '/profile', icon: '👤', label: 'โปรไฟล์' },
   ]
+  const sellActive = pathname === '/sell'
   return (
     <>
-      <div style={{ height: 80 }} />
-      {/* FAB — ลงขาย */}
-      <Link
-        href="/sell"
-        aria-label="ลงขาย"
-        style={{
-          position: 'fixed',
-          right: 18,
-          bottom: 78,
-          zIndex: 90,
-          width: 60,
-          height: 60,
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
-          boxShadow: '0 6px 18px rgba(22,163,74,.4), 0 2px 6px rgba(0,0,0,.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          textDecoration: 'none',
-          fontFamily: 'Kanit',
-          fontWeight: 700,
-          gap: 1,
-        }}
-      >
-        <span style={{ fontSize: 22, lineHeight: 1 }}>📖</span>
-        <span style={{ fontSize: 10, lineHeight: 1 }}>ลงขาย</span>
-      </Link>
+      <div style={{ height: 70 }} />
       <div className="bottom-nav">
         {tabs.map(t => (
           <Link
@@ -107,6 +80,23 @@ export function BottomNav() {
             <span>{t.label}</span>
           </Link>
         ))}
+        {/* ลงขาย — เด่นกว่าตัวอื่น (primary action ของ marketplace) */}
+        <Link
+          href="/sell"
+          className={`bnav-item ${sellActive ? 'active' : ''}`}
+          style={{
+            background: sellActive
+              ? 'linear-gradient(135deg, #15803D 0%, #14532D 100%)'
+              : 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
+            color: 'white',
+            margin: '4px 6px 4px 2px',
+            borderRadius: 12,
+            boxShadow: '0 2px 8px rgba(22,163,74,.3)',
+          }}
+        >
+          <span>📖</span>
+          <span>ลงขาย</span>
+        </Link>
       </div>
     </>
   )
@@ -470,7 +460,7 @@ export function PhoneVerifyModal({
           📱 ยืนยันเบอร์มือถือ <span style={{ fontSize: 14, fontWeight: 600, color: '#16A34A' }}>(ทำครั้งเดียว จบตลอดไป)</span>
         </div>
         <div style={{ fontSize: 14, color: 'var(--ink3)', lineHeight: 1.6, marginBottom: 22 }}>
-          เพื่อความปลอดภัยของผู้ซื้อ — ยืนยันแล้วไม่ต้องทำซ้ำอีก
+          สร้างความมั่นใจให้ลูกค้า เพิ่มโอกาสปิดการขาย
         </div>
 
         {step === 'phone' && (

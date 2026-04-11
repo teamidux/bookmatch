@@ -59,7 +59,7 @@ export default function SellPageWrapper() {
 function SellPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loginWithLine, reloadUser } = useAuth()
+  const { user, loading: authLoading, loginWithLine, reloadUser } = useAuth()
   const { msg, show } = useToast()
 
   // showLogin removed — login goes directly to LINE OAuth
@@ -503,7 +503,11 @@ function SellPage() {
         <div style={{ padding: '16px 16px 80px' }}>
           <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, marginBottom: 16 }}>ลงขายหนังสือ</div>
 
-          {!user ? (
+          {authLoading ? (
+            <div style={{ textAlign: 'center', padding: 60, color: '#94A3B8' }}>
+              <span className="spin" style={{ width: 28, height: 28 }} />
+            </div>
+          ) : !user ? (
             <div style={{ background: 'var(--surface)', border: '2px dashed #BFDBFE', borderRadius: 14, padding: '36px 20px', textAlign: 'center', marginBottom: 14 }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🔐</div>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>เข้าสู่ระบบก่อนลงขาย</div>
