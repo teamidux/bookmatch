@@ -209,7 +209,6 @@ function SellPage() {
     setScanning(true)
     try {
       const result = await scanBarcode(rawFile)
-      console.log('[SCAN DEBUG]', result)
       if (result.isbn) {
         setIsbn(result.isbn)
         fetchBook(result.isbn)

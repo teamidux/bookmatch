@@ -123,7 +123,6 @@ export default function HomePage() {
     setScanning(true)
     try {
       const result = await scanBarcode(raw)
-      console.log('[SCAN DEBUG]', result)
       if (result.isbn) {
         router.push(`/book/${result.isbn}`)
       } else if (result.raw) {

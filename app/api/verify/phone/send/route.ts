@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSessionUser } from '@/lib/session'
-import { sendSMS, generateOTP, normalizeThaiPhone } from '@/lib/thaibulksms'
+import { sendSMS, generateOTP } from '@/lib/thaibulksms'
 
 export const runtime = 'nodejs'
 
@@ -71,9 +71,9 @@ export async function POST(req: NextRequest) {
   }
 
   const message = `BookMatch รหัสยืนยัน: ${code} (ใช้ภายใน ${OTP_TTL_MIN} นาที)`
-  console.log('[OTP] sending to', cleaned, 'code:', code)
+  // ห้าม log code ลง console — risk PDPA/security
   const smsRes = await sendSMS(cleaned, message)
-  console.log('[OTP] result:', JSON.stringify(smsRes))
+  if (!smsRes.ok) console.warn('[OTP] sms failed:', smsRes.error)
   if (!smsRes.ok) {
     return NextResponse.json({ error: 'sms_failed', detail: smsRes.error }, { status: 500 })
   }
