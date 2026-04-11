@@ -58,15 +58,44 @@ export function Nav() {
 
 export function BottomNav() {
   const pathname = usePathname()
+  // 3 tabs + FAB ตรงกลางสำหรับ "ลงขาย" (primary action)
+  // ลด mis-tap + ทำให้ลงขายเด่นชัด (Material Design pattern)
   const tabs = [
     { href: '/', icon: '🏠', label: 'หน้าแรก' },
-    { href: '/sell', icon: '📚', label: 'ลงขาย' },
     { href: '/wanted', icon: '🔔', label: 'ตามหา' },
     { href: '/profile', icon: '👤', label: 'โปรไฟล์' },
   ]
   return (
     <>
-      <div style={{ height: 70 }} />
+      <div style={{ height: 80 }} />
+      {/* FAB — ลงขาย */}
+      <Link
+        href="/sell"
+        aria-label="ลงขาย"
+        style={{
+          position: 'fixed',
+          right: 18,
+          bottom: 78,
+          zIndex: 90,
+          width: 60,
+          height: 60,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
+          boxShadow: '0 6px 18px rgba(22,163,74,.4), 0 2px 6px rgba(0,0,0,.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          textDecoration: 'none',
+          fontFamily: 'Kanit',
+          fontWeight: 700,
+          gap: 1,
+        }}
+      >
+        <span style={{ fontSize: 22, lineHeight: 1 }}>📖</span>
+        <span style={{ fontSize: 10, lineHeight: 1 }}>ลงขาย</span>
+      </Link>
       <div className="bottom-nav">
         {tabs.map(t => (
           <Link
@@ -105,7 +134,7 @@ export function LoginButton({ onClick }: { onClick: () => void }) {
         💚 เข้าสู่ระบบด้วย LINE
       </button>
       <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
-        การ login ถือว่ายอมรับ <a href="/terms" target="_blank" rel="noopener" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>ข้อตกลงการใช้บริการ</a>
+        การ login ถือว่ายอมรับ <Link href="/terms" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>ข้อตกลงการใช้บริการ</Link>
       </div>
     </div>
   )
