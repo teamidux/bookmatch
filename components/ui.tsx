@@ -170,21 +170,35 @@ export function BookCover({
         justifyContent: 'center',
       }}
     >
-      {src ? (
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <img
-          src={src}
-          alt={title}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          src={src || '/nocover.webp'}
+          alt={title || 'ไม่มีภาพปก'}
+          loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none'
+            // ถ้าโหลด cover ไม่สำเร็จ → fallback ไป nocover.webp
+            const img = e.target as HTMLImageElement
+            if (!img.src.endsWith('/nocover.webp')) img.src = '/nocover.webp'
           }}
         />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#64748B' }}>
-          <span style={{ fontSize: Math.max(18, size * 0.32) }}>📕</span>
-          {size >= 56 && <span style={{ fontSize: Math.max(10, size * 0.16), fontWeight: 500 }}>ไม่มีภาพปก</span>}
-        </div>
-      )}
+        {!src && size >= 80 && (
+          <div style={{
+            position: 'absolute',
+            top: 6,
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: Math.max(9, size * 0.09),
+            fontWeight: 600,
+            color: '#64748B',
+            background: 'rgba(255,255,255,0.7)',
+            padding: '2px 4px',
+          }}>
+            ไม่มีภาพปก
+          </div>
+        )}
+      </div>
     </div>
   )
 }

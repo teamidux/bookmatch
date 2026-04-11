@@ -2,32 +2,16 @@
 // 1. Hides upstream source (no third-party URLs leak in the DOM/network panel)
 // 2. Tries multiple sources: cached DB → Google Books → OpenLibrary
 // 3. Browser + edge cached for 1 year on hits, 1 hour on misses
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-const PLACEHOLDER_HEADERS = {
-  'Content-Type': 'image/svg+xml',
-  // misses: cache for an hour so we retry sources later (in case OpenLibrary
-  // adds the cover after we first checked)
-  'Cache-Control': 'public, max-age=3600',
+// Placeholder = static file ใน /public/nocover.webp
+// Redirect ทุก miss → file นั้น (browser cache ตาม URL ของ webp)
+function placeholderResponse(req: NextRequest): Response {
+  return NextResponse.redirect(new URL('/nocover.webp', req.url), 302)
 }
-// Designed placeholder — looks intentional, not broken.
-// Soft gray background, book outline icon, "ไม่มีปก" caption.
-const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300">
-  <rect width="200" height="300" fill="#E2E8F0"/>
-  <rect x="12" y="12" width="176" height="276" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
-  <g transform="translate(76, 108)" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 6 C4 4, 6 2, 8 2 L22 2 L24 4 L24 44 L8 44 C6 44, 4 42, 4 40 Z"/>
-    <path d="M24 4 L40 4 C42 4, 44 6, 44 8 L44 42 C44 44, 42 46, 40 46 L24 44"/>
-    <line x1="10" y1="12" x2="20" y2="12"/>
-    <line x1="10" y1="20" x2="20" y2="20"/>
-    <line x1="30" y1="14" x2="38" y2="14"/>
-    <line x1="30" y1="22" x2="38" y2="22"/>
-  </g>
-  <text x="100" y="210" font-family="-apple-system, system-ui, sans-serif" font-size="13" font-weight="500" text-anchor="middle" fill="#64748B">ไม่มีภาพปก</text>
-</svg>`
 
 function bumpGoogleQuality(url: string): string {
   let out = url.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '')
@@ -135,10 +119,10 @@ function openLibraryUrl(isbn: string): string {
   return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { isbn: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { isbn: string } }) {
   const isbn = decodeURIComponent(params.isbn).replace(/[-\s]/g, '')
   if (!/^\d{10,13}$/.test(isbn)) {
-    return new Response(PLACEHOLDER_SVG, { status: 200, headers: PLACEHOLDER_HEADERS })
+    return placeholderResponse(req)
   }
 
   // Try sources in order. Each returns either an image or null.
@@ -162,7 +146,7 @@ export async function GET(_req: NextRequest, { params }: { params: { isbn: strin
   if (olHit) return imageResponse(olHit)
 
   // No source had it
-  return new Response(PLACEHOLDER_SVG, { status: 200, headers: PLACEHOLDER_HEADERS })
+  return placeholderResponse(req)
 }
 
 function imageResponse(hit: { buf: ArrayBuffer; contentType: string }): Response {
