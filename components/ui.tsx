@@ -1150,14 +1150,20 @@ function TrustItemRow({ item, onClick }: { item: TrustItem; onClick: () => void 
           color: isDone ? '#15803D' : isPending ? '#92400E' : '#121212',
           lineHeight: 1.4,
           marginBottom: 4,
+        }}>
+          <span style={{ marginRight: 6 }}>{item.icon}</span>
+          {item.title}
+        </div>
+        <div style={{
+          fontSize: 12,
+          color: isDone ? '#166534' : isPending ? '#B45309' : 'var(--ink3)',
+          lineHeight: 1.7,
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           flexWrap: 'wrap',
         }}>
-          <span>{item.icon}</span>
-          <span>{item.title}</span>
-          {/* Badge preview — แสดงป้ายจริงที่จะได้ */}
+          {/* Badge preview inline กับคำอธิบาย */}
           {!isDone && !isPending && item.key === 'phone_verified' && (
             <span style={{
               display: 'inline-flex',
@@ -1170,6 +1176,7 @@ function TrustItemRow({ item, onClick }: { item: TrustItem; onClick: () => void 
               fontSize: 10,
               fontWeight: 700,
               lineHeight: 1,
+              flexShrink: 0,
             }}>
               📱 ลงทะเบียนแล้ว
             </span>
@@ -1186,17 +1193,12 @@ function TrustItemRow({ item, onClick }: { item: TrustItem; onClick: () => void 
               fontSize: 10,
               fontWeight: 700,
               lineHeight: 1,
+              flexShrink: 0,
             }}>
               🪪 ยืนยันตัวตนแล้ว
             </span>
           )}
-        </div>
-        <div style={{
-          fontSize: 12,
-          color: isDone ? '#166534' : isPending ? '#B45309' : 'var(--ink3)',
-          lineHeight: 1.5,
-        }}>
-          {isPending ? 'รอตรวจสอบ ~24 ชั่วโมง' : item.benefit}
+          <span>{isPending ? 'รอตรวจสอบ ~24 ชั่วโมง' : item.benefit}</span>
         </div>
       </div>
 
