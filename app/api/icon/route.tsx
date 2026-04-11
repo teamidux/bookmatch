@@ -1,10 +1,25 @@
+// PWA icon generator — ใช้ logo.png (square 1080×1080) เป็น source
+// ?size=192 / 512 / 180 → resize ให้พอดี พร้อม white background สำหรับ maskable
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import fs from 'fs/promises'
+import path from 'path'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
   const size = Number(req.nextUrl.searchParams.get('size') || 192)
+
+  // Load logo from /public
+  const logoPath = path.join(process.cwd(), 'public', 'logo.png')
+  const logoBuffer = await fs.readFile(logoPath).catch(() => null)
+  const logoDataUri = logoBuffer
+    ? `data:image/png;base64,${logoBuffer.toString('base64')}`
+    : null
+
+  // Maskable icon pattern: ใส่ safe area 10% รอบ ๆ ป้องกัน crop โดย OS
+  // (iOS/Android บางตัวกรอบ icon เป็นวงกลม/squircle)
+  const innerSize = Math.round(size * 0.82)
 
   return new ImageResponse(
     (
@@ -12,61 +27,25 @@ export async function GET(req: NextRequest) {
         style={{
           width: size,
           height: size,
-          background: 'linear-gradient(145deg, #2563EB, #1d4ed8)',
+          background: 'white',
           borderRadius: size * 0.2,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexDirection: 'column',
-          gap: size * 0.04,
         }}
       >
-        {/* Book left page */}
-        <div style={{ display: 'flex', position: 'relative' }}>
-          <div
-            style={{
-              width: size * 0.28,
-              height: size * 0.38,
-              background: 'white',
-              borderRadius: `${size * 0.04}px 0 0 ${size * 0.04}px`,
-              opacity: 0.95,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              gap: size * 0.03,
-              padding: size * 0.04,
-            }}
-          >
-            <div style={{ width: '80%', height: size * 0.025, background: '#2563EB', borderRadius: 99, opacity: 0.35 }} />
-            <div style={{ width: '60%', height: size * 0.025, background: '#2563EB', borderRadius: 99, opacity: 0.35 }} />
-            <div style={{ width: '70%', height: size * 0.025, background: '#2563EB', borderRadius: 99, opacity: 0.35 }} />
-          </div>
-          {/* Spine */}
-          <div style={{ width: size * 0.04, height: size * 0.38, background: '#1e40af' }} />
-          {/* Right page */}
-          <div
-            style={{
-              width: size * 0.28,
-              height: size * 0.38,
-              background: 'white',
-              borderRadius: `0 ${size * 0.04}px ${size * 0.04}px 0`,
-              opacity: 0.75,
-            }}
+        {logoDataUri ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={logoDataUri}
+            alt="BookMatch"
+            width={innerSize}
+            height={innerSize}
+            style={{ objectFit: 'contain' }}
           />
-        </div>
-        {/* BM label */}
-        <div
-          style={{
-            color: 'white',
-            fontSize: size * 0.13,
-            fontWeight: 800,
-            letterSpacing: size * 0.01,
-            opacity: 0.9,
-            fontFamily: 'serif',
-          }}
-        >
-          BookMatch
-        </div>
+        ) : (
+          <div style={{ color: '#2563EB', fontSize: size * 0.2, fontWeight: 800 }}>BM</div>
+        )}
       </div>
     ),
     { width: size, height: size }

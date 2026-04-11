@@ -82,10 +82,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       url: `${siteUrl}/book/${isbn}`,
       siteName: 'BookMatch',
-      // ใช้รูปปกหนังสือถ้ามี — ไม่งั้น fallback site default
-      images: book.cover_url
-        ? [{ url: book.cover_url, alt: book.title }]
-        : [{ url: '/og-default.png', width: 1200, height: 630, alt: 'BookMatch' }],
+      // ใช้รูปปกหนังสือถ้ามี — ไม่งั้น Next.js auto fallback ไป app/opengraph-image.tsx
+      ...(book.cover_url && { images: [{ url: book.cover_url, alt: book.title }] }),
       type: 'website',
       locale: 'th_TH',
     },
@@ -93,7 +91,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: 'summary_large_image',
       title: `${book.title} — BookMatch`,
       description,
-      images: book.cover_url ? [book.cover_url] : ['/og-default.png'],
+      ...(book.cover_url && { images: [book.cover_url] }),
     },
   }
 }
