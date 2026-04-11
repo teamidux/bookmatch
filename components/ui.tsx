@@ -884,31 +884,69 @@ function ShieldIcon({ size = 14, color = 'currentColor' }: { size?: number; colo
 }
 
 export function TrustBadge({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md' | 'lg' }) {
-  const { tier } = computeTrustScore(user)
   if (!user) return null
+  const hasPhone = !!user.phone_verified_at
+  const hasId = !!user.id_verified_at
+  const hasBoth = hasPhone && hasId
+
   const fontSize = size === 'lg' ? 13 : size === 'md' ? 12 : 11
   const padding = size === 'lg' ? '6px 12px' : size === 'md' ? '5px 10px' : '3px 8px'
   const iconSize = size === 'lg' ? 16 : size === 'md' ? 14 : 12
-  // Verified Seller ใช้ SVG shield
-  const useShield = tier.level >= 2
-  const label = useShield ? tier.shortLabel.replace(/^[^\w\s]+\s*/,'') : tier.shortLabel
-  return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 4,
-      background: tier.bgColor,
-      color: tier.color,
-      borderRadius: 6,
-      padding,
-      fontSize,
-      fontWeight: 700,
-      whiteSpace: 'nowrap',
-    }}>
-      {useShield && <ShieldIcon size={iconSize} color={tier.color} />}
-      {label}
+
+  const pill = (bg: string, color: string, content: React.ReactNode, key: string) => (
+    <span
+      key={key}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        background: bg,
+        color,
+        borderRadius: 6,
+        padding,
+        fontSize,
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {content}
     </span>
   )
+
+  const badges: React.ReactNode[] = []
+
+  // ไม่มีอะไรเลย → "สมาชิก"
+  if (!hasPhone && !hasId) {
+    const t = TRUST_TIERS.member
+    badges.push(pill(t.bgColor, t.color, t.shortLabel, 'member'))
+  } else {
+    // โชว์ badge แยกตามสิ่งที่ได้จริง
+    if (hasPhone) {
+      const t = TRUST_TIERS.phone
+      badges.push(pill(t.bgColor, t.color, t.shortLabel, 'phone'))
+    }
+    if (hasId) {
+      const t = TRUST_TIERS.id
+      badges.push(pill(t.bgColor, t.color, t.shortLabel, 'id'))
+    }
+    // ครบทั้งคู่ → เพิ่ม Verified Seller (shield SVG) ตัวสุดท้าย
+    if (hasBoth) {
+      const t = TRUST_TIERS.verified
+      badges.push(
+        pill(
+          t.bgColor,
+          t.color,
+          <>
+            <ShieldIcon size={iconSize} color={t.color} />
+            Verified Seller
+          </>,
+          'verified'
+        )
+      )
+    }
+  }
+
+  return <>{badges}</>
 }
 
 export function TrustMission({
@@ -921,44 +959,8 @@ export function TrustMission({
   const { count, total, percent, tier, items } = computeTrustScore(user)
   const isComplete = count === total
 
-  // ครบทุกข้อแล้ว → โชว์ compact success card แทน checklist เต็ม ๆ
-  if (isComplete) {
-    return (
-      <div style={{
-        background: 'linear-gradient(135deg, #ECFDF5 0%, #DBEAFE 100%)',
-        border: '1px solid #BFDBFE',
-        borderRadius: 16,
-        padding: '16px 18px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-      }}>
-        <div style={{
-          width: 48,
-          height: 48,
-          borderRadius: '50%',
-          background: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 24,
-          flexShrink: 0,
-          border: `2px solid ${tier.color}`,
-        }}>
-          {tier.emoji}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 15, fontWeight: 700, color: '#0F172A', marginBottom: 2 }}>
-            ภารกิจสร้างความน่าเชื่อถือ ✓
-          </div>
-          <div style={{ fontSize: 13, color: tier.color, fontWeight: 600 }}>
-            {tier.label} — ลูกค้ามั่นใจในตัวคุณเต็มที่
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // ครบทุกข้อแล้ว → ซ่อน mission card ทั้งหมด (badge บน profile header โชว์ status แทน)
+  if (isComplete) return null
 
   return (
     <div style={{
