@@ -59,7 +59,7 @@ export default function SellPageWrapper() {
 function SellPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loginWithLine } = useAuth()
+  const { user, loginWithLine, reloadUser } = useAuth()
   const { msg, show } = useToast()
 
   // showLogin removed — login goes directly to LINE OAuth
@@ -79,6 +79,11 @@ function SellPage() {
   const [contact, setContact] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showVerifyPrompt, setShowVerifyPrompt] = useState<{ needsLineId: boolean; needsPhone: boolean; needsId: boolean; isbn: string } | null>(null)
+  // Inline guard: ต้องมี LINE ID ก่อนลงขาย (กัน user ลงไปแล้วลูกค้าติดต่อไม่ได้)
+  const [showLineGuard, setShowLineGuard] = useState(false)
+  const [lineIdInput, setLineIdInput] = useState('')
+  const [savingLineId, setSavingLineId] = useState(false)
+  const [lineGuardError, setLineGuardError] = useState('')
   const [marketPrice, setMarketPrice] = useState<{ min: number; max: number; avg: number } | null>(null)
   const [manualTitle, setManualTitle] = useState('')
   const [manualAuthor, setManualAuthor] = useState('')
@@ -269,6 +274,15 @@ function SellPage() {
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { show('กรุณาใส่ราคาที่ถูกต้อง'); return }
     if (!contact.trim()) { show('กรุณาใส่ช่องทางติดต่อ'); return }
 
+    // Guard: ถ้าไม่มี LINE ID → เด้ง modal ให้กรอก inline (ไม่ redirect ออก)
+    // เหตุผล: ลูกค้าติดต่อไม่ได้จริง ๆ ถ้าไม่มี LINE ID, แต่ไม่อยากเสีย context form
+    if (!user.line_id) {
+      setLineIdInput('')
+      setLineGuardError('')
+      setShowLineGuard(true)
+      return
+    }
+
     setSubmitting(true)
     show('กำลังบันทึก...')
 
@@ -337,6 +351,7 @@ function SellPage() {
 
       show('ลงขายเรียบร้อยแล้ว 🎉')
       // เช็คว่าควรแสดง popup เชิญลงทะเบียนไหม
+      // (needsLineId ไม่ควรถึงตรงนี้แล้ว เพราะ guard modal บังคับก่อน submit)
       const needsLineId = !user.line_id
       const needsPhone = !user.phone_verified_at
       const needsId = !user.id_verified_at
@@ -351,11 +366,93 @@ function SellPage() {
     setSubmitting(false)
   }
 
+  // Save LINE ID จาก inline guard modal → reload user → retry submit อัตโนมัติ
+  const saveLineIdAndContinue = async () => {
+    if (!user) return
+    const raw = lineIdInput.trim()
+    if (!raw) { setLineGuardError('กรุณากรอก LINE ID'); return }
+    setSavingLineId(true)
+    setLineGuardError('')
+    try {
+      const res = await fetch('/api/user/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, data: { line_id: raw } }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setLineGuardError(d.message || 'บันทึกไม่สำเร็จ ลองใหม่')
+        return
+      }
+      await reloadUser()
+      setShowLineGuard(false)
+      // ลงขายต่อทันที
+      setTimeout(() => submit(), 100)
+    } catch {
+      setLineGuardError('เกิดข้อผิดพลาด ลองใหม่')
+    } finally {
+      setSavingLineId(false)
+    }
+  }
+
   return (
     <>
       <Nav />
       <InAppBanner />
       <Toast msg={msg} />
+
+      {/* Inline LINE ID guard — กัน user ลงขายโดยไม่มี channel ให้ลูกค้าติดต่อ */}
+      {showLineGuard && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 18, padding: '28px 24px', width: '100%', maxWidth: 380 }}>
+            <div style={{ fontSize: 40, marginBottom: 10, textAlign: 'center' }}>🔗</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 19, fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
+              เพิ่ม LINE ID ก่อนลงขาย
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--ink2)', lineHeight: 1.65, marginBottom: 18, textAlign: 'center' }}>
+              เพื่อให้ลูกค้าติดต่อซื้อหนังสือจากคุณได้
+            </div>
+
+            <input
+              type="text"
+              value={lineIdInput}
+              onChange={e => { setLineIdInput(e.target.value); if (lineGuardError) setLineGuardError('') }}
+              onKeyDown={e => { if (e.key === 'Enter' && !savingLineId) saveLineIdAndContinue() }}
+              placeholder="@bookmatch หรือ john1234"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: `1.5px solid ${lineGuardError ? '#DC2626' : '#E2E8F0'}`,
+                borderRadius: 10,
+                fontFamily: 'Kanit',
+                fontSize: 15,
+                outline: 'none',
+                marginBottom: 6,
+              }}
+            />
+            <div style={{ fontSize: 12, color: lineGuardError ? '#DC2626' : '#94A3B8', marginBottom: 16, lineHeight: 1.5 }}>
+              {lineGuardError || 'กรอก LINE ID ของคุณ (4-20 ตัวอักษร: a-z, 0-9, จุด ขีด)'}
+            </div>
+
+            <button
+              onClick={saveLineIdAndContinue}
+              disabled={savingLineId || !lineIdInput.trim()}
+              className="btn"
+              style={{ marginBottom: 8, opacity: (savingLineId || !lineIdInput.trim()) ? 0.5 : 1 }}
+            >
+              {savingLineId ? 'กำลังบันทึก...' : 'บันทึกและลงขายต่อ'}
+            </button>
+            <button
+              onClick={() => { setShowLineGuard(false); setLineIdInput(''); setLineGuardError('') }}
+              className="btn btn-ghost"
+              disabled={savingLineId}
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Popup เชิญลงทะเบียน หลังลงขายสำเร็จ */}
       {showVerifyPrompt && (
