@@ -469,15 +469,34 @@ export default function ProfilePage() {
             ) : (
               user.seller_type === 'store' ? '🏪' : '👤'
             )}
+
+            {/* Bottom gray strip + "+" ไว้บอกว่าเปลี่ยนรูปได้ */}
+            {!uploadingAvatar && (
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '36%',
+                background: 'rgba(71, 85, 105, 0.85)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: 18,
+                fontWeight: 700,
+                lineHeight: 1,
+                paddingBottom: 2,
+              }}>
+                +
+              </div>
+            )}
+
             {uploadingAvatar && (
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span className="spin" style={{ width: 20, height: 20, borderColor: 'white', borderTopColor: 'transparent' }} />
               </div>
             )}
-            {/* Camera badge corner */}
-            <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, border: '1.5px solid var(--primary)' }}>
-              📷
-            </div>
           </div>
           <input
             ref={avatarInputRef}
