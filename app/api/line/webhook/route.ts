@@ -16,7 +16,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyLineSignature, pushLineText, replyLineMessage } from '@/lib/line-bot'
 
-export const runtime = 'edge'
+// ใช้ nodejs runtime — เดิม edge แต่ cold start + chain ของ awaits ทำให้ timeout > 1-2 วิ
+// ที่ LINE อดทน → webhook error "A timeout occurred when sending a webhook event object"
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 function admin() {
@@ -26,14 +28,79 @@ function admin() {
   )
 }
 
-const SITE_URL = 'https://bookmatch-murex.vercel.app'
+const SITE_URL = 'https://bookmatch.app'
+
+// ประมวลผล events ใน background — ไม่ block response
+async function processEvents(events: any[]) {
+  const sb = admin()
+
+  for (const event of events) {
+    const lineUserId: string | undefined = event.source?.userId
+    if (!lineUserId) continue
+
+    try {
+      switch (event.type) {
+        case 'follow': {
+          const { data: user } = await sb
+            .from('users')
+            .select('id, display_name')
+            .eq('line_user_id', lineUserId)
+            .maybeSingle()
+
+          if (user) {
+            await sb
+              .from('users')
+              .update({ line_oa_friend_at: new Date().toISOString() })
+              .eq('id', user.id)
+
+            await pushLineText(
+              lineUserId,
+              `สวัสดีคุณ ${user.display_name} 👋\n\nขอบคุณที่ Add BookMatch เป็นเพื่อน 📚\n\nต่อไปนี้เราจะแจ้งเตือนเมื่อ:\n• มีคนลงขายหนังสือที่คุณอยากได้\n• มีคนสนใจซื้อหนังสือที่คุณขาย\n• การซื้อขายของคุณเสร็จสมบูรณ์\n\nลุยเลย → ${SITE_URL}`
+            )
+          } else {
+            await pushLineText(
+              lineUserId,
+              `สวัสดี! 👋\n\nขอบคุณที่ Add BookMatch เป็นเพื่อน 📚\n\nกรุณา login เว็บด้วย LINE เดียวกันนี้ เพื่อรับแจ้งเตือนตามหนังสือที่คุณสนใจ:\n${SITE_URL}`
+            )
+          }
+          break
+        }
+
+        case 'unfollow': {
+          await sb
+            .from('users')
+            .update({ line_oa_friend_at: null })
+            .eq('line_user_id', lineUserId)
+          break
+        }
+
+        case 'message': {
+          const replyToken = event.replyToken
+          if (replyToken) {
+            await replyLineMessage(replyToken, [
+              {
+                type: 'text',
+                text: `ขอบคุณที่ติดต่อ BookMatch! 📚\n\nระบบยังไม่รองรับการสนทนาที่นี่\nกรุณาเข้าใช้งานที่เว็บ:\n${SITE_URL}`,
+              },
+            ])
+          }
+          break
+        }
+
+        default:
+          break
+      }
+    } catch (err: any) {
+      console.error('[line/webhook] event error', event.type, err?.message || err)
+    }
+  }
+}
 
 export async function POST(req: NextRequest) {
-  // อ่าน raw body — จำเป็นสำหรับ signature verify
   const rawBody = await req.text()
   const signature = req.headers.get('x-line-signature') || ''
 
-  // Verify signature — กัน fake webhook จาก attacker
+  // Verify signature — ต้อง sync (security)
   const valid = await verifyLineSignature(rawBody, signature)
   if (!valid) {
     console.warn('[line/webhook] invalid signature, len:', signature.length)
@@ -48,83 +115,13 @@ export async function POST(req: NextRequest) {
   }
 
   const events = payload.events || []
-  if (!events.length) return NextResponse.json({ ok: true }) // verify ping
 
-  const sb = admin()
-
-  for (const event of events) {
-    const lineUserId: string | undefined = event.source?.userId
-    if (!lineUserId) continue
-
-    try {
-      switch (event.type) {
-        case 'follow': {
-          // User add OA เป็นเพื่อน → mark subscribed + ส่ง welcome
-          // Match กับ BookMatch user ที่ login ด้วย LINE เดียวกัน (provider เดียวกัน = userId เดียวกัน)
-          const { data: user } = await sb
-            .from('users')
-            .select('id, display_name')
-            .eq('line_user_id', lineUserId)
-            .maybeSingle()
-
-          if (user) {
-            // User เคย login ใน BookMatch แล้ว → mark friend
-            await sb
-              .from('users')
-              .update({ line_oa_friend_at: new Date().toISOString() })
-              .eq('id', user.id)
-              .then(() => {})
-              // Silent ignore ถ้า column ยังไม่มี (migration ยังไม่รัน)
-              // .catch(...) — supabase-js promise ใช้ .then() chain แทน
-
-            await pushLineText(
-              lineUserId,
-              `สวัสดีคุณ ${user.display_name} 👋\n\nขอบคุณที่ Add BookMatch เป็นเพื่อน 📚\n\nต่อไปนี้เราจะแจ้งเตือนเมื่อ:\n• มีคนลงขายหนังสือที่คุณอยากได้\n• มีคนสนใจซื้อหนังสือที่คุณขาย\n• การซื้อขายของคุณเสร็จสมบูรณ์\n\nลุยเลย → ${SITE_URL}`
-            )
-          } else {
-            // User add OA แต่ยังไม่เคย login BookMatch
-            await pushLineText(
-              lineUserId,
-              `สวัสดี! 👋\n\nขอบคุณที่ Add BookMatch เป็นเพื่อน 📚\n\nกรุณา login เว็บด้วย LINE เดียวกันนี้ เพื่อรับแจ้งเตือนตามหนังสือที่คุณสนใจ:\n${SITE_URL}`
-            )
-          }
-          break
-        }
-
-        case 'unfollow': {
-          // User block หรือ remove OA → mark unsubscribed
-          await sb
-            .from('users')
-            .update({ line_oa_friend_at: null })
-            .eq('line_user_id', lineUserId)
-          break
-        }
-
-        case 'message': {
-          // User ส่งข้อความมา OA → reply เบาๆ
-          // ใช้ reply (ฟรี) ไม่ใช่ push (กิน quota)
-          const replyToken = event.replyToken
-          if (replyToken) {
-            await replyLineMessage(replyToken, [
-              {
-                type: 'text',
-                text: `ขอบคุณที่ติดต่อ BookMatch! 📚\n\nระบบยังไม่รองรับการสนทนาที่นี่\nกรุณาเข้าใช้งานที่เว็บ:\n${SITE_URL}`,
-              },
-            ])
-          }
-          break
-        }
-
-        default:
-          // ignore event types อื่น (postback, beacon, etc.)
-          break
-      }
-    } catch (err: any) {
-      // Log แต่ไม่ fail ทั้ง webhook (LINE จะ retry ถ้า return non-200)
-      console.error('[line/webhook] event error', event.type, err?.message || err)
-    }
+  // Fire-and-forget: ไม่ await เพื่อ return 200 ใน <100ms
+  // LINE webhook timeout ~1 วิ — ห้ามรอ LINE API / DB เยอะ ๆ
+  // Node runtime บน Vercel คง process alive ชั่วคราวให้ background finish ได้
+  if (events.length) {
+    processEvents(events).catch(err => console.error('[line/webhook] bg error', err?.message || err))
   }
 
-  // Always return 200 ให้ LINE — ไม่งั้น LINE จะ retry หลายรอบ
   return NextResponse.json({ ok: true })
 }
