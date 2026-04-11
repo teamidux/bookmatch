@@ -889,24 +889,32 @@ export function TrustBadge({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md
   const hasId = !!user.id_verified_at
   const hasBoth = hasPhone && hasId
 
-  const fontSize = size === 'lg' ? 13 : size === 'md' ? 12 : 11
-  const padding = size === 'lg' ? '6px 12px' : size === 'md' ? '5px 10px' : '3px 8px'
-  const iconSize = size === 'lg' ? 16 : size === 'md' ? 14 : 12
+  // สัญลักษณ์เดียวเมื่อ sm/md, มี text เฉพาะ lg
+  const iconOnly = size !== 'lg'
+  const pillSize = size === 'lg' ? 28 : size === 'md' ? 24 : 20
+  const emojiSize = size === 'lg' ? 14 : size === 'md' ? 13 : 12
+  const fontSize = size === 'lg' ? 13 : 12
+  const shieldSize = size === 'lg' ? 16 : size === 'md' ? 14 : 12
 
-  const pill = (bg: string, color: string, content: React.ReactNode, key: string) => (
+  const pill = (bg: string, color: string, content: React.ReactNode, title: string, key: string) => (
     <span
       key={key}
+      title={title}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 4,
+        justifyContent: 'center',
+        gap: iconOnly ? 0 : 4,
         background: bg,
         color,
-        borderRadius: 6,
-        padding,
-        fontSize,
+        borderRadius: iconOnly ? '50%' : 6,
+        width: iconOnly ? pillSize : 'auto',
+        height: iconOnly ? pillSize : 'auto',
+        padding: iconOnly ? 0 : size === 'lg' ? '6px 12px' : '4px 10px',
+        fontSize: iconOnly ? emojiSize : fontSize,
         fontWeight: 700,
         whiteSpace: 'nowrap',
+        lineHeight: 1,
       }}
     >
       {content}
@@ -915,31 +923,26 @@ export function TrustBadge({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md
 
   const badges: React.ReactNode[] = []
 
-  // ไม่มีอะไรเลย → "สมาชิก"
   if (!hasPhone && !hasId) {
     const t = TRUST_TIERS.member
-    badges.push(pill(t.bgColor, t.color, t.shortLabel, 'member'))
+    badges.push(pill(t.bgColor, t.color, iconOnly ? '👤' : t.shortLabel, t.label, 'member'))
   } else {
-    // โชว์ badge แยกตามสิ่งที่ได้จริง
     if (hasPhone) {
       const t = TRUST_TIERS.phone
-      badges.push(pill(t.bgColor, t.color, t.shortLabel, 'phone'))
+      badges.push(pill(t.bgColor, t.color, iconOnly ? '📱' : t.shortLabel, t.label, 'phone'))
     }
     if (hasId) {
       const t = TRUST_TIERS.id
-      badges.push(pill(t.bgColor, t.color, t.shortLabel, 'id'))
+      badges.push(pill(t.bgColor, t.color, iconOnly ? '🪪' : t.shortLabel, t.label, 'id'))
     }
-    // ครบทั้งคู่ → เพิ่ม Verified Seller (shield SVG) ตัวสุดท้าย
     if (hasBoth) {
       const t = TRUST_TIERS.verified
       badges.push(
         pill(
           t.bgColor,
           t.color,
-          <>
-            <ShieldIcon size={iconSize} color={t.color} />
-            Verified Seller
-          </>,
+          <ShieldIcon size={shieldSize} color={t.color} />,
+          'Verified Seller',
           'verified'
         )
       )
