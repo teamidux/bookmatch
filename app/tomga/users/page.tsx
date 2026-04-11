@@ -67,7 +67,7 @@ function AdminUsersPage() {
     return () => clearTimeout(t)
   }, [q])
 
-  const doAction = async (userId: string, action: 'ban' | 'unban' | 'soft_delete', reason?: string) => {
+  const doAction = async (userId: string, action: 'ban' | 'unban' | 'soft_delete' | 'delete_avatar', reason?: string) => {
     setActing(userId)
     try {
       await fetch('/api/tomga/users', {
@@ -244,7 +244,17 @@ function AdminUsersPage() {
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {!u.deleted_at && !u.banned_at && u.avatar_url && (
+                  <button
+                    onClick={() => { if (confirm(`ลบรูป profile ของ "${u.display_name}"?\n\nรูปจะถูก reset เป็น default → user ต้องอัปโหลดใหม่เอง\nใช้กรณีรูปไม่เหมาะสม`)) doAction(u.id, 'delete_avatar') }}
+                    disabled={acting === u.id}
+                    title="ลบรูป profile (รูปไม่เหมาะสม)"
+                    style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
+                  >
+                    🖼️ ลบรูป
+                  </button>
+                )}
                 {!u.deleted_at && !u.banned_at && (
                   <>
                     <button

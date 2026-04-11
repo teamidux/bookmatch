@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { isAdmin } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export const runtime = 'nodejs'
 
@@ -166,7 +167,7 @@ export async function POST(req: NextRequest) {
   if (!adminId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const { userId, action, reason } = await req.json()
-  if (!userId || !['ban', 'unban', 'soft_delete'].includes(action)) {
+  if (!userId || !['ban', 'unban', 'soft_delete', 'delete_avatar'].includes(action)) {
     return NextResponse.json({ error: 'invalid params' }, { status: 400 })
   }
   if (userId === adminId) {
@@ -184,7 +185,19 @@ export async function POST(req: NextRequest) {
   } else if (action === 'soft_delete') {
     const { error } = await db.rpc('soft_delete_user', { p_user_id: userId, p_reason: reason || null })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'delete_avatar') {
+    const { error } = await db.from('users').update({ avatar_url: null }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Log audit (fire-and-forget — ไม่ block response)
+  logAdminAction({
+    adminId,
+    action: `${action}_user`,
+    targetType: 'user',
+    targetId: userId,
+    reason,
+  })
 
   return NextResponse.json({ ok: true, action })
 }

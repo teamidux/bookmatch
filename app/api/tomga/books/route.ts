@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { isAdmin } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export const runtime = 'nodejs'
 
@@ -48,7 +49,8 @@ export async function GET(req: NextRequest) {
 
 // PUT — update book fields
 export async function PUT(req: NextRequest) {
-  if (!(await currentAdmin())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const adminId = await currentAdmin()
+  if (!adminId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const { id, ...fields } = await req.json()
   if (!id) return NextResponse.json({ error: 'missing id' }, { status: 400 })
@@ -66,6 +68,14 @@ export async function PUT(req: NextRequest) {
   const db = sb()
   const { error } = await db.from('books').update(update).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  logAdminAction({
+    adminId,
+    action: 'edit_book',
+    targetType: 'book',
+    targetId: id,
+    metadata: { fields: Object.keys(update) },
+  })
 
   return NextResponse.json({ ok: true })
 }

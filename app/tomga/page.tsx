@@ -47,6 +47,8 @@ export default function AdminPage() {
     { href: '/tomga/verify', icon: '🪪', title: 'ตรวจยืนยันตัวตน', desc: 'อนุมัติ/ปฏิเสธ เอกสาร', badge: data?.pendingVerify },
     { href: '/tomga/users', icon: '👥', title: 'จัดการ User', desc: data?.suspiciousUsers ? `🚩 ${data.suspiciousUsers} น่าสงสัย · ${data.bannedUsers || 0} banned` : 'Ban, soft delete, ระบบ detect พฤติกรรมน่าสงสัย', badge: data?.suspiciousUsers || 0 },
     { href: '/tomga/books', icon: '📖', title: 'จัดการข้อมูลหนังสือ', desc: 'แก้ชื่อ, ผู้แต่ง, รูปปก, รายละเอียด', badge: 0 },
+    { href: '/tomga/listings', icon: '📦', title: 'จัดการ Listings', desc: 'ลบ listing ไม่เหมาะสม + auto flag คำต้องห้าม', badge: 0 },
+    { href: '/tomga/audit', icon: '📋', title: 'Audit Log', desc: 'ประวัติการทำงานของ admin ทั้งหมด', badge: 0 },
     { href: '/tomga/messages', icon: '💬', title: 'ข้อความ & รายงาน', desc: (data?.unreadMessages || data?.pendingReports) ? `📬 ${data?.unreadMessages || 0} ข้อความใหม่ · ${data?.pendingReports || 0} รายงานใหม่` : 'ข้อความจากสมาชิก + รายงานโกง', badge: (data?.unreadMessages || 0) + (data?.pendingReports || 0) },
     { href: '/tomga/import', icon: '📥', title: 'Import หนังสือ', desc: 'Upload CSV เข้าฐานข้อมูล', badge: 0 },
   ]
