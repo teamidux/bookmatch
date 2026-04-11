@@ -143,8 +143,8 @@ export default function HomePage() {
       <Toast msg={msg} />
       <div className="page">
         <div className="hero">
-          <h1 className="hero-title">หนังสือทุกเล่ม — มีคนที่ใช่รออยู่</h1>
-          <p className="hero-sub">เจอหนังสือที่ตามหา เจอลูกค้าที่รอซื้อ</p>
+          <h1 className="hero-title">ตลาดหนังสือออนไลน์</h1>
+          <p className="hero-sub">หนังสือทุกเล่ม — มีคนที่ใช่รออยู่<br />เจอหนังสือที่ตามหา เจอลูกค้าที่รอซื้อ</p>
 
           {/* Search input */}
           <div style={{ maxWidth: 440, margin: '0 auto 10px', position: 'relative' }}>
