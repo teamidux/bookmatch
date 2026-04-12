@@ -13,6 +13,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 })
   }
 
+  // ต้องเป็นเจ้าของ listing เท่านั้น
+  const { getSessionUser } = await import('@/lib/session')
+  const sessionUser = await getSessionUser()
+  if (!sessionUser || sessionUser.id !== sellerId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
   const sb = getSupabase()
 
   // ตรวจว่า listing นั้นเป็นของ seller จริง

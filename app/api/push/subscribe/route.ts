@@ -13,10 +13,13 @@ export async function POST(req: NextRequest) {
   if (!userId || !subscription?.endpoint) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 })
   }
-  // ตรวจว่า userId มีในระบบจริง ป้องกัน upsert ด้วย id แปลกปลอม
+  // ต้องเป็นเจ้าของ session เท่านั้น
+  const { getSessionUser } = await import('@/lib/session')
+  const sessionUser = await getSessionUser()
+  if (!sessionUser || sessionUser.id !== userId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
   const supabase = getSupabase()
-  const { data: user } = await supabase.from('users').select('id').eq('id', userId).maybeSingle()
-  if (!user) return NextResponse.json({ error: 'user not found' }, { status: 403 })
 
   const { error } = await supabase
     .from('push_subscriptions')
@@ -28,6 +31,12 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { userId } = await req.json()
   if (!userId) return NextResponse.json({ error: 'missing userId' }, { status: 400 })
+  // ต้องเป็นเจ้าของ session เท่านั้น
+  const { getSessionUser } = await import('@/lib/session')
+  const sessionUser = await getSessionUser()
+  if (!sessionUser || sessionUser.id !== userId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
   await getSupabase().from('push_subscriptions').delete().eq('user_id', userId)
   return NextResponse.json({ ok: true })
 }

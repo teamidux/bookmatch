@@ -12,6 +12,12 @@ function admin() {
 }
 
 export async function GET(req: NextRequest) {
+  // Admin only
+  const { getSessionUser } = await import('@/lib/session')
+  const { isAdmin } = await import('@/lib/admin')
+  const user = await getSessionUser()
+  if (!user || !isAdmin(user.id)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
   const sb = admin()
   const days = parseInt(req.nextUrl.searchParams.get('days') || '7', 10)
   const since = new Date(Date.now() - days * 86400000).toISOString()

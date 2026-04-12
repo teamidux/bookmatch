@@ -5,15 +5,19 @@ const VALID_REASONS = ['scam', 'fake_book', 'no_ship', 'inappropriate', 'other']
 
 export async function POST(req: NextRequest) {
   try {
-    const { reportedUserId, reporterUserId, listingId, reason, details, website } = await req.json()
+    const { reportedUserId, listingId, reason, details, website } = await req.json()
     // Honeypot
     if (website) return NextResponse.json({ ok: true })
     if (!reportedUserId || typeof reportedUserId !== 'string') {
       return NextResponse.json({ error: 'missing reportedUserId' }, { status: 400 })
     }
-    if (!reporterUserId || typeof reporterUserId !== 'string') {
+    // ใช้ session user แทน client-provided ID — กัน spoofing
+    const { getSessionUser } = await import('@/lib/session')
+    const sessionUser = await getSessionUser()
+    if (!sessionUser) {
       return NextResponse.json({ error: 'must be logged in to report' }, { status: 401 })
     }
+    const reporterUserId = sessionUser.id
     if (reportedUserId === reporterUserId) {
       return NextResponse.json({ error: 'cannot report yourself' }, { status: 400 })
     }

@@ -17,6 +17,11 @@ function db() {
 
 export async function POST(req: NextRequest) {
   try {
+    // ต้อง login แล้วเท่านั้น (เรียกจาก sell page หลัง listing insert)
+    const { getSessionUser } = await import('@/lib/session')
+    const sessionUser = await getSessionUser()
+    if (!sessionUser) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
     const { book_id, seller_id, price, isbn } = await req.json()
     if (!book_id || !seller_id) return NextResponse.json({ ok: true, sent: 0 })
 
