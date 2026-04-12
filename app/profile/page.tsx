@@ -24,8 +24,6 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   // editLine ตัดออก — LINE ID มี flow แยก (re-auth required)
-  const [editSellerType, setEditSellerType] = useState<'individual' | 'store'>('individual')
-  const [editStoreName, setEditStoreName] = useState('')
   const [saving, setSaving] = useState(false)
   const [query, setQuery] = useState('')
   // LINE ID edit (separate from main edit modal)
@@ -122,17 +120,13 @@ export default function ProfilePage() {
 
   const startEdit = () => {
     setEditName(user?.display_name || '')
-    setEditSellerType(user?.seller_type || 'individual')
-    setEditStoreName(user?.store_name || '')
     setEditLineId(user?.line_id || '')
     setEditLineError('')
     setEditing(true)
   }
 
   const saveProfile = async () => {
-    if (editSellerType === 'store' && !editStoreName.trim()) { show('กรุณาใส่ชื่อร้าน'); return }
-    if (editSellerType === 'individual' && !editName.trim()) { show('กรุณาใส่ชื่อ'); return }
-    // validate LINE ID ถ้ากรอก
+    if (!editName.trim()) { show('กรุณาใส่ชื่อ'); return }
     const trimmedLine = editLineId.trim()
     if (trimmedLine) {
       const parsed = parseLineId(trimmedLine)
@@ -141,12 +135,9 @@ export default function ProfilePage() {
     setEditLineError('')
     setSaving(true)
     try {
-      const storeName = editSellerType === 'store' ? editStoreName.trim() : undefined
       await updateUser({
-        display_name: editSellerType === 'store' ? editStoreName.trim() : editName.trim(),
+        display_name: editName.trim(),
         line_id: trimmedLine || (null as any),
-        seller_type: editSellerType,
-        store_name: storeName,
       })
       setEditing(false)
       show('บันทึกแล้ว ✓')
@@ -425,31 +416,12 @@ export default function ProfilePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 18, marginBottom: 20 }}>แก้ไขข้อมูล</div>
-            {editSellerType !== 'store' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
-                <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ" />
-              </div>
-            )}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 8 }}>ประเภทผู้ขาย</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(['individual', 'store'] as const).map(t => (
-                  <button key={t} onClick={() => setEditSellerType(t)}
-                    style={{ flex: 1, padding: '10px 8px', borderRadius: 10, border: `2px solid ${editSellerType === t ? 'var(--primary)' : 'var(--border)'}`, background: editSellerType === t ? 'var(--primary-light)' : 'white', fontFamily: 'Kanit', fontSize: 13, fontWeight: 600, color: editSellerType === t ? 'var(--primary)' : 'var(--ink2)', cursor: 'pointer' }}>
-                    {t === 'individual' ? '👤 บุคคลทั่วไป' : '🏪 ร้านค้า / สำนักพิมพ์'}
-                  </button>
-                ))}
-              </div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
+              <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ หรือชื่อร้าน" />
             </div>
-            {editSellerType === 'store' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อร้าน / สำนักพิมพ์ <span style={{ color: 'var(--red)' }}>*</span></label>
-                <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editStoreName} onChange={e => setEditStoreName(e.target.value)} placeholder="เช่น ร้านหนังสือบ้านหนังสือ" />
-              </div>
-            )}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>LINE ID</label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>LINE ID <span style={{ fontSize: 12, fontWeight: 400, color: '#94A3B8' }}>(ไม่บังคับ — ใส่ให้ลูกค้า Add ง่าย)</span></label>
               <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editLineId} onChange={e => { setEditLineId(e.target.value); setEditLineError('') }} placeholder="เช่น mylineid" />
               {editLineError && <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 4 }}>{editLineError}</div>}
             </div>
@@ -477,7 +449,7 @@ export default function ProfilePage() {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
             ) : (
-              user.seller_type === 'store' ? '🏪' : '👤'
+              '👤'
             )}
 
             {/* Bottom gray strip + "+" ไว้บอกว่าเปลี่ยนรูปได้ */}
@@ -521,15 +493,12 @@ export default function ProfilePage() {
           />
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 20, color: 'white', marginBottom: 3 }}>
-              {user.seller_type === 'store' && user.store_name ? user.store_name : user.display_name}
+              {user.display_name}
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 2 }}>{user.phone}</div>
             {user.line_id && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', marginBottom: 4 }}>Line: {user.line_id}</div>}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               <TrustBadge user={user} size="md" />
-              {user.seller_type === 'store' && (
-                <span className="badge" style={{ background: 'rgba(255,255,255,.2)', color: 'white', fontSize: 12 }}>🏪 ร้านค้า / สำนักพิมพ์</span>
-              )}
               {user.is_pioneer && <span className="badge" style={{ background: 'rgba(255,255,255,.2)', color: 'white', fontSize: 12 }}>🏆 ผู้บุกเบิก</span>}
             </div>
           </div>

@@ -293,7 +293,7 @@ export default function SellerPage({ params }: PageProps) {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
             ) : (
-              seller?.seller_type === 'store' ? '🏪' : '👤'
+              '👤'
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>

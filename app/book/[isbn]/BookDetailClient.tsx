@@ -407,8 +407,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
           )}
 
           {listings.map(l => {
-            const isStore = (l.users as any)?.seller_type === 'store'
-            const sellerName = isStore ? ((l.users as any)?.store_name || l.users?.display_name) : l.users?.display_name
+            const sellerName = l.users?.display_name
             const avatarUrl = (l.users as any)?.avatar_url
             return (
             <div key={l.id} className="card">
