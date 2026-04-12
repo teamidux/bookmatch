@@ -166,12 +166,12 @@ export async function POST(req: NextRequest) {
   const adminId = await currentAdmin()
   if (!adminId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { userId, action, reason } = await req.json()
-  if (!userId || !['ban', 'unban', 'soft_delete', 'delete_avatar', 'reset_verify'].includes(action)) {
+  const { userId, action, reason, phone: newPhone, name: newName } = await req.json()
+  if (!userId || !['ban', 'unban', 'soft_delete', 'delete_avatar', 'reset_verify', 'reset_phone', 'reset_id_verify', 'edit_phone', 'edit_name'].includes(action)) {
     return NextResponse.json({ error: 'invalid params' }, { status: 400 })
   }
-  // Block self-action ยกเว้น reset_verify (อนุญาตให้ admin reset ตัวเองเพื่อ test)
-  if (userId === adminId && action !== 'reset_verify') {
+  // Block self-action ยกเว้น reset actions (อนุญาตให้ admin reset ตัวเองเพื่อ test)
+  if (userId === adminId && !action.startsWith('reset') && action !== 'edit_phone') {
     return NextResponse.json({ error: 'ห้าม action ตัวเอง' }, { status: 400 })
   }
 
@@ -190,12 +190,40 @@ export async function POST(req: NextRequest) {
     const { error } = await db.from('users').update({ avatar_url: null }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   } else if (action === 'reset_verify') {
-    // Reset phone + ID verify — สำหรับ test / admin กู้คืนกรณี user verify ผิดข้อมูล
+    // Reset ทั้งหมด (เดิม) — เก็บไว้เผื่อใช้
     const { error } = await db.from('users').update({
-      phone: null,
-      phone_verified_at: null,
-      id_verified_at: null,
-      id_verify_submitted_at: null,
+      phone: null, phone_verified_at: null,
+      id_verified_at: null, id_verify_submitted_at: null,
+    }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'reset_phone') {
+    // Reset เบอร์โทรอย่างเดียว
+    const { error } = await db.from('users').update({
+      phone: null, phone_verified_at: null,
+    }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'reset_id_verify') {
+    // Reset ยืนยันตัวตน (บัตร + หน้าบัญชี) อย่างเดียว
+    const { error } = await db.from('users').update({
+      id_verified_at: null, id_verify_submitted_at: null,
+    }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'edit_phone') {
+    // Admin แก้เบอร์ให้ user + mark verified
+    if (!newPhone || !/^0\d{9}$/.test(newPhone)) {
+      return NextResponse.json({ error: 'เบอร์ไม่ถูกต้อง (0xxxxxxxxx)' }, { status: 400 })
+    }
+    const { error } = await db.from('users').update({
+      phone: newPhone, phone_verified_at: new Date().toISOString(),
+    }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'edit_name') {
+    // Admin แก้ชื่อ user
+    if (!newName?.trim()) {
+      return NextResponse.json({ error: 'กรุณาใส่ชื่อ' }, { status: 400 })
+    }
+    const { error } = await db.from('users').update({
+      display_name: newName.trim(),
     }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }

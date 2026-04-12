@@ -66,13 +66,13 @@ function AdminUsersPage() {
     return () => clearTimeout(t)
   }, [q])
 
-  const doAction = async (userId: string, action: 'ban' | 'unban' | 'soft_delete' | 'delete_avatar' | 'reset_verify', reason?: string) => {
+  const doAction = async (userId: string, action: string, reason?: string, extra?: Record<string, any>) => {
     setActing(userId)
     try {
       const res = await fetch('/api/tomga/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action, reason }),
+        body: JSON.stringify({ userId, action, reason, ...extra }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -249,14 +249,47 @@ function AdminUsersPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {!u.deleted_at && !u.banned_at && (u.phone_verified_at || u.id_verified_at) && (
+                {!u.deleted_at && !u.banned_at && (
                   <button
-                    onClick={() => { if (confirm(`Reset verify ของ "${u.display_name}"?\n\nจะลบ: เบอร์โทร, ยืนยันเบอร์, ยืนยันตัวตน\n→ user ต้อง verify ใหม่\nใช้สำหรับ test หรือแก้ไขข้อมูลผิด`)) doAction(u.id, 'reset_verify') }}
+                    onClick={() => {
+                      const name = prompt(`แก้ชื่อ "${u.display_name}" เป็น:`, u.display_name)
+                      if (name && name !== u.display_name) doAction(u.id, 'edit_name', undefined, { name })
+                    }}
                     disabled={acting === u.id}
-                    title="Reset verify (test)"
                     style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
                   >
-                    🔄 Reset verify
+                    ✏️ ชื่อ
+                  </button>
+                )}
+                {!u.deleted_at && !u.banned_at && (
+                  <button
+                    onClick={() => {
+                      const phone = prompt(`แก้เบอร์ "${u.display_name}"\nเบอร์ปัจจุบัน: ${u.phone || 'ไม่มี'}\n\nใส่เบอร์ใหม่ (0xxxxxxxxx):`, u.phone || '')
+                      if (phone && /^0\d{9}$/.test(phone)) doAction(u.id, 'edit_phone', undefined, { phone })
+                      else if (phone) alert('เบอร์ไม่ถูกต้อง (0xxxxxxxxx)')
+                    }}
+                    disabled={acting === u.id}
+                    style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
+                  >
+                    📞 เบอร์
+                  </button>
+                )}
+                {!u.deleted_at && !u.banned_at && u.phone_verified_at && (
+                  <button
+                    onClick={() => { if (confirm(`Reset เบอร์โทร "${u.display_name}"?\n\nจะลบเบอร์ + สถานะ verify เบอร์\n→ user ต้อง verify เบอร์ใหม่`)) doAction(u.id, 'reset_phone') }}
+                    disabled={acting === u.id}
+                    style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
+                  >
+                    🔄 Reset เบอร์
+                  </button>
+                )}
+                {!u.deleted_at && !u.banned_at && u.id_verified_at && (
+                  <button
+                    onClick={() => { if (confirm(`Reset ยืนยันตัวตน "${u.display_name}"?\n\nจะลบสถานะ verify บัตร+บัญชี\n→ user ต้อง verify ใหม่`)) doAction(u.id, 'reset_id_verify') }}
+                    disabled={acting === u.id}
+                    style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
+                  >
+                    🔄 Reset บัตร
                   </button>
                 )}
                 {!u.deleted_at && !u.banned_at && u.avatar_url && (
