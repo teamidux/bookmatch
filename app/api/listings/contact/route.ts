@@ -40,6 +40,22 @@ export async function POST(req: NextRequest) {
 }
 
 async function notifySeller(supabase: any, sellerId: string, bookId: string | null) {
+  // === In-app notification — ทุก platform ===
+  let bookTitle = 'หนังสือของคุณ'
+  if (bookId) {
+    const { data: book } = await supabase.from('books').select('title, isbn').eq('id', bookId).maybeSingle()
+    if (book?.title) bookTitle = `"${book.title}"`
+    await supabase.from('notifications').insert({
+      user_id: sellerId,
+      type: 'contact',
+      title: 'มีคนสนใจหนังสือของคุณ!',
+      body: `มีคนกดติดต่อเรื่อง ${bookTitle}`,
+      url: book?.isbn ? `/book/${book.isbn}` : '/profile',
+      metadata: { book_id: bookId },
+    })
+  }
+
+  // === Web Push (bonus) ===
   const vapidSubject = process.env.VAPID_SUBJECT
   const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY
@@ -52,13 +68,6 @@ async function notifySeller(supabase: any, sellerId: string, bookId: string | nu
     .eq('user_id', sellerId)
     .maybeSingle()
   if (!sub?.subscription) return
-
-  // ดึงชื่อหนังสือ
-  let bookTitle = 'หนังสือของคุณ'
-  if (bookId) {
-    const { data: book } = await supabase.from('books').select('title').eq('id', bookId).maybeSingle()
-    if (book?.title) bookTitle = `"${book.title}"`
-  }
 
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
   const payload = JSON.stringify({

@@ -67,6 +67,19 @@ export async function POST(req: NextRequest) {
       .select('id, display_name, line_user_id, line_oa_friend_at')
       .in('id', freshUserIds)
 
+    // === In-app notification — ทุกคน ทุก platform ===
+    const notifRows = freshUserIds.map(uid => ({
+      user_id: uid,
+      type: 'wanted_match',
+      title: 'มีหนังสือที่คุณตามหา!',
+      body: `"${book.title}" ลงขายแล้ว ฿${price || '—'}`,
+      url: `/book/${bookIsbn}`,
+      metadata: { book_id, seller_id, isbn: bookIsbn },
+    }))
+    if (notifRows.length) {
+      await sb.from('notifications').insert(notifRows)
+    }
+
     // === Web Push — ส่งทุกคนที่มี subscription (ฟรี ไม่จำกัด) ===
     const vapidSubject = process.env.VAPID_SUBJECT
     const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY

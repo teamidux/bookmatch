@@ -1,0 +1,290 @@
+'use client'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { supabase, Wanted } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
+import { Nav, BottomNav, BookCover, useToast, Toast, MultiLoginButton } from '@/components/ui'
+
+type Notification = {
+  id: string
+  type: string
+  title: string
+  body: string | null
+  url: string | null
+  read_at: string | null
+  created_at: string
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'เมื่อสักครู่'
+  if (min < 60) return `${min} นาที`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr} ชม.`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day} วัน`
+  return `${Math.floor(day / 7)} สัปดาห์`
+}
+
+export default function NotificationsPage() {
+  const { user } = useAuth()
+  const [tab, setTab] = useState<'activity' | 'wanted'>('activity')
+  const [notifs, setNotifs] = useState<Notification[]>([])
+  const [wanted, setWanted] = useState<Wanted[]>([])
+  const [loading, setLoading] = useState(true)
+  const { msg, show } = useToast()
+
+  useEffect(() => {
+    if (!user) { setLoading(false); return }
+    loadAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  const loadAll = async () => {
+    setLoading(true)
+    await Promise.all([loadNotifs(), loadWanted()])
+    setLoading(false)
+  }
+
+  const loadNotifs = async () => {
+    try {
+      const r = await fetch('/api/notifications')
+      const data = await r.json()
+      setNotifs(data.items || [])
+    } catch {}
+  }
+
+  const loadWanted = async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('wanted')
+      .select('*, books(isbn, title, author, cover_url, active_listings_count, min_price)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+    setWanted(data || [])
+  }
+
+  const markAllRead = async () => {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+    })
+    setNotifs(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })))
+    show('อ่านทั้งหมดแล้ว')
+  }
+
+  const markRead = async (id: string) => {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] }),
+    })
+    setNotifs(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+  }
+
+  const removeWanted = async (id: string) => {
+    await fetch('/api/wanted', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wanted_id: id }),
+    })
+    setWanted(prev => prev.filter(w => w.id !== id))
+    show('ลบออกจากรายการตามหาแล้ว')
+  }
+
+  if (!user) return (
+    <>
+      <Nav />
+      <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🔔</div>
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>แจ้งเตือน</div>
+        <div style={{ fontSize: 14, color: 'var(--ink3)', marginBottom: 24 }}>เข้าสู่ระบบเพื่อรับแจ้งเตือน</div>
+        <MultiLoginButton />
+      </div>
+      <BottomNav />
+    </>
+  )
+
+  const unreadCount = notifs.filter(n => !n.read_at).length
+
+  return (
+    <>
+      <Nav />
+      <Toast msg={msg} />
+      <div className="page">
+        <div style={{ padding: '16px 16px 0' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, fontWeight: 700 }}>
+              แจ้งเตือน
+              {unreadCount > 0 && (
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#EF4444', marginLeft: 8 }}>{unreadCount} ใหม่</span>
+              )}
+            </div>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                style={{ fontSize: 13, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+              >
+                อ่านทั้งหมด
+              </button>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--border)' }}>
+            <button
+              onClick={() => setTab('activity')}
+              style={{
+                flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: tab === 'activity' ? 'var(--primary)' : '#94A3B8',
+                borderBottom: tab === 'activity' ? '2px solid var(--primary)' : '2px solid transparent',
+                marginBottom: -2,
+              }}
+            >
+              กิจกรรม {unreadCount > 0 && <span style={{ color: '#EF4444' }}>({unreadCount})</span>}
+            </button>
+            <button
+              onClick={() => setTab('wanted')}
+              style={{
+                flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: tab === 'wanted' ? 'var(--primary)' : '#94A3B8',
+                borderBottom: tab === 'wanted' ? '2px solid var(--primary)' : '2px solid transparent',
+                marginBottom: -2,
+              }}
+            >
+              ตามหา ({wanted.length})
+            </button>
+          </div>
+
+          {loading && (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <span className="spin" style={{ width: 28, height: 28 }} />
+            </div>
+          )}
+
+          {/* === Tab: กิจกรรม === */}
+          {!loading && tab === 'activity' && (
+            <>
+              {notifs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94A3B8' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🔔</div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>ยังไม่มีแจ้งเตือน</div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}>เมื่อมีคนลงขายหนังสือที่คุณตามหา หรือมีคนสนใจหนังสือของคุณ จะแจ้งที่นี่</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {notifs.map(n => (
+                    <Link
+                      key={n.id}
+                      href={n.url || '#'}
+                      onClick={() => { if (!n.read_at) markRead(n.id) }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <div style={{
+                        display: 'flex', gap: 12, padding: '14px 12px', borderRadius: 10,
+                        background: n.read_at ? 'transparent' : '#EFF6FF',
+                        borderLeft: n.read_at ? 'none' : '3px solid #3B82F6',
+                      }}>
+                        <div style={{ fontSize: 24, lineHeight: 1, flexShrink: 0 }}>
+                          {n.type === 'wanted_match' ? '📚' : n.type === 'contact' ? '👤' : '🔔'}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: n.read_at ? 500 : 700, color: '#0F172A', lineHeight: 1.4 }}>
+                            {n.title}
+                          </div>
+                          {n.body && (
+                            <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.5, marginTop: 2 }}>
+                              {n.body}
+                            </div>
+                          )}
+                          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
+                            {timeAgo(n.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === Tab: ตามหา === */}
+          {!loading && tab === 'wanted' && (
+            <>
+              {wanted.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94A3B8' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>ยังไม่มีรายการ</div>
+                  <div style={{ fontSize: 13, marginTop: 6, marginBottom: 20 }}>ค้นหาหนังสือที่อยากได้แล้วกด "ตามหาเล่มนี้"</div>
+                  <Link href="/"><button className="btn" style={{ maxWidth: 200, margin: '0 auto', display: 'block' }}>ค้นหาหนังสือ</button></Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {wanted.map(w => {
+                    const hasStock = (w.books?.active_listings_count || 0) > 0
+                    return (
+                      <div key={w.id} className="card" style={{ position: 'relative' }}>
+                        <Link href={`/book/${w.books?.isbn || w.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <BookCover isbn={w.books?.isbn || w.isbn} title={w.books?.title} size={60} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.books?.title}</div>
+                              <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                                {w.max_price && <span style={{ fontSize: 13, color: 'var(--ink3)' }}>สูงสุด <strong style={{ color: 'var(--primary)' }}>฿{w.max_price}</strong></span>}
+                                {hasStock
+                                  ? <span className="badge badge-green">มีคนขาย {w.books?.active_listings_count} ราย</span>
+                                  : <span className="badge" style={{ background: '#FFF8E1', color: '#E65100' }}>รอคอยอยู่</span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                        <button onClick={() => removeWanted(w.id)} style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', color: 'var(--ink3)', fontSize: 16, cursor: 'pointer', padding: 4 }}>✕</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* LINE OA bonus — ล่างสุด แสดงเฉพาะคนที่ยังไม่ add */}
+          {!(user as any)?.line_oa_friend_at && (
+            <div style={{
+              background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 12,
+              padding: '14px 16px', marginTop: 20,
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <span style={{ fontSize: 24 }}>💚</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>รับแจ้งเตือนผ่าน LINE ด้วย</div>
+                <div style={{ fontSize: 12, color: '#15803D', marginTop: 2 }}>Add @BookMatch เป็นเพื่อน</div>
+              </div>
+              <a
+                href={`https://line.me/R/ti/p/${process.env.NEXT_PUBLIC_LINE_OA_BASIC_ID || '@521qvzrv'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  background: '#06C755', color: 'white', borderRadius: 8,
+                  padding: '8px 14px', fontSize: 13, fontWeight: 700,
+                  textDecoration: 'none', whiteSpace: 'nowrap',
+                }}
+              >
+                เชื่อม
+              </a>
+            </div>
+          )}
+
+        </div>
+        <div style={{ height: 12 }} />
+      </div>
+      <BottomNav />
+    </>
+  )
+}

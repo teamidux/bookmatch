@@ -73,11 +73,23 @@ export function Nav() {
 
 export function BottomNav() {
   const pathname = usePathname()
-  // 4 tabs ใน nav strip — "ลงขาย" อยู่ขวาสุด มี styling เด่นกว่าตัวอื่น
-  // (ไม่ใช้ FAB ลอยเพราะบัง content)
+  const { user } = useAuth()
+  const [unread, setUnread] = useState(0)
+
+  // Poll unread count ทุก 30 วิ (เบา — แค่ count)
+  useEffect(() => {
+    if (!user) return
+    const fetchUnread = () => {
+      fetch('/api/notifications/unread').then(r => r.json()).then(d => setUnread(d.unread || 0)).catch(() => {})
+    }
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
+  }, [user])
+
   const tabs = [
     { href: '/', icon: '🏠', label: 'หน้าแรก' },
-    { href: '/wanted', icon: '🔔', label: 'ตามหา' },
+    { href: '/notifications', icon: '🔔', label: 'แจ้งเตือน', badge: unread },
     { href: '/profile', icon: '👤', label: 'โปรไฟล์' },
   ]
   const sellActive = pathname === '/sell'
@@ -91,11 +103,22 @@ export function BottomNav() {
             href={t.href}
             className={`bnav-item ${pathname === t.href ? 'active' : ''}`}
           >
-            <span>{t.icon}</span>
+            <span style={{ position: 'relative', display: 'inline-block' }}>
+              {t.icon}
+              {(t as any).badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -8,
+                  background: '#EF4444', color: 'white',
+                  fontSize: 10, fontWeight: 800, lineHeight: 1,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+                }}>{(t as any).badge > 99 ? '99+' : (t as any).badge}</span>
+              )}
+            </span>
             <span>{t.label}</span>
           </Link>
         ))}
-        {/* ลงขาย — เด่นกว่าตัวอื่น (primary action ของ marketplace) */}
         <Link
           href="/sell"
           className={`bnav-item ${sellActive ? 'active' : ''}`}
@@ -332,6 +355,16 @@ export function MultiLoginButton({
     )
   }
 
+  // Detect browser ที่ LINE login ใช้ไม่ได้
+  const [showLine, setShowLine] = useState(true)
+  useEffect(() => {
+    const ua = navigator.userAgent
+    // FB in-app browser → LINE login ไม่ได้
+    if (/FBAN|FBAV/.test(ua)) { setShowLine(false); return }
+    // iPhone Chrome (CriOS) → LINE login ไม่ได้ (Apple บังคับ Safari สำหรับ OAuth)
+    if (/CriOS/.test(ua)) { setShowLine(false); return }
+  }, [])
+
   // Menu mode — show all login options
   return (
     <div style={{ maxWidth: 320, margin: '0 auto' }}>
@@ -359,26 +392,28 @@ export function MultiLoginButton({
         เข้าด้วยเบอร์มือถือ
       </button>
 
-      {/* LINE */}
-      <button
-        className="btn"
-        onClick={() => loginWithLine()}
-        style={{
-          width: '100%',
-          background: '#06C755',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-          fontSize: 16,
-          padding: '14px 16px',
-          fontWeight: 700,
-          marginBottom: 10,
-        }}
-      >
-        LINE
-      </button>
+      {/* LINE — ซ่อนใน FB browser / iPhone Chrome */}
+      {showLine && (
+        <button
+          className="btn"
+          onClick={() => loginWithLine()}
+          style={{
+            width: '100%',
+            background: '#06C755',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            fontSize: 16,
+            padding: '14px 16px',
+            fontWeight: 700,
+            marginBottom: 10,
+          }}
+        >
+          LINE
+        </button>
+      )}
 
       {/* Facebook */}
       <button
