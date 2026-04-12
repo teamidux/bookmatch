@@ -463,11 +463,10 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 13, color: 'var(--ink3)' }}>{l.price_includes_shipping ? '✓ ส่งฟรี' : 'ผู้ซื้อจ่ายค่าส่ง'}</div>
                 <button onClick={async () => {
-                  if (!user) { loginWithLine(window.location.pathname); return }
                   setCopied(false)
-                  // fetch contact info (line_id, phone) แยก — ต้อง login
+                  // fetch contact info (line_id, phone) แยก — ต้องรู้ทั้ง listing_id + seller_id
                   const [ciRes] = await Promise.all([
-                    fetch(`/api/listings/contact-info?seller_id=${l.seller_id}`).then(r => r.json()).catch(() => ({})),
+                    fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({})),
                     fetch('/api/listings/contact', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
