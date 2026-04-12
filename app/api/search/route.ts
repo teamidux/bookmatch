@@ -179,6 +179,8 @@ export async function GET(req: NextRequest) {
       cover_url: b.cover_url || null,
       language: b.language || 'th',
       source: 'google_books',
+      category: b.category || null,
+      list_price: b.list_price || null,
     }))
 
   const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -198,6 +200,17 @@ export async function GET(req: NextRequest) {
     }
   } else if (!hasServiceRole) {
     cacheError = 'no_service_role_key'
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // 8. SEARCH LOG — fire-and-forget, ไม่ block response
+  // ─────────────────────────────────────────────────────────────────
+  if (hasServiceRole) {
+    supabase.from('search_logs').insert({
+      keyword: q,
+      result_count: results.length,
+      mode,
+    }).then(() => {}).catch(() => {})
   }
 
   return NextResponse.json({

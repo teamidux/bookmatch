@@ -8,6 +8,8 @@ export type GoogleBook = {
   publisher?: string
   cover_url?: string
   language?: string
+  category?: string
+  list_price?: number // ราคาปก (บาท) จาก Google Books saleInfo
 }
 
 // แปลง ISBN-10 → ISBN-13
@@ -34,6 +36,15 @@ function mapVolume(item: any): GoogleBook | null {
   const isbn = extractISBN(info)
   if (!isbn) return null
   const thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ''
+
+  // category: ใช้ตัวแรกจาก categories array
+  const category = info.categories?.[0] || undefined
+
+  // list_price: ราคาปก (THB) จาก saleInfo — ถ้าเป็นสกุลอื่นไม่เก็บ
+  const sale = item.saleInfo
+  const lp = sale?.listPrice
+  const list_price = (lp && lp.currencyCode === 'THB') ? Math.round(lp.amount) : undefined
+
   return {
     isbn,
     title: info.title,
@@ -43,6 +54,8 @@ function mapVolume(item: any): GoogleBook | null {
       ? thumb.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '').replace(/&zoom=\d+/g, '')
       : '',
     language: info.language || '',
+    category,
+    list_price,
   }
 }
 

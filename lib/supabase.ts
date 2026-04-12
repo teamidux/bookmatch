@@ -96,12 +96,15 @@ export async function fetchBookByISBN(isbn: string): Promise<Partial<Book> | nul
     if (!d.items?.length) return null
 
     const info = d.items[0].volumeInfo
+    const sale = d.items[0].saleInfo
     const author = info.authors?.join(', ') || ''
     const raw_thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ''
     // Google Books ส่ง HTTP มา — upgrade เป็น HTTPS และเอา edge/zoom params ออก
     const cover_url = raw_thumb
       ? raw_thumb.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '').replace(/&zoom=\d+/g, '')
       : ''
+    const lp = sale?.listPrice
+    const list_price = (lp && lp.currencyCode === 'THB') ? Math.round(lp.amount) : undefined
 
     return {
       isbn,
@@ -110,6 +113,8 @@ export async function fetchBookByISBN(isbn: string): Promise<Partial<Book> | nul
       publisher: info.publisher || '',
       cover_url,
       language: info.language || 'th',
+      category: info.categories?.[0] || undefined,
+      list_price,
     }
   } catch {
     return null

@@ -15,7 +15,7 @@ function admin() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { isbn, title, author, cover_url, publisher, language } = await req.json()
+    const { isbn, title, author, cover_url, publisher, language, category, list_price } = await req.json()
     if (!isbn || !/^(978|979)\d{10}$/.test(isbn)) {
       return NextResponse.json({ error: 'invalid isbn' }, { status: 400 })
     }
@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
         cover_url: cover_url || null,
         language: language || 'th',
         source: 'google_books',
+        category: category || null,
+        list_price: list_price || null,
       })
       if (insertErr) {
         console.error('[/api/books/view] insert error:', insertErr.message)

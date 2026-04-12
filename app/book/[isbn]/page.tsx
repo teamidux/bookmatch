@@ -31,8 +31,11 @@ async function getBook(isbn: string) {
     const d = await r.json()
     if (!d.items?.length) return null
     const info = d.items[0].volumeInfo
+    const sale = d.items[0].saleInfo
     const thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ''
     const cover_url = thumb ? thumb.replace(/^http:\/\//, 'https://').replace(/&edge=\w+/g, '').replace(/&zoom=\d+/g, '') : ''
+    const lp = sale?.listPrice
+    const list_price = (lp && lp.currencyCode === 'THB') ? Math.round(lp.amount) : null
 
     return {
       title: info.title || '',
@@ -40,6 +43,8 @@ async function getBook(isbn: string) {
       publisher: info.publisher || '',
       cover_url,
       language: info.language || 'th',
+      category: info.categories?.[0] || null,
+      list_price,
       active_listings_count: 0,
       min_price: null,
     }

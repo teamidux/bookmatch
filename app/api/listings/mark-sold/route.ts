@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   // ตรวจว่า listing นั้นเป็นของ seller จริง
   const { data: listing } = await sb
     .from('listings')
-    .select('id, status, sold_at, seller_id')
+    .select('id, status, sold_at, seller_id, created_at')
     .eq('id', listingId)
     .eq('seller_id', sellerId)
     .maybeSingle()
@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
   if (action === 'sold') {
     if (listing.status === 'sold') return NextResponse.json({ ok: true })
 
-    await sb.from('listings').update({ status: 'sold', sold_at: new Date().toISOString() }).eq('id', listingId)
+    const now = new Date()
+    const createdAt = new Date(listing.created_at)
+    const days_to_sell = Math.floor((now.getTime() - createdAt.getTime()) / 86400000)
+
+    await sb.from('listings').update({ status: 'sold', sold_at: now.toISOString(), days_to_sell }).eq('id', listingId)
     await sb.from('users').update({ sold_count: currentCount + 1 }).eq('id', sellerId)
     return NextResponse.json({ ok: true, sold_count: currentCount + 1 })
   }
