@@ -193,7 +193,6 @@ function SellPage() {
       // ISBN สแกนได้ แต่ไม่อยู่ในระบบ — ให้ผู้ขายกรอกข้อมูลเพิ่ม
       setNotFoundMode('has_isbn')
       setSellSearch('')
-      // missing ISBN logging removed — admin tracks manually via dashboard
     }
     setFetching(false)
   }

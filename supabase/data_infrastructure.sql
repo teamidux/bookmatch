@@ -22,9 +22,3 @@ CREATE TABLE IF NOT EXISTS search_logs (
 -- Index สำหรับ analytics query
 CREATE INDEX IF NOT EXISTS idx_search_logs_created ON search_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_search_logs_zero ON search_logs(result_count) WHERE result_count = 0;
-
--- ─── 4. missing_isbns: เพิ่ม resolved tracking + retry tracking ──
-ALTER TABLE missing_isbns ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
-ALTER TABLE missing_isbns ADD COLUMN IF NOT EXISTS resolved_book_id uuid REFERENCES books(id);
-ALTER TABLE missing_isbns ADD COLUMN IF NOT EXISTS retry_count integer DEFAULT 0;
-ALTER TABLE missing_isbns ADD COLUMN IF NOT EXISTS last_retry_at timestamptz;

@@ -2,7 +2,6 @@ import { Metadata } from 'next'
 import Script from 'next/script'
 import BookDetailClient from './BookDetailClient'
 import { createClient } from '@supabase/supabase-js'
-// logMissingIsbnServer removed — admin จะ track missing ISBNs เองผ่าน dashboard
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,8 +104,6 @@ export default async function BookPage({ params }: PageProps) {
   const isbn = decodeURIComponent(params.isbn)
   const book = await getBook(isbn)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bookmatch.app'
-
-  // Missing ISBN logging removed — admin tracks manually via dashboard
 
   const jsonLd = book ? {
     '@context': 'https://schema.org',
