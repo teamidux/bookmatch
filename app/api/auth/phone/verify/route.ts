@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createSession } from '@/lib/session'
+import { createSession, getSessionUser } from '@/lib/session'
 import { getAdminAuth } from '@/lib/firebase-admin'
 
 export const runtime = 'nodejs'
@@ -79,27 +79,34 @@ export async function POST(req: NextRequest) {
     // Existing user with this phone → login
     userId = existing.id
   } else {
-    // New user → create with phone already verified
+    // ถ้า user login อยู่แล้ว (เช่น login ด้วย FB/LINE มาก่อน) → link เบอร์เข้า account เดิม
+    const currentUser = await getSessionUser()
     const now = new Date().toISOString()
-    const { data: newUser, error: insertErr } = await sb
-      .from('users')
-      .insert({
-        phone: cleaned,
-        phone_verified_at: now,
-        display_name: 'นักอ่าน',
-        plan: 'free',
-        listings_limit: 20,
-        seller_type: 'individual',
-      })
-      .select('id')
-      .single()
+    if (currentUser) {
+      await sb.from('users').update({ phone: cleaned, phone_verified_at: now }).eq('id', currentUser.id)
+      userId = currentUser.id
+    } else {
+      // New user → create with phone already verified
+      const { data: newUser, error: insertErr } = await sb
+        .from('users')
+        .insert({
+          phone: cleaned,
+          phone_verified_at: now,
+          display_name: 'นักอ่าน',
+          plan: 'free',
+          listings_limit: 20,
+          seller_type: 'individual',
+        })
+        .select('id')
+        .single()
 
-    if (insertErr || !newUser) {
-      console.error('[auth/phone] insert error:', insertErr)
-      return NextResponse.json({ error: 'user_create_failed' }, { status: 500 })
+      if (insertErr || !newUser) {
+        console.error('[auth/phone] insert error:', insertErr)
+        return NextResponse.json({ error: 'user_create_failed' }, { status: 500 })
+      }
+      userId = newUser.id
+      isNewUser = true
     }
-    userId = newUser.id
-    isNewUser = true
   }
 
   // Create session (HTTP-only cookie)

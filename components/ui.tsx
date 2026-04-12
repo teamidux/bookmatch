@@ -172,6 +172,17 @@ export function MultiLoginButton({
     return () => { try { recaptchaRef.current?.clear() } catch {} }
   }, [])
 
+  // WebOTP API — Android auto-read SMS (รวม in-app browsers)
+  useEffect(() => {
+    if (step !== 'code') return
+    if (!('OTPCredential' in window)) return
+    const ac = new AbortController()
+    navigator.credentials.get({ otp: { transport: ['sms'] }, signal: ac.signal } as any)
+      .then((cred: any) => { if (cred?.code) setCode(cred.code) })
+      .catch(() => {})
+    return () => ac.abort()
+  }, [step])
+
   const formatPhone = (raw: string): string => {
     const digits = raw.replace(/\D/g, '').slice(0, 10)
     if (digits.length <= 3) return digits
@@ -225,9 +236,10 @@ export function MultiLoginButton({
       }
       onLoginSuccess?.()
     } catch (e: any) {
-      if (e?.code === 'auth/invalid-verification-code') show('รหัสไม่ถูกต้อง')
-      else if (e?.code === 'auth/code-expired') show('รหัสหมดอายุ ขอใหม่')
-      else show('ยืนยันไม่สำเร็จ')
+      setCode('')
+      if (e?.code === 'auth/invalid-verification-code') show('รหัสไม่ถูกต้อง กรอกใหม่ได้เลย')
+      else if (e?.code === 'auth/code-expired') { show('รหัสหมดอายุ กดส่ง OTP ใหม่'); setStep('phone') }
+      else show('ยืนยันไม่สำเร็จ ลองใหม่')
     } finally {
       setLoading(false)
     }
@@ -292,9 +304,17 @@ export function MultiLoginButton({
             </button>
             <button
               className="btn btn-ghost"
+              onClick={sendOtp}
+              disabled={cooldown > 0 || loading}
+              style={{ width: '100%', marginTop: 6, fontSize: 14 }}
+            >
+              {cooldown > 0 ? `ส่ง OTP ใหม่ใน ${cooldown}s` : 'ส่ง OTP ใหม่'}
+            </button>
+            <button
+              className="btn btn-ghost"
               onClick={() => { setStep('phone'); setCode('') }}
               disabled={loading}
-              style={{ width: '100%', marginTop: 6, fontSize: 14 }}
+              style={{ width: '100%', marginTop: 4, fontSize: 13, color: '#94A3B8' }}
             >
               เปลี่ยนเบอร์
             </button>

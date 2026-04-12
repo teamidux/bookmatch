@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
-import { createSession } from '@/lib/session'
+import { createSession, getSessionUser } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
@@ -96,25 +96,33 @@ export async function GET(req: NextRequest) {
     // ถ้า user เก่ายังไม่ได้ตั้ง line_id (user ที่ signup มาก่อนมี onboarding) → ก็ส่งไป onboarding
     if (!existing.line_id) needsOnboarding = true
   } else {
-    const { data: newUser, error } = await sb
-      .from('users')
-      .insert({
-        line_user_id: lineUserId,
-        display_name: displayName,
-        avatar_url: pictureUrl,
-        plan: 'free',
-        listings_limit: 20,
-        seller_type: 'individual',
-      })
-      .select('id')
-      .single()
-    if (error || !newUser) {
-      console.error('[line/callback] insert error:', error)
-      const errMsg = error ? `${error.code || ''}:${(error.message || '').slice(0, 80)}` : 'no_user_returned'
-      return redirectError(`user_create_failed:${errMsg}`)
+    // ถ้า user login อยู่แล้ว (เช่น login ด้วยเบอร์/FB มาก่อน) → link LINE เข้า account เดิม
+    const currentUser = await getSessionUser()
+    if (currentUser) {
+      await sb.from('users').update({ line_user_id: lineUserId }).eq('id', currentUser.id)
+      userId = currentUser.id
+      if (!currentUser.line_id) needsOnboarding = true
+    } else {
+      const { data: newUser, error } = await sb
+        .from('users')
+        .insert({
+          line_user_id: lineUserId,
+          display_name: displayName,
+          avatar_url: pictureUrl,
+          plan: 'free',
+          listings_limit: 20,
+          seller_type: 'individual',
+        })
+        .select('id')
+        .single()
+      if (error || !newUser) {
+        console.error('[line/callback] insert error:', error)
+        const errMsg = error ? `${error.code || ''}:${(error.message || '').slice(0, 80)}` : 'no_user_returned'
+        return redirectError(`user_create_failed:${errMsg}`)
+      }
+      userId = newUser.id
+      needsOnboarding = true
     }
-    userId = newUser.id
-    needsOnboarding = true // user ใหม่ → ส่งไป onboarding LINE ID
   }
 
   // Create session

@@ -130,24 +130,31 @@ export async function GET(req: NextRequest) {
       await sb.from('users').update(patch).eq('id', userId)
     }
   } else {
-    const { data: newUser, error: insertErr } = await sb
-      .from('users')
-      .insert({
-        facebook_id: fbUserId,
-        display_name: displayName,
-        avatar_url: pictureUrl,
-        plan: 'free',
-        listings_limit: 20,
-        seller_type: 'individual',
-      })
-      .select('id')
-      .single()
+    // ถ้า user login อยู่แล้ว (เช่น login ด้วยเบอร์มาก่อน) → link FB เข้า account เดิม
+    const currentUser = await getSessionUser()
+    if (currentUser) {
+      await sb.from('users').update({ facebook_id: fbUserId }).eq('id', currentUser.id)
+      userId = currentUser.id
+    } else {
+      const { data: newUser, error: insertErr } = await sb
+        .from('users')
+        .insert({
+          facebook_id: fbUserId,
+          display_name: displayName,
+          avatar_url: pictureUrl,
+          plan: 'free',
+          listings_limit: 20,
+          seller_type: 'individual',
+        })
+        .select('id')
+        .single()
 
-    if (insertErr || !newUser) {
-      console.error('[facebook/callback] insert error:', insertErr)
-      return redirectError('user_create_failed')
+      if (insertErr || !newUser) {
+        console.error('[facebook/callback] insert error:', insertErr)
+        return redirectError('user_create_failed')
+      }
+      userId = newUser.id
     }
-    userId = newUser.id
   }
 
   // Create session
