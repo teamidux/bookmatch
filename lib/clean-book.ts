@@ -61,7 +61,7 @@ export function cleanName(text: string | null | undefined): string | null {
 
   // extract text จาก JSON-like string
   if (t.includes('"text":"')) {
-    const parts = [...t.matchAll(/"text":"([^"]+)"/g)].map(m => m[1])
+    const parts = Array.from(t.matchAll(/"text":"([^"]+)"/g)).map(m => m[1])
     if (parts.length) t = parts.join(' ')
   }
 
