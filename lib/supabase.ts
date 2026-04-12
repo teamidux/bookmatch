@@ -20,6 +20,8 @@ export type Book = {
   min_price?: number
   source: string
   alt_titles?: string | null
+  category?: string | null
+  list_price?: number | null
   created_at: string
 }
 
