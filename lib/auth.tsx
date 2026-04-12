@@ -7,6 +7,8 @@ type AuthCtx = {
   user: User | null
   loading: boolean
   loginWithLine: (next?: string) => void
+  loginWithFacebook: (next?: string) => void
+  loginWithPhone: (idToken: string) => Promise<{ ok: boolean; isNewUser?: boolean; error?: string }>
   logout: () => Promise<void>
   reloadUser: () => Promise<void>
   updateUser: (data: Partial<User>) => Promise<void>
@@ -17,6 +19,8 @@ const AuthContext = createContext<AuthCtx>({
   user: null,
   loading: true,
   loginWithLine: () => {},
+  loginWithFacebook: () => {},
+  loginWithPhone: async () => ({ ok: false, error: 'no_provider' }),
   logout: async () => {},
   reloadUser: async () => {},
   updateUser: async () => {},
@@ -48,6 +52,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithLine = (next?: string) => {
     const qs = next ? `?next=${encodeURIComponent(next)}` : ''
     window.location.href = `/api/auth/line/start${qs}`
+  }
+
+  // เริ่ม Facebook OAuth
+  const loginWithFacebook = (next?: string) => {
+    const qs = next ? `?next=${encodeURIComponent(next)}` : ''
+    window.location.href = `/api/auth/facebook/start${qs}`
+  }
+
+  // Phone OTP login — รับ Firebase ID token จาก client, ส่ง backend สร้าง session
+  const loginWithPhone = async (idToken: string): Promise<{ ok: boolean; isNewUser?: boolean; error?: string }> => {
+    try {
+      const res = await fetch('/api/auth/phone/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { ok: false, error: data.error || 'unknown' }
+      await reloadUser()
+      return { ok: true, isNewUser: data.isNewUser }
+    } catch {
+      return { ok: false, error: 'network_error' }
+    }
   }
 
   const logout = async () => {
@@ -83,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router])
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithLine, logout, reloadUser, updateUser, syncUser }}>
+    <AuthContext.Provider value={{ user, loading, loginWithLine, loginWithFacebook, loginWithPhone, logout, reloadUser, updateUser, syncUser }}>
       {children}
     </AuthContext.Provider>
   )

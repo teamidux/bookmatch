@@ -86,11 +86,13 @@ export async function GET(req: NextRequest) {
   let needsOnboarding = false
   if (existing) {
     userId = existing.id
-    // Refresh display name + avatar if changed
-    await sb
-      .from('users')
-      .update({ display_name: existing.display_name || displayName, avatar_url: pictureUrl })
-      .eq('id', userId)
+    // Only fill in missing fields — never overwrite data the user already has
+    const patch: Record<string, string> = {}
+    if (!existing.display_name) patch.display_name = displayName
+    if (!existing.avatar_url) patch.avatar_url = pictureUrl ?? undefined!
+    if (Object.keys(patch).length > 0) {
+      await sb.from('users').update(patch).eq('id', userId)
+    }
     // ถ้า user เก่ายังไม่ได้ตั้ง line_id (user ที่ signup มาก่อนมี onboarding) → ก็ส่งไป onboarding
     if (!existing.line_id) needsOnboarding = true
   } else {

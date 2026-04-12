@@ -145,6 +145,250 @@ export function LoginButton({ onClick }: { onClick: () => void }) {
   )
 }
 
+// Multi-auth login — Phone OTP (primary) + LINE + Facebook
+export function MultiLoginButton({
+  onLoginSuccess,
+}: {
+  onLoginSuccess?: () => void
+}) {
+  const { loginWithLine, loginWithFacebook, loginWithPhone } = useAuth()
+  const [mode, setMode] = useState<'menu' | 'phone'>('menu')
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState<'phone' | 'code'>('phone')
+  const [loading, setLoading] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const { msg, show } = useToast()
+  const confirmationRef = useRef<any>(null)
+  const recaptchaRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(t)
+  }, [cooldown])
+
+  useEffect(() => {
+    return () => { try { recaptchaRef.current?.clear() } catch {} }
+  }, [])
+
+  const formatPhone = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '').slice(0, 10)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+  }
+
+  const sendOtp = async () => {
+    const cleaned = phone.replace(/\D/g, '')
+    if (!/^0\d{9}$/.test(cleaned)) { show('กรุณากรอกเบอร์ 10 หลัก ขึ้นต้น 0'); return }
+    setLoading(true)
+    try {
+      const [{ getFirebaseAuth }, { RecaptchaVerifier, signInWithPhoneNumber }] = await Promise.all([
+        import('@/lib/firebase-client'),
+        import('firebase/auth'),
+      ])
+      const auth = getFirebaseAuth()
+      if (!recaptchaRef.current) {
+        recaptchaRef.current = new RecaptchaVerifier(auth, 'bm-login-recaptcha', { size: 'invisible' })
+      }
+      const e164 = '+66' + cleaned.slice(1)
+      const result = await signInWithPhoneNumber(auth, e164, recaptchaRef.current)
+      confirmationRef.current = result
+      setStep('code')
+      setCooldown(60)
+      show('ส่งรหัส OTP แล้ว ตรวจ SMS')
+    } catch (e: any) {
+      const errCode = e?.code || 'unknown'
+      if (errCode === 'auth/invalid-phone-number') show('เบอร์ไม่ถูกต้อง')
+      else if (errCode === 'auth/too-many-requests') show('ขอ OTP บ่อยเกินไป ลองใหม่ภายหลัง')
+      else if (errCode === 'auth/quota-exceeded') show('ระบบใช้งานเต็ม ลองใหม่พรุ่งนี้')
+      else show(`เกิดข้อผิดพลาด: ${errCode}`)
+      try { recaptchaRef.current?.clear() } catch {}
+      recaptchaRef.current = null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const confirmOtp = async () => {
+    if (!/^\d{6}$/.test(code)) { show('กรอก OTP 6 หลัก'); return }
+    if (!confirmationRef.current) { show('ขอ OTP ใหม่'); setStep('phone'); return }
+    setLoading(true)
+    try {
+      const result = await confirmationRef.current.confirm(code)
+      const idToken = await result.user.getIdToken()
+      const loginResult = await loginWithPhone(idToken)
+      if (!loginResult.ok) {
+        show('เข้าสู่ระบบไม่สำเร็จ: ' + (loginResult.error || 'unknown'))
+        return
+      }
+      onLoginSuccess?.()
+    } catch (e: any) {
+      if (e?.code === 'auth/invalid-verification-code') show('รหัสไม่ถูกต้อง')
+      else if (e?.code === 'auth/code-expired') show('รหัสหมดอายุ ขอใหม่')
+      else show('ยืนยันไม่สำเร็จ')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (mode === 'phone') {
+    return (
+      <div style={{ maxWidth: 320, margin: '0 auto' }}>
+        <Toast msg={msg} />
+        {step === 'phone' ? (
+          <>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', marginBottom: 12, textAlign: 'center' }}>
+              กรอกเบอร์มือถือ
+            </div>
+            <input
+              className="input"
+              type="tel"
+              inputMode="numeric"
+              placeholder="08X-XXX-XXXX"
+              autoComplete="tel"
+              value={formatPhone(phone)}
+              onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+              style={{ width: '100%', boxSizing: 'border-box', fontSize: 20, padding: '14px 16px', textAlign: 'center', fontWeight: 600, letterSpacing: 1 }}
+              autoFocus
+            />
+            <button
+              className="btn"
+              onClick={sendOtp}
+              disabled={loading || phone.replace(/\D/g, '').length < 10}
+              style={{ width: '100%', marginTop: 12, fontSize: 16, padding: '14px', fontWeight: 700 }}
+            >
+              {loading ? 'กำลังส่ง OTP...' : 'ส่งรหัส OTP'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', marginBottom: 6, textAlign: 'center' }}>
+              กรอกรหัส OTP
+            </div>
+            <div style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 12 }}>
+              ส่งไปที่ {formatPhone(phone)}
+            </div>
+            <input
+              className="input"
+              type="tel"
+              inputMode="numeric"
+              placeholder="------"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              style={{ width: '100%', boxSizing: 'border-box', fontSize: 28, padding: '14px 16px', textAlign: 'center', fontWeight: 700, letterSpacing: 8 }}
+              autoFocus
+            />
+            <button
+              className="btn"
+              onClick={confirmOtp}
+              disabled={loading || code.length < 6}
+              style={{ width: '100%', marginTop: 12, fontSize: 16, padding: '14px', fontWeight: 700 }}
+            >
+              {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => { setStep('phone'); setCode('') }}
+              disabled={loading}
+              style={{ width: '100%', marginTop: 6, fontSize: 14 }}
+            >
+              เปลี่ยนเบอร์
+            </button>
+          </>
+        )}
+        <button
+          className="btn btn-ghost"
+          onClick={() => { setMode('menu'); setStep('phone'); setPhone(''); setCode('') }}
+          style={{ width: '100%', marginTop: 8, fontSize: 14 }}
+        >
+          กลับ
+        </button>
+        <div id="bm-login-recaptcha" />
+      </div>
+    )
+  }
+
+  // Menu mode — show all login options
+  return (
+    <div style={{ maxWidth: 320, margin: '0 auto' }}>
+      <Toast msg={msg} />
+
+      {/* Phone OTP — primary */}
+      <button
+        className="btn"
+        onClick={() => setMode('phone')}
+        style={{
+          width: '100%',
+          background: '#1E293B',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          fontSize: 16,
+          padding: '14px 16px',
+          fontWeight: 700,
+          marginBottom: 10,
+        }}
+      >
+        <span style={{ fontSize: 20 }}>&#128241;</span>
+        เข้าด้วยเบอร์มือถือ
+      </button>
+
+      {/* LINE */}
+      <button
+        className="btn"
+        onClick={() => loginWithLine()}
+        style={{
+          width: '100%',
+          background: '#06C755',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          fontSize: 16,
+          padding: '14px 16px',
+          fontWeight: 700,
+          marginBottom: 10,
+        }}
+      >
+        LINE
+      </button>
+
+      {/* Facebook */}
+      <button
+        className="btn"
+        onClick={() => loginWithFacebook()}
+        style={{
+          width: '100%',
+          background: '#1877F2',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          fontSize: 16,
+          padding: '14px 16px',
+          fontWeight: 700,
+          marginBottom: 10,
+        }}
+      >
+        Facebook
+      </button>
+
+      <div style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 6, lineHeight: 1.5 }}>
+        การ login ถือว่ายอมรับ <Link href="/terms" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>ข้อตกลงการใช้บริการ</Link>
+      </div>
+      <div id="bm-login-recaptcha" />
+    </div>
+  )
+}
+
 export function Toast({ msg }: { msg: string | null }) {
   if (!msg) return null
   return <div className="toast">{msg}</div>

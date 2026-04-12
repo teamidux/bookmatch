@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase, Listing } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, PhoneVerifyModal, useToast, Toast, TrustMission, TrustBadge, IdentityVerifyWizard, LoginButton } from '@/components/ui'
+import { Nav, BottomNav, BookCover, PhoneVerifyModal, useToast, Toast, TrustMission, TrustBadge, IdentityVerifyWizard, MultiLoginButton } from '@/components/ui'
 import { parseLineId } from '@/lib/line-id'
 import type { TrustItemKey } from '@/lib/trust'
 
@@ -264,7 +264,7 @@ export default function ProfilePage() {
         <div style={{ fontSize: 48, marginBottom: 16 }}>👤</div>
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>เข้าสู่ระบบก่อน</div>
         <div style={{ fontSize: 14, color: 'var(--ink3)', marginBottom: 24 }}>เพื่อดูและจัดการหนังสือที่ลงขาย</div>
-        <LoginButton onClick={() => loginWithLine('/profile')} />
+        <MultiLoginButton />
       </div>
       <BottomNav />
     </>
@@ -591,6 +591,46 @@ export default function ProfilePage() {
                 break
             }
           }} />
+        </div>
+
+        {/* Connected accounts — เชื่อมบัญชีเพื่อ login ได้หลายวิธี */}
+        <div style={{ padding: '14px 16px 0' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#121212', marginBottom: 10 }}>บัญชีที่เชื่อมแล้ว</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Phone */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 18 }}>&#128241;</span>
+              <span style={{ flex: 1, fontSize: 14, color: user.phone_verified_at ? '#121212' : '#94A3B8' }}>
+                {user.phone_verified_at ? user.phone : 'เบอร์มือถือ — ยังไม่เชื่อม'}
+              </span>
+              {user.phone_verified_at
+                ? <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>เชื่อมแล้ว</span>
+                : <button className="btn" onClick={() => setShowPhoneVerify(true)} style={{ fontSize: 12, padding: '6px 12px', minHeight: 0 }}>เชื่อม</button>
+              }
+            </div>
+            {/* LINE */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#06C755' }}>LINE</span>
+              <span style={{ flex: 1, fontSize: 14, color: user.line_user_id ? '#121212' : '#94A3B8' }}>
+                {user.line_user_id ? (user.line_id || 'เชื่อมแล้ว') : 'ยังไม่เชื่อม'}
+              </span>
+              {user.line_user_id
+                ? <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>เชื่อมแล้ว</span>
+                : <button className="btn" onClick={() => loginWithLine('/profile')} style={{ fontSize: 12, padding: '6px 12px', minHeight: 0, background: '#06C755' }}>เชื่อม LINE</button>
+              }
+            </div>
+            {/* Facebook */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#1877F2' }}>FB</span>
+              <span style={{ flex: 1, fontSize: 14, color: user.facebook_id ? '#121212' : '#94A3B8' }}>
+                {user.facebook_id ? 'เชื่อมแล้ว' : 'Facebook — ยังไม่เชื่อม'}
+              </span>
+              {user.facebook_id
+                ? <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>เชื่อมแล้ว</span>
+                : <button className="btn" onClick={() => { window.location.href = '/api/auth/facebook/start?next=/profile&link=1' }} style={{ fontSize: 12, padding: '6px 12px', minHeight: 0, background: '#1877F2' }}>เชื่อม Facebook</button>
+              }
+            </div>
+          </div>
         </div>
 
         {listings.length >= 5 && (

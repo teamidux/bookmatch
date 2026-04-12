@@ -47,6 +47,7 @@ export type User = {
   phone?: string | null
   phone_verified_at?: string | null
   line_user_id?: string | null
+  facebook_id?: string | null
   display_name: string
   avatar_url?: string | null
   line_id?: string
