@@ -1,10 +1,11 @@
 // แจ้งเตือนคนที่ตามหา เมื่อมีคนลงขายหนังสือเล่มนั้น
 // เรียกจาก sell page หลัง listing insert สำเร็จ
-// ส่ง LINE OA message (ฟรี 200/เดือน) — web push ไว้เพิ่มทีหลัง
+// ส่ง Web Push (ฟรี ไม่จำกัด) + LINE OA (ถ้า add OA แล้ว)
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { pushLineText } from '@/lib/line-bot'
+import webpush from 'web-push'
 
 export const runtime = 'nodejs'
 
@@ -60,23 +61,50 @@ export async function POST(req: NextRequest) {
     const freshUserIds = userIds.filter(id => !notifiedSet.has(id))
     if (!freshUserIds.length) return NextResponse.json({ ok: true, sent: 0, skipped: userIds.length })
 
-    // ดึงเฉพาะคนที่ add OA แล้ว (ไม่งั้นส่งไปก็ fail + เสียเครดิต)
+    // ดึง users ทั้งหมดที่ตามหา (ส่ง Web Push ได้ทุกคน, LINE เฉพาะคนที่ add OA)
     const { data: users } = await sb
       .from('users')
-      .select('id, display_name, line_user_id')
+      .select('id, display_name, line_user_id, line_oa_friend_at')
       .in('id', freshUserIds)
-      .not('line_user_id', 'is', null)
-      .not('line_oa_friend_at', 'is', null)
 
+    // === Web Push — ส่งทุกคนที่มี subscription (ฟรี ไม่จำกัด) ===
+    const vapidSubject = process.env.VAPID_SUBJECT
+    const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    const vapidPrivate = process.env.VAPID_PRIVATE_KEY
+    let webPushSent = 0
+    if (vapidSubject && vapidPublic && vapidPrivate) {
+      webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
+      const { data: subs } = await sb
+        .from('push_subscriptions')
+        .select('user_id, subscription')
+        .in('user_id', freshUserIds)
+      if (subs?.length) {
+        const payload = JSON.stringify({
+          title: 'มีหนังสือที่คุณตามหา!',
+          body: `"${book.title}" ลงขายแล้ว ฿${price || '—'}`,
+          url: `/book/${bookIsbn}`,
+          tag: `wanted-${bookIsbn}`,
+        })
+        const expired: string[] = []
+        await Promise.allSettled(subs.map(async s => {
+          try { await webpush.sendNotification(s.subscription, payload); webPushSent++ }
+          catch (e: any) { if (e.statusCode === 404 || e.statusCode === 410) expired.push(s.user_id) }
+        }))
+        if (expired.length) await sb.from('push_subscriptions').delete().in('user_id', expired)
+      }
+    }
+
+    // === LINE Push — เฉพาะคนที่ add OA แล้ว ===
     let sent = 0
     const logRows: { user_id: string; book_id: string; seller_id: string }[] = []
-    for (const u of users || []) {
+    for (const u of (users || []).filter(u => u.line_user_id && u.line_oa_friend_at)) {
       const msg = `📚 หนังสือที่คุณตามหามีคนลงขายแล้ว!\n\n"${book.title}"\nราคา ฿${price || '—'}\n\nดูรายละเอียด:\nbookmatch.app/book/${bookIsbn}`
       const result = await pushLineText(u.line_user_id, msg)
-      if (result.success) {
-        sent++
-        logRows.push({ user_id: u.id, book_id, seller_id })
-      }
+      if (result.success) sent++
+    }
+    // Log ทุกคนที่แจ้ง (Web Push + LINE) ไม่ให้แจ้งซ้ำ
+    for (const uid of freshUserIds) {
+      logRows.push({ user_id: uid, book_id, seller_id })
     }
 
     // Log ว่าแจ้งไปแล้ว — ครั้งหน้า seller เดิมลงเล่มเดิม จะ skip
@@ -85,7 +113,7 @@ export async function POST(req: NextRequest) {
       await sb.from('wanted_notifications').insert(logRows)
     }
 
-    return NextResponse.json({ ok: true, sent, total_wanted: wanted.length, skipped: notifiedSet.size })
+    return NextResponse.json({ ok: true, line_sent: sent, web_push_sent: webPushSent, total_wanted: wanted.length, skipped: notifiedSet.size })
   } catch (e: any) {
     console.error('[notify/wanted-match]', e?.message)
     return NextResponse.json({ ok: true, sent: 0 }) // ไม่ให้ error block UX
