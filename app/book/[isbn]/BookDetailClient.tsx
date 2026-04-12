@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { supabase, Book, Listing, fetchBookByISBN, CONDITIONS } from '@/lib/supabase'
+import { supabase, Book, Listing, CONDITIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, CondBadge, useToast, Toast, SkeletonList, TrustBadge } from '@/components/ui'
 import { parseLineId } from '@/lib/line-id'
@@ -40,10 +40,13 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
     }
   }, [user, book, isWanted])
 
-  // Auto-save book + increment view_count ทุกครั้งที่เปิดหน้า detail
-  // (ครั้งแรก = insert, ครั้งต่อไป = increment)
+  // Auto-save book + increment view_count
+  // Throttle: นับ 1 ครั้งต่อ ISBN ต่อ session (กัน refresh spam)
   useEffect(() => {
     if (!book?.title) return
+    const key = `bm_viewed_${isbn}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
     fetch('/api/books/view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -73,20 +76,19 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
 
   const loadData = async (cancelled = false) => {
     setLoading(true)
-    const { data: dbBook } = await supabase.from('books').select('*').eq('isbn', isbn).maybeSingle()
+
+    // ใช้ initialBook จาก server ถ้ามี id (= อยู่ใน DB แล้ว) → ไม่ต้อง query ซ้ำ
+    // ถ้าไม่มี id (= มาจาก Google Books) หรือไม่มีเลย → query DB เพื่อเช็คว่ามีใครเพิ่มไปแล้วหรือยัง
+    const bookId = (initialBook as any)?.id
+    const dbBook = bookId
+      ? initialBook // server ส่งมาจาก DB แล้ว ใช้เลย
+      : (await supabase.from('books').select('*').eq('isbn', isbn).maybeSingle()).data
     if (cancelled) return
 
-    if (!dbBook) {
-      // ถ้าไม่อยู่ใน DB แต่มี initialBook จาก server (Google Books) → ใช้ได้เลย ไม่ต้อง fetch ซ้ำ
-      if (!book) {
-        const fetched = await fetchBookByISBN(isbn)
-        if (cancelled) return
-        if (fetched) setBook(fetched as Book)
-      }
-    } else {
-      setBook(dbBook)
-      bookIdRef.current = dbBook.id
-      await loadListings(dbBook.id)
+    if (dbBook?.id) {
+      setBook(dbBook as Book)
+      bookIdRef.current = dbBook.id as string
+      await loadListings(dbBook.id as string)
       if (cancelled) return
       if (user) {
         const { data: w } = await supabase.from('wanted').select('id').eq('user_id', user.id).eq('book_id', dbBook.id).maybeSingle()
@@ -94,6 +96,8 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
         setIsWanted(!!w)
       }
     }
+    // ถ้าไม่มีใน DB → book state ยังเป็น initialBook (จาก Google) หรือ null
+    // ไม่ต้องเรียก Google ซ้ำ — server ทำไปแล้ว
     setLoading(false)
   }
 
