@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
   if (!q || q.length < 1) return NextResponse.json({ results: [] })
 
   const mode = req.nextUrl.searchParams.get('mode') === 'db' ? 'db' : 'all'
-  const wantDebug = false // debug mode ปิดถาวร — กัน expose internal data
   // pages: จำนวน page Google ที่จะดึง (1=light/live, 5=deep/button) max 10
   const pagesParam = parseInt(req.nextUrl.searchParams.get('pages') || '1', 10)
   const pages = Math.max(1, Math.min(isNaN(pagesParam) ? 1 : pagesParam, 10))
@@ -213,25 +212,5 @@ export async function GET(req: NextRequest) {
     })).catch(() => {})
   }
 
-  return NextResponse.json({
-    results,
-    matchQuality,
-    ...(wantDebug && {
-      debug: {
-        query: q,
-        mode,
-        pages,
-        google_raw_count: googleRaw.length,
-        db_match_count: dbBooks.length,
-        merged_count: results.length,
-        to_cache_count: toCache.length,
-        cached_count: cachedCount,
-        cache_error: cacheError,
-        google_isbns: googleRaw.map((b: any) => b.isbn),
-        db_isbns: Array.from(dbIsbnSet),
-        google: googleDebug,
-        pages_breakdown: pagesDebug,
-      },
-    }),
-  })
+  return NextResponse.json({ results, matchQuality })
 }
