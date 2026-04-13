@@ -415,7 +415,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={sellerName || ''} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: isStore ? '#FFF7ED' : 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{isStore ? '🏪' : '👤'}</div>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>👤</div>
                 )}
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
