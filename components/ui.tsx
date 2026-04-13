@@ -195,6 +195,15 @@ export function MultiLoginButton({
     return () => { try { recaptchaRef.current?.clear() } catch {} }
   }, [])
 
+  // Detect browser ที่ LINE login ใช้ไม่ได้
+  const [showLine, setShowLine] = useState(true)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const ua = navigator.userAgent
+    if (/FBAN|FBAV/.test(ua)) { setShowLine(false); return }
+    if (/CriOS/.test(ua)) { setShowLine(false); return }
+  }, [])
+
   // WebOTP API — Android auto-read SMS (รวม in-app browsers)
   useEffect(() => {
     if (step !== 'code') return
@@ -354,16 +363,6 @@ export function MultiLoginButton({
       </div>
     )
   }
-
-  // Detect browser ที่ LINE login ใช้ไม่ได้
-  const [showLine, setShowLine] = useState(true)
-  useEffect(() => {
-    const ua = navigator.userAgent
-    // FB in-app browser → LINE login ไม่ได้
-    if (/FBAN|FBAV/.test(ua)) { setShowLine(false); return }
-    // iPhone Chrome (CriOS) → LINE login ไม่ได้ (Apple บังคับ Safari สำหรับ OAuth)
-    if (/CriOS/.test(ua)) { setShowLine(false); return }
-  }, [])
 
   // Menu mode — show all login options
   return (
