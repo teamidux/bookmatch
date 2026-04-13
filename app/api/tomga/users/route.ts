@@ -167,11 +167,11 @@ export async function POST(req: NextRequest) {
   if (!adminId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const { userId, action, reason, phone: newPhone, name: newName } = await req.json()
-  if (!userId || !['ban', 'unban', 'soft_delete', 'delete_avatar', 'reset_verify', 'reset_phone', 'reset_id_verify', 'edit_phone', 'edit_name'].includes(action)) {
+  if (!userId || !['ban', 'unban', 'soft_delete', 'hard_delete', 'delete_avatar', 'reset_verify', 'reset_phone', 'reset_id_verify', 'edit_phone', 'edit_name'].includes(action)) {
     return NextResponse.json({ error: 'invalid params' }, { status: 400 })
   }
   // Block self-action ยกเว้น reset actions (อนุญาตให้ admin reset ตัวเองเพื่อ test)
-  if (userId === adminId && !action.startsWith('reset') && action !== 'edit_phone') {
+  if (userId === adminId && !action.startsWith('reset') && action !== 'edit_phone' && action !== 'hard_delete' && action !== 'edit_name') {
     return NextResponse.json({ error: 'ห้าม action ตัวเอง' }, { status: 400 })
   }
 
@@ -185,6 +185,13 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   } else if (action === 'soft_delete') {
     const { error } = await db.rpc('soft_delete_user', { p_user_id: userId, p_reason: reason || null })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (action === 'hard_delete') {
+    // ลบ user ถาวร — cascade ลบ sessions, listings, wanted, notifications ทั้งหมด
+    // ใช้สำหรับ test เท่านั้น!
+    await db.from('sessions').delete().eq('user_id', userId)
+    await db.from('notifications').delete().eq('user_id', userId)
+    const { error } = await db.from('users').delete().eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   } else if (action === 'delete_avatar') {
     const { error } = await db.from('users').update({ avatar_url: null }).eq('id', userId)
