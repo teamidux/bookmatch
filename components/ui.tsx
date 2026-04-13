@@ -301,10 +301,15 @@ export function MultiLoginButton({
               className="btn"
               onClick={sendOtp}
               disabled={loading || phone.replace(/\D/g, '').length < 10}
-              style={{ width: '100%', marginTop: 12, fontSize: 16, padding: '14px', fontWeight: 700 }}
+              style={{ width: '100%', marginTop: 12, fontSize: 16, padding: '14px', fontWeight: 700, opacity: loading ? 0.7 : 1 }}
             >
-              {loading ? 'กำลังส่ง OTP...' : 'ส่งรหัส OTP'}
+              {loading ? <><span className="spin" style={{ width: 18, height: 18, marginRight: 8 }} />กำลังส่ง OTP...</> : 'ส่งรหัส OTP'}
             </button>
+            {loading && (
+              <div style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 10, lineHeight: 1.6 }}>
+                กำลังตรวจสอบและส่ง SMS<br />รอสักครู่...
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -323,6 +328,7 @@ export function MultiLoginButton({
               maxLength={6}
               value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onInput={e => { const v = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6); if (v && v !== code) setCode(v) }}
               style={{ width: '100%', boxSizing: 'border-box', fontSize: 28, padding: '14px 16px', textAlign: 'center', fontWeight: 700, letterSpacing: 8 }}
               autoFocus
             />
