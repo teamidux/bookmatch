@@ -305,7 +305,7 @@ function AdminUsersPage() {
                 {/* ปุ่มลบทิ้ง (test) — ลบ user + ข้อมูลทั้งหมด เพื่อทดสอบลงทะเบียนใหม่ */}
                 {!u.deleted_at && (
                   <button
-                    onClick={() => { if (confirm(`⚠️ ลบ "${u.display_name}" ออกจากระบบถาวร?\n\nเบอร์: ${u.phone || '-'}\nFacebook: ${(u as any).facebook_id ? 'มี' : '-'}\nLINE: ${u.line_user_id ? 'มี' : '-'}\n\nข้อมูลทั้งหมดจะหายไป ใช้สำหรับ test เท่านั้น!`)) doAction(u.id, 'hard_delete') }}
+                    onClick={() => { if (confirm(`⚠️ ลบ "${u.display_name}" ออกจากระบบถาวร?\n\nเบอร์: ${u.phone || '-'}\nFacebook: ${(u as any).facebook_id ? 'มี' : '-'}\nLINE: ${(u as any).line_user_id ? 'มี' : '-'}\n\nข้อมูลทั้งหมดจะหายไป ใช้สำหรับ test เท่านั้น!`)) doAction(u.id, 'hard_delete') }}
                     disabled={acting === u.id}
                     style={{ background: '#4C1D95', border: 'none', color: 'white', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Kanit' }}
                   >
