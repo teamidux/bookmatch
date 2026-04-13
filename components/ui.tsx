@@ -317,12 +317,19 @@ export function MultiLoginButton({
         {/* Loading overlay — กลางจอ เห็นชัดทุก platform */}
         {loading && (
           <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', zIndex: 300,
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,.6)', zIndex: 9999,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
           }}>
-            <span className="spin" style={{ width: 40, height: 40, borderWidth: 4 }} />
-            <div style={{ color: 'white', fontSize: 16, fontWeight: 700, textAlign: 'center', lineHeight: 1.6 }}>
-              {step === 'phone' ? 'กำลังส่ง OTP...\nรอสักครู่' : 'กำลังตรวจสอบ...'}
+            <div style={{
+              width: 48, height: 48,
+              border: '4px solid rgba(255,255,255,.3)',
+              borderTopColor: 'white',
+              borderRadius: '50%',
+              animation: 'spin 0.7s linear infinite',
+            }} />
+            <div style={{ color: 'white', fontSize: 17, fontWeight: 700, textAlign: 'center', lineHeight: 1.7 }}>
+              {step === 'phone' ? <>กำลังส่ง OTP...<br />รอสักครู่</> : <>กำลังตรวจสอบ...</>}
             </div>
           </div>
         )}
