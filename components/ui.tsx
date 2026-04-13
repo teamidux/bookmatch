@@ -258,11 +258,13 @@ export function MultiLoginButton({
   }
 
   const confirmOtp = async () => {
-    if (!/^\d{6}$/.test(code)) { show('กรอก OTP 6 หลัก'); return }
+    // อ่านค่าจาก DOM ตรงๆ เผื่อ autofill ไม่ sync กับ React state
+    const otpVal = otpInputRef.current?.value.replace(/\D/g, '').slice(0, 6) || code
+    if (!/^\d{6}$/.test(otpVal)) { show('กรอก OTP 6 หลัก'); return }
     if (!confirmationRef.current) { show('ขอ OTP ใหม่'); setStep('phone'); return }
     setLoading(true)
     try {
-      const result = await confirmationRef.current.confirm(code)
+      const result = await confirmationRef.current.confirm(otpVal)
       const idToken = await result.user.getIdToken()
       const loginResult = await loginWithPhone(idToken)
       if (!loginResult.ok) {
@@ -271,7 +273,7 @@ export function MultiLoginButton({
       }
       onLoginSuccess?.()
     } catch (e: any) {
-      setCode('')
+      setCode(''); if (otpInputRef.current) otpInputRef.current.value = ''
       if (e?.code === 'auth/invalid-verification-code') show('รหัสไม่ถูกต้อง กรอกใหม่ได้เลย')
       else if (e?.code === 'auth/code-expired') { show('รหัสหมดอายุ กดส่ง OTP ใหม่'); setStep('phone') }
       else show('ยืนยันไม่สำเร็จ ลองใหม่')
@@ -283,17 +285,29 @@ export function MultiLoginButton({
   // OTP input ref สำหรับ auto-fill
   const otpInputRef = useRef<HTMLInputElement>(null)
 
-  // ดัก auto-fill ทุกวิธี (onChange, onInput, MutationObserver, polling)
+  // จับ auto-fill ด้วย native event listener + polling
+  // React controlled input ทับค่า autofill → ต้องฟังจาก DOM ตรงๆ
   useEffect(() => {
     if (step !== 'code' || !otpInputRef.current) return
     const el = otpInputRef.current
-    // Polling ทุก 300ms เพื่อจับค่าที่ browser autofill ใส่ให้
+    const handleNativeInput = () => {
+      const v = el.value.replace(/\D/g, '').slice(0, 6)
+      if (v) setCode(v)
+    }
+    // Native event listener — จับ autofill ที่ React onChange ไม่เห็น
+    el.addEventListener('input', handleNativeInput)
+    el.addEventListener('change', handleNativeInput)
+    // Polling fallback — บาง browser ไม่ fire event เลย
     const interval = setInterval(() => {
       const v = el.value.replace(/\D/g, '').slice(0, 6)
-      if (v.length === 6) { setCode(v); clearInterval(interval) }
-    }, 300)
-    return () => clearInterval(interval)
-  }, [step])
+      if (v && v.length >= 4 && v !== code) setCode(v)
+    }, 200)
+    return () => {
+      el.removeEventListener('input', handleNativeInput)
+      el.removeEventListener('change', handleNativeInput)
+      clearInterval(interval)
+    }
+  }, [step, code])
 
   if (mode === 'phone') {
     return (
@@ -351,19 +365,24 @@ export function MultiLoginButton({
               className="input"
               type="tel"
               inputMode="numeric"
+              name="one-time-code"
               placeholder="------"
               autoComplete="one-time-code"
               maxLength={6}
-              value={code}
+              defaultValue=""
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              onInput={e => { const v = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6); if (v && v !== code) setCode(v) }}
               style={{ width: '100%', boxSizing: 'border-box', fontSize: 28, padding: '14px 16px', textAlign: 'center', fontWeight: 700, letterSpacing: 8 }}
               autoFocus
             />
             <button
               className="btn"
-              onClick={confirmOtp}
-              disabled={loading || code.length < 6}
+              onClick={() => {
+                // อ่านค่าจาก DOM ตรงๆ ก่อน confirm (กัน autofill ที่ state ไม่ sync)
+                const domVal = otpInputRef.current?.value.replace(/\D/g, '').slice(0, 6) || ''
+                if (domVal.length === 6) setCode(domVal)
+                setTimeout(() => confirmOtp(), 50)
+              }}
+              disabled={loading}
               style={{ width: '100%', marginTop: 12, fontSize: 16, padding: '14px', fontWeight: 700 }}
             >
               {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
