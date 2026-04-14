@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/lib/auth'
 import type { User } from '@/lib/supabase'
 
 // Smart single-button opt-in สำหรับ LINE notification
@@ -10,6 +11,7 @@ import type { User } from '@/lib/supabase'
 
 export default function LineAlertOptin({ user, nextPath = '/notifications' }: { user: User | null; nextPath?: string }) {
   const [blocked, setBlocked] = useState(false)
+  const { reloadUser } = useAuth()
 
   useEffect(() => {
     if (typeof navigator === 'undefined') return
@@ -19,6 +21,20 @@ export default function LineAlertOptin({ user, nextPath = '/notifications' }: { 
     // iPhone Chrome → Apple บังคับ Safari สำหรับ LINE OAuth
     if (/CriOS/.test(ua)) { setBlocked(true); return }
   }, [])
+
+  // Reload user ทุกครั้งที่กลับมาที่หน้า (จาก LINE deeplink)
+  // → webhook "follow" อัปเดต DB แล้ว → client sync ให้ banner หาย
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reloadUser()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', reloadUser)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', reloadUser)
+    }
+  }, [reloadUser])
 
   if (!user || blocked) return null
 
