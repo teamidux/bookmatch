@@ -204,17 +204,6 @@ export function MultiLoginButton({
     if (/CriOS/.test(ua)) { setShowLine(false); return }
   }, [])
 
-  // WebOTP API — Android auto-read SMS (รวม in-app browsers)
-  useEffect(() => {
-    if (step !== 'code') return
-    if (!('OTPCredential' in window)) return
-    const ac = new AbortController()
-    navigator.credentials.get({ otp: { transport: ['sms'] }, signal: ac.signal } as any)
-      .then((cred: any) => { if (cred?.code) setCode(cred.code) })
-      .catch(() => {})
-    return () => ac.abort()
-  }, [step])
-
   const formatPhone = (raw: string): string => {
     const digits = raw.replace(/\D/g, '').slice(0, 10)
     if (digits.length <= 3) return digits
