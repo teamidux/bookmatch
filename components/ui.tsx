@@ -239,7 +239,7 @@ export function MultiLoginButton({
     } catch (e: any) {
       const errCode = e?.code || 'unknown'
       if (errCode === 'auth/invalid-phone-number') show('เบอร์ไม่ถูกต้อง')
-      else if (errCode === 'auth/too-many-requests') show('ถูก block ชั่วคราว (~30 นาที) — ลองใหม่หรือใช้เบอร์อื่น')
+      else if (errCode === 'auth/too-many-requests') show('ถูก block ชั่วคราว (~30 นาที) เพราะขอ OTP บ่อยเกินไป ลองใหม่หรือใช้เบอร์อื่น')
       else if (errCode === 'auth/quota-exceeded') show('ระบบใช้งานเต็ม ลองใหม่พรุ่งนี้')
       else show(`เกิดข้อผิดพลาด: ${errCode}`)
       try { recaptchaRef.current?.clear() } catch {}
@@ -791,7 +791,7 @@ export function PhoneVerifyModal({
       // Show exact error code บนจอ เพื่อ debug ง่ายขึ้น
       const code = e?.code || 'unknown'
       if (code === 'auth/invalid-phone-number') show('เบอร์ไม่ถูกต้อง')
-      else if (code === 'auth/too-many-requests') show('ถูก block ชั่วคราว (~30 นาที) — ลองใหม่หรือใช้เบอร์อื่น')
+      else if (code === 'auth/too-many-requests') show('ถูก block ชั่วคราว (~30 นาที) เพราะขอ OTP บ่อยเกินไป ลองใหม่หรือใช้เบอร์อื่น')
       else if (code === 'auth/quota-exceeded') show('ระบบใช้งานเต็ม ลองใหม่พรุ่งนี้')
       else if (code === 'auth/unauthorized-domain') show('❌ Domain ไม่ได้ authorize ใน Firebase Console')
       else if (code === 'auth/billing-not-enabled') show('❌ Firebase ต้อง upgrade เป็น Blaze plan')
