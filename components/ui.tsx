@@ -282,32 +282,8 @@ export function MultiLoginButton({
     }
   }
 
-  // OTP input ref สำหรับ auto-fill
+  // OTP input ref — ปล่อย native ทำงานเอง ไม่มี React state คั่น
   const otpInputRef = useRef<HTMLInputElement>(null)
-
-  // จับ auto-fill ด้วย native event listener + polling
-  // React controlled input ทับค่า autofill → ต้องฟังจาก DOM ตรงๆ
-  useEffect(() => {
-    if (step !== 'code' || !otpInputRef.current) return
-    const el = otpInputRef.current
-    const handleNativeInput = () => {
-      const v = el.value.replace(/\D/g, '').slice(0, 6)
-      if (v) setCode(v)
-    }
-    // Native event listener — จับ autofill ที่ React onChange ไม่เห็น
-    el.addEventListener('input', handleNativeInput)
-    el.addEventListener('change', handleNativeInput)
-    // Polling fallback — บาง browser ไม่ fire event เลย
-    const interval = setInterval(() => {
-      const v = el.value.replace(/\D/g, '').slice(0, 6)
-      if (v && v.length >= 4 && v !== code) setCode(v)
-    }, 200)
-    return () => {
-      el.removeEventListener('input', handleNativeInput)
-      el.removeEventListener('change', handleNativeInput)
-      clearInterval(interval)
-    }
-  }, [step, code])
 
   if (mode === 'phone') {
     return (
@@ -360,41 +336,37 @@ export function MultiLoginButton({
             </button>
           </>
         ) : (
-          <>
+          <form onSubmit={e => { e.preventDefault(); confirmOtp() }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', marginBottom: 6, textAlign: 'center' }}>
               กรอกรหัส OTP
             </div>
             <div style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 12 }}>
               ส่งไปที่ {formatPhone(phone)}
             </div>
+            {/* Fully uncontrolled input — ปล่อย browser autofill ทำงานเอง ไม่มี React interference */}
             <input
               ref={otpInputRef}
               className="input"
-              type="tel"
+              type="text"
               inputMode="numeric"
-              name="one-time-code"
+              pattern="\d{6}"
+              name="otp"
+              id="otp"
               placeholder="------"
               autoComplete="one-time-code"
               maxLength={6}
-              defaultValue=""
-              onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               style={{ width: '100%', boxSizing: 'border-box', fontSize: 28, padding: '14px 16px', textAlign: 'center', fontWeight: 700, letterSpacing: 8 }}
-              autoFocus
             />
             <button
+              type="submit"
               className="btn"
-              onClick={() => {
-                // อ่านค่าจาก DOM ตรงๆ ก่อน confirm (กัน autofill ที่ state ไม่ sync)
-                const domVal = otpInputRef.current?.value.replace(/\D/g, '').slice(0, 6) || ''
-                if (domVal.length === 6) setCode(domVal)
-                setTimeout(() => confirmOtp(), 50)
-              }}
               disabled={loading}
               style={{ width: '100%', marginTop: 12, fontSize: 16, padding: '14px', fontWeight: 700 }}
             >
               {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
             </button>
             <button
+              type="button"
               className="btn btn-ghost"
               onClick={sendOtp}
               disabled={cooldown > 0 || loading}
@@ -403,6 +375,7 @@ export function MultiLoginButton({
               {cooldown > 0 ? `ส่ง OTP ใหม่ใน ${cooldown}s` : 'ส่ง OTP ใหม่'}
             </button>
             <button
+              type="button"
               className="btn btn-ghost"
               onClick={() => { setStep('phone'); setCode('') }}
               disabled={loading}
@@ -410,7 +383,7 @@ export function MultiLoginButton({
             >
               เปลี่ยนเบอร์
             </button>
-          </>
+          </form>
         )}
         <button
           className="btn btn-ghost"
