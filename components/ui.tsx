@@ -1173,21 +1173,22 @@ export function CameraCaptureModal({ onCapture, onClose }: { onCapture: (file: F
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
-  const [isLineBrowser, setIsLineBrowser] = useState(false)
+  const [isLineBrowser, setIsLineBrowser] = useState<boolean | null>(null)
 
+  // LINE browser → เปิด gallery ทันที ไม่แสดง modal (simpler UX)
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && /Line\//.test(navigator.userAgent)) {
-      setIsLineBrowser(true)
+    if (typeof navigator === 'undefined') return
+    const isLine = /Line\//.test(navigator.userAgent)
+    setIsLineBrowser(isLine)
+    if (isLine) {
+      // Trigger gallery picker ทันที หลัง mount
+      setTimeout(() => galleryInputRef.current?.click(), 50)
     }
   }, [])
 
-  const openInChrome = () => {
-    const url = window.location.href
-    // Android intent → เปิดใน Chrome โดยตรง
-    window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
-  }
-
   useEffect(() => {
+    // ถ้าเป็น LINE browser ไม่ต้องเปิดกล้อง (ใช้ gallery แทน)
+    if (isLineBrowser) return
     let cancelled = false
     const start = async () => {
       try {
@@ -1211,7 +1212,7 @@ export function CameraCaptureModal({ onCapture, onClose }: { onCapture: (file: F
       cancelled = true
       streamRef.current?.getTracks().forEach(t => t.stop())
     }
-  }, [])
+  }, [isLineBrowser])
 
   const takePhoto = () => {
     const video = videoRef.current
@@ -1229,7 +1230,21 @@ export function CameraCaptureModal({ onCapture, onClose }: { onCapture: (file: F
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.95)', zIndex: 300, display: isLineBrowser ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      {/* LINE browser: ซ่อน modal แต่คง gallery input ไว้ให้ trigger ได้ */}
+      {isLineBrowser && (
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file) onCapture(file)
+            else onClose() // user ยกเลิก picker → ปิด modal
+          }}
+        />
+      )}
       <div style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ color: 'white', fontFamily: "'Kanit', sans-serif", fontSize: 22, fontWeight: 700 }}>ถ่ายรูป Barcode</div>
