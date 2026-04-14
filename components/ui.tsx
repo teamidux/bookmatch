@@ -1477,28 +1477,27 @@ export function TrustMission({
       boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     }}>
       {/* Header: title + tier */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 16, fontWeight: 700, color: '#121212', letterSpacing: '-0.01em' }}>
-            🎯 ภารกิจสร้างความน่าเชื่อถือ
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 2 }}>
-            ทำครบเพื่อขายไวขึ้น
-          </div>
+      {/* Title บรรทัดเดียว + badge เป็น row ล่าง */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 16, fontWeight: 700, color: '#121212', letterSpacing: '-0.01em', marginBottom: 4 }}>
+          🎯 ภารกิจสร้างความน่าเชื่อถือ
         </div>
-        {count > 0 && (
-          <div style={{
-            background: tier.bgColor,
-            color: tier.color,
-            borderRadius: 8,
-            padding: '6px 12px',
-            fontSize: 13,
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-          }}>
-            {tier.emoji} {tier.label}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 13, color: 'var(--ink3)' }}>ทำครบเพื่อขายไวขึ้น</div>
+          {count > 0 && (
+            <div style={{
+              background: tier.bgColor,
+              color: tier.color,
+              borderRadius: 8,
+              padding: '4px 10px',
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}>
+              {tier.emoji} {tier.label}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Progress bar */}
