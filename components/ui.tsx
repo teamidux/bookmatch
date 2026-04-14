@@ -1170,8 +1170,22 @@ export function LiveScanModal({ onCode, onClose }: { onCode: (code: string) => v
 export function CameraCaptureModal({ onCapture, onClose }: { onCapture: (file: File) => void; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [isLineBrowser, setIsLineBrowser] = useState(false)
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && /Line\//.test(navigator.userAgent)) {
+      setIsLineBrowser(true)
+    }
+  }, [])
+
+  const openInChrome = () => {
+    const url = window.location.href
+    // Android intent → เปิดใน Chrome โดยตรง
+    window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -1223,10 +1237,65 @@ export function CameraCaptureModal({ onCapture, onClose }: { onCapture: (file: F
         </div>
 
         {error ? (
-          <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 14, padding: '32px 20px', textAlign: 'center', color: 'white' }}>
-            <div style={{ fontSize: 40, marginBottom: 14 }}>📵</div>
-            <div style={{ fontSize: 16, lineHeight: 1.6, marginBottom: 22 }}>{error}</div>
-            <button className="btn" onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); onClose() }}>ปิด</button>
+          <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 14, padding: '28px 20px', textAlign: 'center', color: 'white' }}>
+            <div style={{ fontSize: 40, marginBottom: 14 }}>{isLineBrowser ? '⚠️' : '📵'}</div>
+            {isLineBrowser ? (
+              <>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>LINE browser ไม่รองรับการสแกน</div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 22, color: 'rgba(255,255,255,.8)' }}>
+                  เลือกทางออก:
+                </div>
+                <button
+                  onClick={openInChrome}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 12,
+                    background: '#4285F4', color: 'white', border: 'none',
+                    fontSize: 15, fontWeight: 700, fontFamily: 'Kanit',
+                    cursor: 'pointer', marginBottom: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                >
+                  🌐 เปิดใน Chrome (แนะนำ)
+                </button>
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 12,
+                    background: 'rgba(255,255,255,.15)', color: 'white',
+                    border: '1px solid rgba(255,255,255,.3)',
+                    fontSize: 15, fontWeight: 600, fontFamily: 'Kanit',
+                    cursor: 'pointer', marginBottom: 10,
+                  }}
+                >
+                  🖼️ เลือกรูปจากแกลเลอรี่
+                </button>
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) onCapture(file)
+                  }}
+                />
+                <button
+                  onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); onClose() }}
+                  style={{
+                    width: '100%', padding: '10px', background: 'none',
+                    border: 'none', color: 'rgba(255,255,255,.6)',
+                    fontSize: 13, fontFamily: 'Kanit', cursor: 'pointer',
+                  }}
+                >
+                  ปิด
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 16, lineHeight: 1.6, marginBottom: 22 }}>{error}</div>
+                <button className="btn" onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); onClose() }}>ปิด</button>
+              </>
+            )}
           </div>
         ) : (
           <>
