@@ -33,7 +33,14 @@ export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<Notification[]>([])
   const [wanted, setWanted] = useState<Wanted[]>([])
   const [loading, setLoading] = useState(true)
+  const [isLineBrowser, setIsLineBrowser] = useState(false)
   const { msg, show } = useToast()
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && /Line\//.test(navigator.userAgent)) {
+      setIsLineBrowser(true)
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) { setLoading(false); return }
@@ -254,8 +261,8 @@ export default function NotificationsPage() {
             </>
           )}
 
-          {/* LINE OA bonus — ล่างสุด แสดงเฉพาะคนที่ยังไม่ add */}
-          {!(user as any)?.line_oa_friend_at && (
+          {/* LINE OA bonus — ซ่อนใน LINE browser (ไม่จำเป็น) */}
+          {!isLineBrowser && !(user as any)?.line_oa_friend_at && (
             <div style={{
               background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 12,
               padding: '14px 16px', marginTop: 20,

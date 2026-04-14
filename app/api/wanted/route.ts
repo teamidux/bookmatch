@@ -21,7 +21,25 @@ export async function POST(req: NextRequest) {
   const { book_id, isbn, max_price } = await req.json()
   if (!book_id || !isbn) return NextResponse.json({ error: 'missing fields' }, { status: 400 })
 
-  const { error } = await db().from('wanted').insert({
+  const sb = db()
+
+  // กันซ้ำ — ถ้า user ตามหา book นี้อยู่แล้ว ไม่สร้าง row ใหม่
+  const { data: existing } = await sb
+    .from('wanted')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('book_id', book_id)
+    .maybeSingle()
+
+  if (existing) {
+    // อัปเดต max_price ถ้ามี แต่ไม่ insert ใหม่
+    if (max_price !== undefined) {
+      await sb.from('wanted').update({ max_price: max_price || null }).eq('id', existing.id)
+    }
+    return NextResponse.json({ ok: true, existing: true })
+  }
+
+  const { error } = await sb.from('wanted').insert({
     user_id: user.id,
     book_id,
     isbn,

@@ -1,20 +1,12 @@
-// Trust mission logic — compute completion + tier + badge from user object
+// Trust mission logic — 2 items เท่านั้น
+//   1. ยืนยันเบอร์โทร (ถ้า login ด้วย OTP ผ่านเลย)
+//   2. ยืนยันตัวตน (บัตร + หน้าบัญชี)
 //
-// Tier badge (ต้องครบ "ทั้งคู่" ถึงจะเป็น Verified Seller):
-//   login ด้วย LINE                     → 👤 สมาชิก
-//   + ยืนยันเบอร์โทร (ไม่มี ID)          → 📱 ลงทะเบียนมือถือแล้ว
-//   + ยืนยันตัวตน (ไม่มี phone)         → 🪪 ยืนยันตัวตนแล้ว
-//   + ครบทั้ง phone + ID                → 🛡️ Verified Seller
-//
-// Mission items (แสดงใน profile):
-//   - LINE ID (แสดงเฉพาะคนยังไม่กรอก)
-//   - ยืนยันเบอร์โทร
-//   - ยืนยันตัวตน
+// LINE ID ไม่อยู่ในนี้แล้ว — เป็น optional ใน edit profile
 
 import type { User } from './supabase'
 
 export type TrustItemKey =
-  | 'line_id'
   | 'phone_verified'
   | 'id_verified'
 
@@ -58,23 +50,11 @@ export function computeTrustScore(user: Partial<User> | null | undefined): Trust
   }
 
   const u = user as any
-  const hasLineId = !!u.line_id
   const hasPhone = !!u.phone_verified_at
   const hasId = !!u.id_verified_at
   const idPending = !hasId && !!u.id_verify_submitted_at
 
-  // Visible items — ซ่อน line_id ถ้าทำแล้ว
   const items: TrustItem[] = []
-
-  if (!hasLineId) {
-    items.push({
-      key: 'line_id',
-      status: 'todo',
-      title: 'ใส่ LINE ID ของคุณ',
-      benefit: 'ผู้ซื้อจะติดต่อคุณได้ — ไม่มี LINE ID ลูกค้าหาคุณไม่เจอ',
-      icon: '🆔',
-    })
-  }
 
   items.push({
     key: 'phone_verified',
