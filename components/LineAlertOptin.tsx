@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 import type { User } from '@/lib/supabase'
 
@@ -23,34 +23,41 @@ export default function LineAlertOptin({ user, nextPath = '/notifications' }: { 
     if (/CriOS/.test(ua)) { setBlocked(true); return }
   }, [])
 
-  // เช็คสถานะเพื่อนผ่าน LINE API แล้ว reload
+  // ref sync กับ user state — กัน stale closure ใน interval
+  const friendNowRef = useRef<boolean>(!!(user as any)?.line_oa_friend_at)
+  useEffect(() => {
+    friendNowRef.current = !!(user as any)?.line_oa_friend_at
+  }, [user])
+
   const checkAndReload = async () => {
+    if (friendNowRef.current) return // เป็นเพื่อนแล้ว ไม่ต้องเช็คอีก
     try {
       const r = await fetch('/api/line/check-friendship', { method: 'POST' })
       const data = await r.json().catch(() => ({}))
-      const wasFriend = !!(user as any)?.line_oa_friend_at
-      if (data.isFriend && !wasFriend) {
-        // เพิ่งเป็นเพื่อน → โชว์ success
+      if (data.isFriend) {
+        // เพิ่งเป็นเพื่อน → โชว์ success + reload
+        friendNowRef.current = true
         setShowSuccess(true)
         setTimeout(() => setShowSuccess(false), 4000)
+        await reloadUser()
       }
     } catch {}
-    await reloadUser()
   }
 
-  // เช็คตอน mount + focus + visibility + interval (หลังกด Add)
+  // เช็ค: mount + focus + visibility + poll ทุก 3 วิ (หยุดเมื่อเป็นเพื่อน)
   useEffect(() => {
-    checkAndReload() // ครั้งแรกที่หน้าโหลด
+    if (friendNowRef.current) return // ครบแล้วไม่ต้อง setup
+    checkAndReload()
     const onVisible = () => {
       if (document.visibilityState === 'visible') checkAndReload()
     }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', checkAndReload)
-    // poll ทุก 3 วิเป็นเวลา 30 วิ เผื่อ focus event ไม่ fire (เช่น LINE browser)
     const interval = setInterval(() => {
-      if (!(user as any)?.line_oa_friend_at) checkAndReload()
+      if (friendNowRef.current) { clearInterval(interval); return }
+      checkAndReload()
     }, 3000)
-    const stopPolling = setTimeout(() => clearInterval(interval), 30000)
+    const stopPolling = setTimeout(() => clearInterval(interval), 60000) // 60 วิพอ
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', checkAndReload)
