@@ -591,7 +591,7 @@ function SellPage() {
 
                   {/* ส่วนล่าง: ไม่มี Barcode → ค้นหา / กรอกเอง */}
                   <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 14, padding: '16px', marginBottom: 12 }}>
-                    <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>ไม่มี Barcode</div>
+                    <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>ไม่มี Barcode / หนังสือเก่า</div>
 
                     <div className="form-group" style={{ marginBottom: 8 }}>
                       <div style={{ position: 'relative' }}>
