@@ -17,9 +17,11 @@ export default function LineBrowserBanner() {
     } else {
       // Android: auto-redirect ทันที
       const url = window.location.href
+      let redirected = false
+      window.addEventListener('beforeunload', () => { redirected = true }, { once: true })
       window.location.href = `https://line.me/R/nv/externalBrowser?url=${encodeURIComponent(url)}`
-      // fallback ถ้า LINE scheme ไม่ work
-      setTimeout(() => setMode('android-fallback'), 1500)
+      // fallback ถ้า LINE scheme ไม่ work (ยังอยู่หน้าเดิม)
+      setTimeout(() => { if (!redirected) setMode('android-fallback') }, 1500)
     }
   }, [])
 

@@ -11,21 +11,24 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('listings')
-    .select('id, price, condition, price_includes_shipping, photos, created_at, seller_id, books(id, isbn, title, author, cover_url), users!seller_id(banned_at)')
+    .select('id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url), users!seller_id(banned_at, deleted_at)')
     .eq('status', 'active')
+    .is('users.banned_at', null)
+    .is('users.deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(limit + 5) // ดึงเผื่อ กรอง banned ออกแล้วยังได้ครบ
+    .limit(limit)
 
   if (error) {
-    console.error('[recent listings]', error.message)
-    return NextResponse.json({ listings: [] })
+    // Fallback ถ้า filter ไม่ work (บาง Supabase version ไม่รองรับ nested filter)
+    const { data: fallback } = await supabase
+      .from('listings')
+      .select('id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url)')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    return NextResponse.json({ listings: fallback || [] })
   }
 
-  // กรอง listings ของ user ที่โดน ban ออก
-  const filtered = (data || [])
-    .filter((l: any) => !l.users?.banned_at && !l.users?.deleted_at)
-    .map((l: any) => { const { users, ...rest } = l; return rest })
-    .slice(0, limit)
-
-  return NextResponse.json({ listings: filtered })
+  const clean = (data || []).map((l: any) => { const { users, ...rest } = l; return rest })
+  return NextResponse.json({ listings: clean })
 }
