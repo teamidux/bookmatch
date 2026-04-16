@@ -273,20 +273,22 @@ function SellPage() {
 
   const submit = async () => {
     if (!user) { goLogin(); return }
-    // Phone verify ไม่บังคับแล้ว — เป็น mission item ใน profile
-    // ผู้ขาย verified จะได้ badge + ขายไวกว่า (gamified incentive)
-    if (!fetchedBook?.title && !manualTitle) { show('กรุณาดึงข้อมูลหนังสือก่อน'); return }
-    if (!coverFile) { show('กรุณาใส่รูปหน้าปก'); return }
-    if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { show('กรุณาใส่ราคาที่ถูกต้อง'); return }
-    if (!contact.trim()) { show('กรุณาใส่ช่องทางติดต่อ'); return }
 
-    // Guard: บังคับเบอร์โทร — ทุกคนต้องมีเบอร์ก่อนลงขาย
+    // Guard: บังคับเบอร์โทรก่อน — ต้องเช็คก่อน validation อื่น
+    // เพราะ contact auto-fill จากเบอร์/LINE ID ถ้าไม่มีเบอร์ contact จะว่าง
     if (!user.phone) {
       setGuardPhoneInput('')
       setPhoneGuardError('')
       setShowPhoneGuard(true)
       return
     }
+
+    if (!fetchedBook?.title && !manualTitle) { show('กรุณาดึงข้อมูลหนังสือก่อน'); return }
+    if (!coverFile) { show('กรุณาใส่รูปหน้าปก'); return }
+    if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { show('กรุณาใส่ราคาที่ถูกต้อง'); return }
+    // contact auto-fill จาก user.phone หรือ user.line_id — ถ้ายังว่างใช้เบอร์โทร
+    const finalContact = contact.trim() || user.phone || ''
+    if (!finalContact) { show('กรุณาใส่ช่องทางติดต่อ'); return }
 
     setSubmitting(true)
     show('กำลังบันทึก...')
@@ -320,7 +322,7 @@ function SellPage() {
           condition: cond,
           price: parseFloat(price),
           price_includes_shipping: shipping === 'free',
-          contact: contact.trim(),
+          contact: contact.trim() || user.phone || '',
           notes: [
             notes.trim(),
             shipping === 'buyer' && shippingCost ? `ค่าส่งประมาณ ฿${shippingCost}` : '',
