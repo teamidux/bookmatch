@@ -84,14 +84,11 @@ function SellPage() {
   const [contact, setContact] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
-  const [showVerifyPrompt, setShowVerifyPrompt] = useState<{ isbn: string } | null>(null)
-  // Inline guard: ต้องมีช่องทางติดต่อก่อนลงขาย (LINE ID หรือเบอร์โทร)
-  const [showLineGuard, setShowLineGuard] = useState(false)
-  const [lineIdInput, setLineIdInput] = useState('')
+  // Inline guard: บังคับเบอร์โทรก่อนลงขาย
+  const [showPhoneGuard, setShowPhoneGuard] = useState(false)
   const [guardPhoneInput, setGuardPhoneInput] = useState('')
-  const [guardMode, setGuardMode] = useState<'line' | 'phone'>('phone') // default ถามเบอร์โทร (ง่ายกว่า)
-  const [savingLineId, setSavingLineId] = useState(false)
-  const [lineGuardError, setLineGuardError] = useState('')
+  const [savingPhone, setSavingPhone] = useState(false)
+  const [phoneGuardError, setPhoneGuardError] = useState('')
   const [marketPrice, setMarketPrice] = useState<{ min: number; max: number; avg: number } | null>(null)
   const [manualTitle, setManualTitle] = useState('')
   const [manualAuthor, setManualAuthor] = useState('')
@@ -283,12 +280,11 @@ function SellPage() {
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { show('กรุณาใส่ราคาที่ถูกต้อง'); return }
     if (!contact.trim()) { show('กรุณาใส่ช่องทางติดต่อ'); return }
 
-    // Guard: ต้องมีช่องทางติดต่ออย่างน้อย 1 อย่าง (LINE ID หรือ เบอร์โทร)
-    // ถ้า login ด้วย LINE แล้ว + มีเบอร์โทร → ผ่านได้เลย ไม่ต้องบังคับ LINE ID
-    if (!user.line_id && !user.phone) {
-      setLineIdInput('')
-      setLineGuardError('')
-      setShowLineGuard(true)
+    // Guard: บังคับเบอร์โทร — ทุกคนต้องมีเบอร์ก่อนลงขาย
+    if (!user.phone) {
+      setGuardPhoneInput('')
+      setPhoneGuardError('')
+      setShowPhoneGuard(true)
       return
     }
 
@@ -351,13 +347,8 @@ function SellPage() {
       await reloadUser()
       const freshRes = await fetch('/api/auth/me')
       const freshUser = freshRes.ok ? (await freshRes.json()).user : user
-      const needsContact = !freshUser.line_id && !freshUser.phone
-      if (needsContact) {
-        setShowVerifyPrompt({ isbn: currentIsbn })
-      } else {
-        // มีช่องทางติดต่อแล้ว → ไปหน้า book เลย
-        router.push(`/book/${currentIsbn}`)
-      }
+      // บังคับเบอร์แล้ว ตรงนี้ต้องมีเบอร์แน่นอน → ไปหน้า book เลย
+      router.push(`/book/${currentIsbn}`)
       return // ไม่ต้อง setSubmitting(false) — ค้าง loading จน redirect เสร็จ
     } catch (e: any) {
       show('❌ ' + (e.message || 'เกิดข้อผิดพลาด'))
@@ -366,42 +357,33 @@ function SellPage() {
     setSubmitting(false)
   }
 
-  // Save contact info จาก inline guard modal → reload user → retry submit อัตโนมัติ
-  const saveContactAndContinue = async () => {
+  // Save เบอร์โทรจาก guard modal → reload user → retry submit อัตโนมัติ
+  const savePhoneAndContinue = async () => {
     if (!user) return
-    setSavingLineId(true)
-    setLineGuardError('')
+    const cleaned = guardPhoneInput.replace(/\D/g, '')
+    if (!/^0\d{9}$/.test(cleaned)) { setPhoneGuardError('กรุณากรอกเบอร์โทร 10 หลัก ขึ้นต้น 0'); return }
+    setSavingPhone(true)
+    setPhoneGuardError('')
     try {
-      let updateData: Record<string, string> = {}
-      if (guardMode === 'phone') {
-        const cleaned = guardPhoneInput.replace(/\D/g, '')
-        if (!/^0\d{9}$/.test(cleaned)) { setLineGuardError('กรุณากรอกเบอร์โทร 10 หลัก ขึ้นต้น 0'); setSavingLineId(false); return }
-        updateData = { phone: cleaned }
-        setContact(cleaned)
-      } else {
-        const raw = lineIdInput.trim()
-        if (!raw) { setLineGuardError('กรุณากรอก LINE ID'); setSavingLineId(false); return }
-        updateData = { line_id: raw }
-        setContact(raw)
-      }
       const res = await fetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, data: updateData }),
+        body: JSON.stringify({ userId: user.id, data: { phone: cleaned } }),
       })
       const d = await res.json()
       if (!res.ok) {
-        setLineGuardError(d.message || 'บันทึกไม่สำเร็จ ลองใหม่')
+        setPhoneGuardError(d.message || 'บันทึกไม่สำเร็จ ลองใหม่')
         return
       }
+      setContact(cleaned)
       await reloadUser()
-      setShowLineGuard(false)
+      setShowPhoneGuard(false)
       // ลงขายต่อทันที
       setTimeout(() => submit(), 100)
     } catch {
-      setLineGuardError('เกิดข้อผิดพลาด ลองใหม่')
+      setPhoneGuardError('เกิดข้อผิดพลาด ลองใหม่')
     } finally {
-      setSavingLineId(false)
+      setSavingPhone(false)
     }
   }
 
@@ -410,79 +392,44 @@ function SellPage() {
       <Nav />
       <Toast msg={msg} />
 
-      {/* Inline contact guard — ต้องมีช่องทางติดต่อ (เบอร์โทร หรือ LINE ID) ก่อนลงขาย */}
-      {showLineGuard && (
+      {/* Guard: บังคับเบอร์โทรก่อนลงขาย */}
+      {showPhoneGuard && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 18, padding: '28px 24px', width: '100%', maxWidth: 380 }}>
             <div style={{ fontSize: 40, marginBottom: 10, textAlign: 'center' }}>📞</div>
             <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 19, fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
-              เพิ่มช่องทางติดต่อก่อนลงขาย
+              เพิ่มเบอร์โทรก่อนลงขาย
             </div>
             <div style={{ fontSize: 14, color: 'var(--ink2)', lineHeight: 1.65, marginBottom: 18, textAlign: 'center' }}>
               เพื่อให้ลูกค้าติดต่อซื้อหนังสือจากคุณได้
             </div>
 
-            {/* Toggle เบอร์โทร / LINE ID */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button
-                onClick={() => { setGuardMode('phone'); setLineGuardError('') }}
-                style={{ flex: 1, padding: '10px 8px', border: `1.5px solid ${guardMode === 'phone' ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, background: guardMode === 'phone' ? 'var(--primary-light)' : 'white', fontFamily: 'Kanit', fontSize: 14, fontWeight: 700, cursor: 'pointer', color: guardMode === 'phone' ? 'var(--primary-dark)' : 'var(--ink2)' }}
-              >
-                เบอร์โทร
-              </button>
-              <button
-                onClick={() => { setGuardMode('line'); setLineGuardError('') }}
-                style={{ flex: 1, padding: '10px 8px', border: `1.5px solid ${guardMode === 'line' ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, background: guardMode === 'line' ? 'var(--primary-light)' : 'white', fontFamily: 'Kanit', fontSize: 14, fontWeight: 700, cursor: 'pointer', color: guardMode === 'line' ? 'var(--primary-dark)' : 'var(--ink2)' }}
-              >
-                LINE ID
-              </button>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={guardPhoneInput}
+              onChange={e => { setGuardPhoneInput(e.target.value); if (phoneGuardError) setPhoneGuardError('') }}
+              onKeyDown={e => { if (e.key === 'Enter' && !savingPhone) savePhoneAndContinue() }}
+              placeholder="08X-XXX-XXXX"
+              autoFocus
+              style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${phoneGuardError ? '#DC2626' : '#E2E8F0'}`, borderRadius: 10, fontFamily: 'Kanit', fontSize: 15, outline: 'none', marginBottom: 6 }}
+            />
+            <div style={{ fontSize: 13, color: phoneGuardError ? '#DC2626' : '#94A3B8', marginBottom: 16, lineHeight: 1.5 }}>
+              {phoneGuardError || 'กรอกเบอร์โทรศัพท์ 10 หลัก'}
             </div>
 
-            {guardMode === 'phone' ? (
-              <>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={guardPhoneInput}
-                  onChange={e => { setGuardPhoneInput(e.target.value); if (lineGuardError) setLineGuardError('') }}
-                  onKeyDown={e => { if (e.key === 'Enter' && !savingLineId) saveContactAndContinue() }}
-                  placeholder="08X-XXX-XXXX"
-                  autoFocus
-                  style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${lineGuardError ? '#DC2626' : '#E2E8F0'}`, borderRadius: 10, fontFamily: 'Kanit', fontSize: 15, outline: 'none', marginBottom: 6 }}
-                />
-                <div style={{ fontSize: 13, color: lineGuardError ? '#DC2626' : '#94A3B8', marginBottom: 16, lineHeight: 1.5 }}>
-                  {lineGuardError || 'กรอกเบอร์โทรศัพท์ 10 หลัก'}
-                </div>
-              </>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  value={lineIdInput}
-                  onChange={e => { setLineIdInput(e.target.value); if (lineGuardError) setLineGuardError('') }}
-                  onKeyDown={e => { if (e.key === 'Enter' && !savingLineId) saveContactAndContinue() }}
-                  placeholder="@bookmatch หรือ john1234"
-                  autoFocus
-                  style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${lineGuardError ? '#DC2626' : '#E2E8F0'}`, borderRadius: 10, fontFamily: 'Kanit', fontSize: 15, outline: 'none', marginBottom: 6 }}
-                />
-                <div style={{ fontSize: 13, color: lineGuardError ? '#DC2626' : '#94A3B8', marginBottom: 16, lineHeight: 1.5 }}>
-                  {lineGuardError || 'กรอก LINE ID ของคุณ (4-20 ตัวอักษร: a-z, 0-9, จุด ขีด)'}
-                </div>
-              </>
-            )}
-
             <button
-              onClick={saveContactAndContinue}
-              disabled={savingLineId || (guardMode === 'phone' ? !guardPhoneInput.trim() : !lineIdInput.trim())}
+              onClick={savePhoneAndContinue}
+              disabled={savingPhone || !guardPhoneInput.trim()}
               className="btn"
-              style={{ marginBottom: 8, opacity: (savingLineId || (guardMode === 'phone' ? !guardPhoneInput.trim() : !lineIdInput.trim())) ? 0.5 : 1 }}
+              style={{ marginBottom: 8, opacity: (savingPhone || !guardPhoneInput.trim()) ? 0.5 : 1 }}
             >
-              {savingLineId ? 'กำลังบันทึก...' : 'บันทึกและลงขายต่อ'}
+              {savingPhone ? 'กำลังบันทึก...' : 'บันทึกและลงขายต่อ'}
             </button>
             <button
-              onClick={() => { setShowLineGuard(false); setLineIdInput(''); setGuardPhoneInput(''); setLineGuardError('') }}
+              onClick={() => { setShowPhoneGuard(false); setGuardPhoneInput(''); setPhoneGuardError('') }}
               className="btn btn-ghost"
-              disabled={savingLineId}
+              disabled={savingPhone}
             >
               ยกเลิก
             </button>
@@ -490,38 +437,10 @@ function SellPage() {
         </div>
       )}
 
-      {/* Popup เชิญลงทะเบียน หลังลงขายสำเร็จ */}
-      {showVerifyPrompt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 18, padding: '28px 22px', width: '100%', maxWidth: 360, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>🎉</div>
-            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 19, fontWeight: 700, marginBottom: 12 }}>
-              ลงขายสำเร็จ!
-            </div>
-
-            <div style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 12, padding: '14px 16px', marginBottom: 16, textAlign: 'left' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#991B1B', marginBottom: 4 }}>⚠️ ยังไม่มีช่องทางติดต่อ</div>
-              <div style={{ fontSize: 13, color: '#7F1D1D', lineHeight: 1.6 }}>
-                ลูกค้าจะติดต่อคุณไม่ได้ — กรุณาเพิ่มเบอร์โทร หรือ LINE ID ในโปรไฟล์
-              </div>
-            </div>
-            <button className="btn" onClick={() => { router.push('/profile') }} style={{ marginBottom: 8, background: '#DC2626' }}>
-              เพิ่มช่องทางติดต่อเลย
-            </button>
-
-            <button
-              className="btn btn-ghost"
-              onClick={() => { setShowVerifyPrompt(null); router.push(`/book/${showVerifyPrompt.isbn}`) }}
-            >
-              ไว้ทีหลัง
-            </button>
-          </div>
-        </div>
-      )}
       {showPhoneVerify && <PhoneVerifyModal onClose={() => setShowPhoneVerify(false)} onDone={() => setShowPhoneVerify(false)} />}
 
       {/* Success overlay — แสดงทันทีหลังลงขายสำเร็จ กัน user งงว่าผ่านรึยัง */}
-      {submitSuccess && !showVerifyPrompt && (
+      {submitSuccess && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.7)', zIndex: 190, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 18, padding: '36px 24px', textAlign: 'center', maxWidth: 320, width: '100%' }}>
             <div style={{ fontSize: 52, marginBottom: 12 }}>🎉</div>
