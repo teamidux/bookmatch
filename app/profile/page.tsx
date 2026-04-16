@@ -407,8 +407,51 @@ export default function ProfilePage() {
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink2)', display: 'block', marginBottom: 6 }}>ชื่อที่แสดง</label>
               <input className="search-input" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--ink1)' }} value={editName} onChange={e => setEditName(e.target.value)} placeholder="ชื่อของคุณ หรือชื่อร้าน" />
             </div>
-            {/* LINE ID ย้ายไปแก้ในส่วน "ข้อมูลติดต่อ" แทน (ต้อง re-auth) */}
-            <div style={{ marginBottom: 10 }} />
+            {/* เบอร์โทร */}
+            <div style={{ marginBottom: 14, background: '#F8FAFC', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#94A3B8', display: 'block' }}>เบอร์โทร</label>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: user?.phone ? 'var(--ink)' : '#94A3B8', marginTop: 2 }}>
+                    {user?.phone || 'ยังไม่มีเบอร์'}
+                  </div>
+                  {user?.phone && (
+                    <div style={{ fontSize: 12, color: user?.phone_verified_at ? '#15803D' : '#F59E0B', fontWeight: 600, marginTop: 2 }}>
+                      {user?.phone_verified_at ? 'ยืนยันแล้ว' : 'ยังไม่ได้ยืนยัน'}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setEditing(false); setShowPhoneVerify(true) }}
+                  style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 8, padding: '6px 14px', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, color: 'var(--primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  {!user?.phone ? 'เพิ่มเบอร์' : user?.phone_verified_at ? 'เปลี่ยนเบอร์' : 'ยืนยันเบอร์'}
+                </button>
+              </div>
+            </div>
+
+            {/* LINE ID */}
+            <div style={{ marginBottom: 14, background: '#F8FAFC', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#94A3B8', display: 'block' }}>LINE ID <span style={{ fontSize: 11 }}>(ไม่บังคับ)</span></label>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: user?.line_id ? 'var(--ink)' : '#94A3B8', marginTop: 2 }}>
+                    {user?.line_id || 'ยังไม่มี'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditing(false)
+                    if (user?.line_id) setShowLineConfirm(true)
+                    else { setEditingLineId(true); setNewLineId('') }
+                  }}
+                  style={{ background: '#F0FFF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '6px 14px', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, color: '#15803D', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  {user?.line_id ? 'เปลี่ยน' : 'เพิ่ม LINE ID'}
+                </button>
+              </div>
+            </div>
+
             <button className="btn" style={{ marginBottom: 8 }} onClick={saveProfile} disabled={saving}>
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
@@ -525,50 +568,6 @@ export default function ProfilePage() {
             <div style={{ fontSize: 22, color: '#1D4ED8', fontWeight: 700, lineHeight: 1 }}>›</div>
           </div>
         </Link>
-
-        {/* ข้อมูลติดต่อ */}
-        <div style={{ padding: '14px 16px 0' }}>
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>ข้อมูลติดต่อ</div>
-
-            {/* เบอร์โทร */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 12, borderBottom: user.line_id ? '1px solid var(--border-light)' : 'none' }}>
-              <span style={{ fontSize: 18 }}>📞</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{user.phone || 'ยังไม่มีเบอร์โทร'}</div>
-                {user.phone_verified_at
-                  ? <div style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600, marginTop: 2 }}>ยืนยันแล้ว</div>
-                  : user.phone
-                    ? <div style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, marginTop: 2 }}>ยังไม่ได้ยืนยัน</div>
-                    : null
-                }
-              </div>
-              <button
-                onClick={() => setShowPhoneVerify(true)}
-                style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 8, padding: '6px 12px', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, color: 'var(--primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-              >
-                {!user.phone ? 'เพิ่มเบอร์' : user.phone_verified_at ? 'เปลี่ยนเบอร์' : 'ยืนยันเบอร์'}
-              </button>
-            </div>
-
-            {/* LINE ID */}
-            {user.line_id && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 12 }}>
-                <span style={{ fontSize: 18 }}>💚</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{user.line_id}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink3)', marginTop: 2 }}>LINE ID</div>
-                </div>
-                <button
-                  onClick={() => user.line_id ? setShowLineConfirm(true) : startEdit()}
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontFamily: 'Kanit', fontWeight: 600, fontSize: 12, color: 'var(--ink2)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  เปลี่ยน
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Trust Mission — ยืนยันตัวตน */}
         <div style={{ padding: '14px 16px 0' }}>
