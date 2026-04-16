@@ -50,6 +50,7 @@ export default function AdminPage() {
       items: [
         { href: '/tomga/verify', icon: '🪪', title: 'ตรวจยืนยันตัวตน', desc: 'อนุมัติ/ปฏิเสธ เอกสาร', badge: data?.pendingVerify || 0 },
         { href: '/tomga/users', icon: '👥', title: 'จัดการ User', desc: 'Ban, delete, detect พฤติกรรม', badge: data?.suspiciousUsers || 0 },
+        { href: '/tomga/investigate', icon: '🔍', title: 'ตรวจสอบ User', desc: 'ค้นหาเบอร์/ชื่อ ดูประวัติ ban/delete', badge: 0 },
         { href: '/tomga/messages', icon: '💬', title: 'ข้อความ & รายงาน', desc: 'ข้อความ + รายงานโกง', badge: (data?.unreadMessages || 0) + (data?.pendingReports || 0) },
       ],
     },
