@@ -241,6 +241,12 @@ export default function HomePage() {
               </div>
             )}
 
+            {/* ค้นไม่เจอ — ข้อความเล็กใต้ช่อง search */}
+            {query.trim().length >= 3 && !liveSearching && !googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
+              <div style={{ fontSize: 14, color: 'var(--ink3)', marginTop: 8, textAlign: 'center' }}>
+                ไม่พบ "{query}" — ลองใช้ ISBN หรือสแกน barcode
+              </div>
+            )}
 
             {/* Loading state — Google ยังหาอยู่ และยังไม่มีผลใดๆ */}
             {query.trim() && !liveSearching && googleLoading && liveResults.length === 0 && googleLiveResults.length === 0 && (
