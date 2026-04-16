@@ -100,7 +100,7 @@ async function fromDB(isbn: string): Promise<string | null> {
 // Source 2: Google Books API
 async function fromGoogle(isbn: string): Promise<string | null> {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
+    const apiKey = process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
     const r = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}${apiKey ? `&key=${apiKey}` : ''}`,
       { next: { revalidate: 86400 } }
