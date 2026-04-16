@@ -186,7 +186,15 @@ function SellPage() {
     if (!isValidISBN(q)) { show('กล้องอ่านบาร์โค้ดไม่ชัด ลองสแกนใหม่อีกครั้ง หรือพิมพ์ ISBN เอง'); return }
     setFetching(true)
     setNotFoundMode(null)
-    const book = await fetchBookByISBN(q)
+    // ค้น DB ก่อน → ถ้าไม่มี ลอง /api/search ที่ค้น Google Books ฝั่ง server (ไม่โดน client quota)
+    let book = await fetchBookByISBN(q)
+    if (!book?.title) {
+      try {
+        const r = await fetch(`/api/search?q=${q}&mode=all`)
+        const { results } = await r.json()
+        if (results?.length) book = results[0]
+      } catch {}
+    }
     if (book?.title) {
       setFetchedBook(book)
       setSellSearch('')
