@@ -35,36 +35,35 @@ export async function GET(req: NextRequest) {
   // ค้นหา user จากเบอร์ (รวมเบอร์เก่าใน log)
   if (!targetUserId && phone) {
     const cleaned = phone.replace(/\D/g, '')
+    if (!cleaned) return NextResponse.json({ error: 'invalid_phone' }, { status: 400 })
     // หาจาก users.phone ปัจจุบัน
     const { data: u } = await sb.from('users').select('id').eq('phone', cleaned).maybeSingle()
     if (u) {
       targetUserId = u.id
     } else {
-      // หาจาก log เบอร์เก่า
-      const { data: log } = await sb.from('phone_changes_log')
-        .select('user_id')
-        .or(`old_phone.eq.${cleaned},new_phone.eq.${cleaned}`)
-        .limit(1)
-        .maybeSingle()
-      if (log) targetUserId = log.user_id
+      // หาจาก log เบอร์เก่า — eq() ใช้ parameterized query ปลอดภัย
+      const { data: logOld } = await sb.from('phone_changes_log').select('user_id').eq('old_phone', cleaned).limit(1).maybeSingle()
+      const { data: logNew } = !logOld ? await sb.from('phone_changes_log').select('user_id').eq('new_phone', cleaned).limit(1).maybeSingle() : { data: null }
+      if (logOld) targetUserId = logOld.user_id
+      else if (logNew) targetUserId = logNew.user_id
     }
   }
 
-  // ค้นหา user จากชื่อ
+  // ค้นหา user จากชื่อ — sanitize เพื่อกัน filter injection
   if (!targetUserId && name) {
+    const safeName = name.replace(/[%_\\,()]/g, '')
+    if (!safeName.trim()) return NextResponse.json({ error: 'invalid_name' }, { status: 400 })
     const { data: u } = await sb.from('users').select('id')
-      .ilike('display_name', `%${name}%`)
+      .ilike('display_name', `%${safeName}%`)
       .limit(1)
       .maybeSingle()
     if (u) targetUserId = u.id
-    // หาจาก log ชื่อเก่า
+    // หาจาก log ชื่อเก่า — ใช้ ilike แยกเพื่อกัน injection
     if (!targetUserId) {
-      const { data: log } = await sb.from('phone_changes_log')
-        .select('user_id')
-        .or(`old_phone.ilike.%[name]%${name}%,new_phone.ilike.%[name]%${name}%`)
-        .limit(1)
-        .maybeSingle()
-      if (log) targetUserId = log.user_id
+      const { data: logOld } = await sb.from('phone_changes_log').select('user_id').ilike('old_phone', `%[name]%${safeName}%`).limit(1).maybeSingle()
+      const { data: logNew } = !logOld ? await sb.from('phone_changes_log').select('user_id').ilike('new_phone', `%[name]%${safeName}%`).limit(1).maybeSingle() : { data: null }
+      if (logOld) targetUserId = logOld.user_id
+      else if (logNew) targetUserId = logNew.user_id
     }
   }
 

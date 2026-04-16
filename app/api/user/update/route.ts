@@ -25,12 +25,13 @@ export async function POST(req: NextRequest) {
     const newName = data.display_name.trim()
     // Audit log ชื่อเก่า→ใหม่ (ตามตัวคนโกงเปลี่ยนชื่อหนี)
     if (newName && newName !== sessionUser.display_name) {
-      const sb = getSupabase()
-      await sb.from('phone_changes_log').insert({
-        user_id: userId,
-        old_phone: `[name] ${sessionUser.display_name || ''}`,
-        new_phone: `[name] ${newName}`,
-      }).catch(() => {})
+      try {
+        await getSupabase().from('phone_changes_log').insert({
+          user_id: userId,
+          old_phone: `[name] ${sessionUser.display_name || ''}`,
+          new_phone: `[name] ${newName}`,
+        })
+      } catch {}
     }
     allowed.display_name = newName
   }
@@ -45,11 +46,13 @@ export async function POST(req: NextRequest) {
       const { data: current } = await supabase.from('users').select('phone').eq('id', userId).maybeSingle()
       const oldPhone = current?.phone || null
       if (oldPhone !== cleaned) {
-        await supabase.from('phone_changes_log').insert({
-          user_id: userId,
-          old_phone: oldPhone,
-          new_phone: cleaned,
-        }).catch(() => {}) // ไม่ block ถ้า log fail
+        try {
+          await supabase.from('phone_changes_log').insert({
+            user_id: userId,
+            old_phone: oldPhone,
+            new_phone: cleaned,
+          })
+        } catch {} // ไม่ block ถ้า log fail
       }
       allowed.phone = cleaned
     } else if (data.phone.trim() === '') {

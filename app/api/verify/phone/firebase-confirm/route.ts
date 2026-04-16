@@ -66,11 +66,13 @@ export async function POST(req: NextRequest) {
   // Audit log — บันทึกเบอร์เก่าก่อน update (ตามตัวได้ถ้าโกง)
   const oldPhone = user.phone || null
   if (oldPhone !== cleaned) {
-    await sb.from('phone_changes_log').insert({
-      user_id: user.id,
-      old_phone: oldPhone,
-      new_phone: cleaned,
-    }).catch(() => {})
+    try {
+      await sb.from('phone_changes_log').insert({
+        user_id: user.id,
+        old_phone: oldPhone,
+        new_phone: cleaned,
+      })
+    } catch {}
   }
 
   // Update users record

@@ -56,8 +56,6 @@ export default function ProfilePage() {
     return `${Math.floor(days / 365)} ปี`
   }
 
-  const [editLineId, setEditLineId] = useState('')
-  const [editLineError, setEditLineError] = useState('')
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
@@ -120,8 +118,6 @@ export default function ProfilePage() {
 
   const startEdit = () => {
     setEditName(user?.display_name || '')
-    setEditLineId(user?.line_id || '')
-    setEditLineError('')
     setEditing(true)
   }
 

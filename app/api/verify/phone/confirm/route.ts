@@ -51,13 +51,15 @@ export async function POST(req: NextRequest) {
   await sb.from('phone_otps').update({ consumed_at: now }).eq('id', otp.id)
   await sb.from('users').update({ phone: otp.phone, phone_verified_at: now }).eq('id', user.id)
 
-  // Audit log
-  await sb.from('phone_changes_log').insert({
-    user_id: user.id,
-    old_phone: user.phone || null,
-    new_phone: otp.phone,
-    changed_by: 'user',
-  })
+  // Audit log (ไม่ block ถ้า fail)
+  try {
+    await sb.from('phone_changes_log').insert({
+      user_id: user.id,
+      old_phone: user.phone || null,
+      new_phone: otp.phone,
+      changed_by: 'user',
+    })
+  } catch {}
 
   return NextResponse.json({ ok: true })
 }
