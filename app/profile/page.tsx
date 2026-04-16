@@ -658,6 +658,22 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button onClick={() => {
+                  const newPrice = prompt(`แก้ราคา "${l.books?.title}"\nราคาปัจจุบัน: ฿${l.price}\n\nใส่ราคาใหม่:`, String(l.price))
+                  if (!newPrice) return
+                  const p = parseFloat(newPrice)
+                  if (isNaN(p) || p <= 0) { show('ราคาไม่ถูกต้อง'); return }
+                  fetch('/api/listings/update-price', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listingId: l.id, price: p }),
+                  }).then(r => r.json()).then(d => {
+                    if (d.ok) { setListings(prev => prev.map(x => x.id === l.id ? { ...x, price: p } : x)); show('แก้ราคาแล้ว') }
+                    else show(d.error || 'แก้ราคาไม่สำเร็จ')
+                  })
+                }} style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--primary)' }}>
+                  ฿ แก้ราคา
+                </button>
                 <button onClick={() => setConfirmSoldId(l.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--ink2)' }}>
                   ขายแล้ว?
                 </button>

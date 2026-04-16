@@ -231,17 +231,27 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       <div className="page">
         <Link href="/" className="back-btn">← กลับ</Link>
         <div style={{ padding: '0 16px 80px' }}>
-          <div style={{ background: '#FEF9C3', border: '1px solid #FDE047', borderRadius: 12, padding: '14px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>🔍</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#713F12' }}>ยังไม่มีข้อมูลหนังสือเล่มนี้ในระบบ</div>
-              <div style={{ fontSize: 13, color: '#92400E', marginTop: 2 }}>ISBN: {isbn}</div>
+          <div style={{ textAlign: 'center', padding: '32px 0 24px' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📖</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>ไม่พบข้อมูลหนังสือเล่มนี้ในระบบ</div>
+            <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>ISBN: {isbn}</div>
+          </div>
+
+          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.8 }}>
+              หนังสือบางเล่มอาจเป็น:
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.8, paddingLeft: 4, marginTop: 4 }}>
+              &bull; สำนักพิมพ์อิสระที่ไม่ได้ลงทะเบียนออนไลน์<br/>
+              &bull; หนังสือเก่าหรือหายากที่พิมพ์จำนวนน้อย<br/>
+              &bull; หนังสืองานศพหรือสิ่งพิมพ์พิเศษ
             </div>
           </div>
+
           <div style={{ background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 12, padding: '16px 18px' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 4 }}>คุณมีหนังสือเล่มนี้อยู่ไหม?</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 6 }}>คุณมีหนังสือเล่มนี้อยู่ไหม?</div>
             <div style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 14, lineHeight: 1.7 }}>
-              ลงขายและเพิ่มข้อมูลหนังสือเล่มนี้เข้าระบบ — เป็นคนแรกที่ขาย โอกาสขายได้เร็วมาก
+              ลงขายและเพิ่มข้อมูลเข้าระบบ — เป็นคนแรกที่ขาย โอกาสขายได้เร็วมาก
             </div>
             <button className="btn" onClick={goSell} style={{ width: '100%' }}>📖 ลงขายเล่มนี้เลย</button>
           </div>
@@ -366,7 +376,21 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
                 <span style={{ opacity: 0.7 }}>แปลโดย </span>{book.translator}
               </div>
             )}
-            <div style={{ fontSize: 13, color: '#BFDBFE', fontWeight: 600, letterSpacing: '0.02em', marginTop: 4, marginBottom: 12 }}>ISBN: {isbn}</div>
+            <div style={{ fontSize: 13, color: '#BFDBFE', fontWeight: 600, letterSpacing: '0.02em', marginTop: 4, marginBottom: 4 }}>ISBN: {isbn}</div>
+            <button
+              onClick={() => {
+                const correct = prompt(`ชื่อหนังสือปัจจุบัน: "${book.title}"\n\nกรอกชื่อที่ถูกต้อง:`)
+                if (!correct?.trim()) return
+                fetch('/api/books/report-name', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ bookId: book.id, isbn, currentTitle: book.title, suggestedTitle: correct.trim() }),
+                }).then(() => show('ส่งแล้ว ขอบคุณที่ช่วยแก้ไข!')).catch(() => show('ส่งไม่สำเร็จ'))
+              }}
+              style={{ background: 'none', border: 'none', fontSize: 12, color: 'rgba(255,255,255,.5)', cursor: 'pointer', padding: 0, fontFamily: 'Kanit', marginBottom: 8 }}
+            >
+              ชื่อไม่ถูกต้อง?
+            </button>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={toggleWanted} style={{ background: isWanted ? 'white' : 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, padding: '10px 14px', minHeight: 44, fontFamily: 'Kanit', fontWeight: 600, fontSize: 13, color: isWanted ? 'var(--primary)' : 'white', cursor: 'pointer' }}>
                 {isWanted ? '✕ เลิกตามหา' : '🔔 ตามหาเล่มนี้'}

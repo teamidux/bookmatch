@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   // 1. หา/สร้าง book
   let bookId = existing_book_id
   let bookCoverUrl = existing_cover_url || ''
+  let isNewBook = false
 
   if (!bookId) {
     const { data: existing } = await sb.from('books').select('id, cover_url').eq('isbn', isbn).maybeSingle()
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
       }).select('id').single()
       if (bookErr) return NextResponse.json({ error: bookErr.message }, { status: 500 })
       bookId = newBook.id
+      isNewBook = true
     }
   }
 
@@ -77,5 +79,25 @@ export async function POST(req: NextRequest) {
   })
   if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 })
 
-  return NextResponse.json({ ok: true, book_id: bookId, isbn })
+  // 4. ถ้าเป็นหนังสือใหม่ → update pioneer_count + แจ้ง admin
+  if (isNewBook) {
+    // เพิ่ม pioneer_count ให้ user
+    try { await sb.rpc('increment_pioneer_count', { p_user_id: user.id }) } catch {}
+    // แจ้ง admin ว่ามีหนังสือใหม่ถูกเพิ่ม (ตรวจความถูกต้อง)
+    const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+    for (const adminId of adminIds) {
+      try {
+        await sb.from('notifications').insert({
+          user_id: adminId,
+          type: 'new_book',
+          title: '📖 หนังสือใหม่ถูกเพิ่มเข้าระบบ',
+          body: `"${title}" โดย ${user.display_name || 'ผู้ใช้'} — ตรวจความถูกต้อง`,
+          url: `/tomga/books`,
+          metadata: { book_id: bookId, isbn, added_by: user.id },
+        })
+      } catch {}
+    }
+  }
+
+  return NextResponse.json({ ok: true, book_id: bookId, isbn, is_new_book: isNewBook })
 }

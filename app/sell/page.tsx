@@ -84,6 +84,7 @@ function SellPage() {
   const [contact, setContact] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [pioneerBook, setPioneerBook] = useState<{ title: string; coverUrl: string } | null>(null)
   // Inline guard: บังคับเบอร์โทรก่อนลงขาย
   const [showPhoneGuard, setShowPhoneGuard] = useState(false)
   const [guardPhoneInput, setGuardPhoneInput] = useState('')
@@ -342,10 +343,18 @@ function SellPage() {
       }).catch(() => {})
 
       setSubmitSuccess(true)
-      show('ลงขายเรียบร้อยแล้ว 🎉')
-      // กัน view_count +1 ตอน redirect ไปหน้า book (ไม่นับ seller เข้าดูตัวเอง)
       sessionStorage.setItem(`bm_viewed_${currentIsbn}`, '1')
-      router.push(`/book/${currentIsbn}`)
+
+      // ถ้าเป็นหนังสือใหม่ → แสดง pioneer popup ก่อน redirect
+      if (createData.is_new_book) {
+        setPioneerBook({
+          title: fetchedBook?.title || manualTitle,
+          coverUrl: coverPreview || '',
+        })
+      } else {
+        show('ลงขายเรียบร้อยแล้ว 🎉')
+        router.push(`/book/${currentIsbn}`)
+      }
       return // ไม่ต้อง setSubmitting(false) — ค้าง loading จน redirect เสร็จ
     } catch (e: any) {
       show('❌ ' + (e.message || 'เกิดข้อผิดพลาด'))
@@ -430,6 +439,45 @@ function SellPage() {
               disabled={savingPhone}
             >
               ยกเลิก
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pioneer popup — แสดงเมื่อเพิ่มหนังสือใหม่เข้าระบบ */}
+      {pioneerBook && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: '32px 24px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>🏆</div>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 22, fontWeight: 700, color: '#92400E', marginBottom: 10 }}>
+              คุณคือผู้บุกเบิก!
+            </div>
+
+            {pioneerBook.coverUrl && (
+              <div style={{ width: 80, height: 110, margin: '0 auto 12px', borderRadius: 8, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,.15)' }}>
+                <img src={pioneerBook.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            )}
+
+            <div style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.7, marginBottom: 6 }}>
+              <b>"{pioneerBook.title}"</b>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.7, marginBottom: 16 }}>
+              ถูกเพิ่มเข้า BookMatch เป็นครั้งแรกโดยคุณ
+            </div>
+
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', marginBottom: 18, fontSize: 13, color: '#92400E', lineHeight: 1.6, textAlign: 'left' }}>
+              &bull; ประกาศของคุณจะติดป้าย 🏆 ผู้บุกเบิก<br/>
+              &bull; listing ขึ้นอันดับแรกของเล่มนี้<br/>
+              &bull; รูปที่อัปโหลดจะเป็นปกประจำเล่ม
+            </div>
+
+            <button className="btn" onClick={() => {
+              setPioneerBook(null)
+              const currentIsbn = (fetchedBook as any)?.isbn || (notFoundMode === 'no_isbn' ? bmIsbn : isbn)
+              router.push(`/book/${currentIsbn}`)
+            }}>
+              ดูหนังสือของฉัน
             </button>
           </div>
         </div>
@@ -613,7 +661,20 @@ function SellPage() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>กรอกข้อมูลหนังสือ เพื่อเพิ่มเข้าระบบและลงขาย</div>
                     <div className="form-group">
                       <label className="label">ISBN</label>
-                      <input className="input" value={isbn} onChange={e => setIsbn(e.target.value)} placeholder="เช่น 9784088703251" />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input className="input" value={isbn} onChange={e => setIsbn(e.target.value)} placeholder="เช่น 9784088703251" style={{ flex: 1 }} />
+                        {isLineIAB ? (
+                          <button onClick={() => setShowCamera(true)} disabled={scanning}
+                            style={{ padding: '8px 14px', background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 10, fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, color: 'var(--primary)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            📷
+                          </button>
+                        ) : (
+                          <label style={{ padding: '8px 14px', background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 10, fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, color: 'var(--primary)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                            <input type="file" accept="image/*" capture={capture} onChange={scanFromPhoto} style={{ display: 'none' }} />
+                            📷
+                          </label>
+                        )}
+                      </div>
                     </div>
                     <div className="form-group">
                       <label className="label">ชื่อหนังสือ <span style={{ color: 'var(--red)' }}>*</span></label>
