@@ -72,22 +72,24 @@ export async function GET(req: NextRequest) {
   }
 
   // ดึงข้อมูลทั้งหมดพร้อมกัน
-  const [userRes, changesRes, listingsRes, sessionsRes, contactsRes] = await Promise.all([
-    // 1. ข้อมูล user ปัจจุบัน
+  const [userRes, changesRes, listingsRes, sessionsRes, contactsRes, idVerRes, wantedRes, reportsRes] = await Promise.all([
     sb.from('users').select('*').eq('id', targetUserId).maybeSingle(),
-    // 2. ประวัติเปลี่ยนเบอร์ + ชื่อ
     sb.from('phone_changes_log').select('*').eq('user_id', targetUserId).order('changed_at', { ascending: false }).limit(50),
-    // 3. ประกาศขายทั้งหมด (รวมที่ลบแล้ว)
-    sb.from('listings').select('id, book_id, condition, price, contact, status, created_at, books(isbn, title)').eq('seller_id', targetUserId).order('created_at', { ascending: false }).limit(50),
-    // 4. Sessions (IP + device)
-    sb.from('sessions').select('id, ua, ip, created_at').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(20),
-    // 5. Contact events — คนที่กดติดต่อ user นี้
+    sb.from('listings').select('id, book_id, condition, price, contact, status, notes, photos, created_at, books(isbn, title)').eq('seller_id', targetUserId).order('created_at', { ascending: false }).limit(50),
+    sb.from('sessions').select('id, ua, ip, created_at').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(30),
     sb.from('contact_events').select('id, listing_id, buyer_id, created_at').eq('seller_id', targetUserId).order('created_at', { ascending: false }).limit(30),
+    sb.from('id_verifications').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(10),
+    sb.from('wanted').select('*, books(isbn, title)').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(20),
+    sb.from('reports').select('*').eq('reported_user_id', targetUserId).order('created_at', { ascending: false }).limit(20),
   ])
+
+  // หา registration IP (session แรกสุด)
+  const firstSession = (sessionsRes.data || []).length > 0
+    ? (sessionsRes.data || [])[(sessionsRes.data || []).length - 1]
+    : null
 
   return NextResponse.json({
     user: userRes.data,
-    // แยก phone changes กับ name changes
     phone_changes: (changesRes.data || []).filter((c: any) => !c.old_phone?.startsWith('[name]') && !c.new_phone?.startsWith('[name]')),
     name_changes: (changesRes.data || []).filter((c: any) => c.old_phone?.startsWith('[name]') || c.new_phone?.startsWith('[name]')).map((c: any) => ({
       ...c,
@@ -97,15 +99,20 @@ export async function GET(req: NextRequest) {
     listings: listingsRes.data || [],
     sessions: sessionsRes.data || [],
     contact_events: contactsRes.data || [],
-    // สรุปสำหรับ admin
+    id_verifications: idVerRes.data || [],
+    wanted: wantedRes.data || [],
+    reports_against: reportsRes.data || [],
     summary: {
       immutable_ids: {
         line_user_id: userRes.data?.line_user_id || null,
         facebook_id: userRes.data?.facebook_id || null,
       },
+      registration_ip: firstSession?.ip || null,
+      registration_device: firstSession?.ua || null,
       total_phone_changes: (changesRes.data || []).filter((c: any) => !c.old_phone?.startsWith('[name]')).length,
       total_name_changes: (changesRes.data || []).filter((c: any) => c.old_phone?.startsWith('[name]')).length,
       total_listings: (listingsRes.data || []).length,
+      total_reports: (reportsRes.data || []).length,
       unique_ips: Array.from(new Set((sessionsRes.data || []).map((s: any) => s.ip).filter(Boolean))),
     },
   })

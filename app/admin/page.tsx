@@ -10,11 +10,17 @@ type UserResult = {
   listings: any[]
   sessions: any[]
   contact_events: any[]
+  id_verifications: any[]
+  wanted: any[]
+  reports_against: any[]
   summary: {
     immutable_ids: { line_user_id: string | null; facebook_id: string | null }
+    registration_ip: string | null
+    registration_device: string | null
     total_phone_changes: number
     total_name_changes: number
     total_listings: number
+    total_reports: number
     unique_ips: string[]
   }
 }
@@ -193,6 +199,17 @@ export default function AdminPage() {
               )}
             </div>
 
+            {/* Login methods */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              {u.line_user_id && <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: '#F0FFF4', color: '#15803D', border: '1px solid #BBF7D0' }}>LINE Login</span>}
+              {u.facebook_id && <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>Facebook</span>}
+              {u.phone_verified_at && <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A' }}>Phone OTP</span>}
+              {u.id_verified_at && <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC' }}>ID Verified</span>}
+              {u.banned_at && <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>BANNED</span>}
+              {u.deleted_at && <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: '#F1F5F9', color: '#64748B', border: '1px solid #E2E8F0' }}>DELETED</span>}
+              {u.is_pioneer && <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>Pioneer</span>}
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
               <InfoRow label="เบอร์โทร" value={u.phone || '—'} warn={!u.phone} />
               <InfoRow label="เบอร์ verified" value={u.phone_verified_at ? formatDate(u.phone_verified_at) : 'ยังไม่ verify'} warn={!u.phone_verified_at} />
@@ -202,18 +219,21 @@ export default function AdminPage() {
           </div>
 
           {/* Immutable IDs — สำคัญที่สุดสำหรับตามตัว */}
-          <SectionCard title="Immutable IDs (เปลี่ยนไม่ได้)" icon="🔒" color="#DC2626">
+          <SectionCard title="Immutable IDs + Registration" icon="🔒" color="#DC2626">
             <InfoRow label="LINE user ID" value={s.immutable_ids.line_user_id || 'ไม่มี'} mono />
             <InfoRow label="Facebook ID" value={s.immutable_ids.facebook_id || 'ไม่มี'} mono />
-            <InfoRow label="Unique IPs" value={s.unique_ips.length > 0 ? s.unique_ips.join(', ') : 'ไม่มีข้อมูล'} mono />
+            <InfoRow label="Registration IP" value={s.registration_ip || 'ไม่มีข้อมูล'} mono />
+            <InfoRow label="Registration Device" value={s.registration_device || 'ไม่มีข้อมูล'} />
+            <InfoRow label="Unique IPs ทั้งหมด" value={s.unique_ips.length > 0 ? s.unique_ips.join(', ') : 'ไม่มีข้อมูล'} mono />
           </SectionCard>
 
           {/* Risk Indicators */}
           <SectionCard title="Risk Indicators" icon="⚠️" color="#F59E0B">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
               <StatBox label="เปลี่ยนเบอร์" value={s.total_phone_changes} warn={s.total_phone_changes > 1} />
               <StatBox label="เปลี่ยนชื่อ" value={s.total_name_changes} warn={s.total_name_changes > 2} />
               <StatBox label="Listings" value={s.total_listings} />
+              <StatBox label="ถูกรายงาน" value={s.total_reports} warn={s.total_reports > 0} />
             </div>
           </SectionCard>
 
@@ -282,6 +302,59 @@ export default function AdminPage() {
                     <span style={{ color: '#94A3B8' }}>{timeAgo(sess.created_at)}</span>
                   </div>
                   {sess.ua && <div style={{ color: '#94A3B8', fontSize: 11, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sess.ua}</div>}
+                </div>
+              ))}
+            </SectionCard>
+          )}
+
+          {/* ID Verifications — เอกสารยืนยันตัวตน */}
+          {result.id_verifications.length > 0 && (
+            <SectionCard title={`เอกสารยืนยันตัวตน (${result.id_verifications.length})`} icon="🪪">
+              {result.id_verifications.map((v: any) => (
+                <div key={v.id} style={{ padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                      background: v.status === 'approved' ? '#DCFCE7' : v.status === 'rejected' ? '#FEE2E2' : '#FEF9C3',
+                      color: v.status === 'approved' ? '#15803D' : v.status === 'rejected' ? '#DC2626' : '#92400E',
+                    }}>
+                      {v.status}
+                    </span>
+                    <span style={{ fontSize: 12, color: '#94A3B8' }}>{formatDate(v.created_at)}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748B' }}>
+                    <div>ID: <span style={{ fontFamily: 'monospace' }}>{v.id_image_path}</span></div>
+                    <div>Selfie: <span style={{ fontFamily: 'monospace' }}>{v.selfie_image_path}</span></div>
+                  </div>
+                  {v.admin_note && <div style={{ fontSize: 12, color: '#DC2626', marginTop: 4 }}>Note: {v.admin_note}</div>}
+                </div>
+              ))}
+            </SectionCard>
+          )}
+
+          {/* Wanted — หนังสือที่ตามหา */}
+          {result.wanted.length > 0 && (
+            <SectionCard title={`หนังสือที่ตามหา (${result.wanted.length})`} icon="🔔">
+              {result.wanted.map((w: any) => (
+                <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: 13 }}>
+                  <span style={{ fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.books?.title || w.isbn}</span>
+                  {w.max_price && <span style={{ color: '#64748B', fontSize: 12, flexShrink: 0, marginLeft: 8 }}>max ฿{w.max_price}</span>}
+                </div>
+              ))}
+            </SectionCard>
+          )}
+
+          {/* Reports — ถูกรายงาน */}
+          {result.reports_against.length > 0 && (
+            <SectionCard title={`ถูกรายงาน (${result.reports_against.length})`} icon="🚨" color="#DC2626">
+              {result.reports_against.map((r: any) => (
+                <div key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid #F1F5F9', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600, color: '#DC2626' }}>{r.reason}</span>
+                    <span style={{ fontSize: 12, color: '#94A3B8' }}>{timeAgo(r.created_at)}</span>
+                  </div>
+                  {r.details && <div style={{ fontSize: 12, color: '#64748B', marginTop: 4, lineHeight: 1.5 }}>{r.details}</div>}
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>by: {r.reporter_user_id ? r.reporter_user_id.slice(0, 8) + '...' : 'anonymous'}</div>
                 </div>
               ))}
             </SectionCard>
