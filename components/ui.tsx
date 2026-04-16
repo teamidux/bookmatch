@@ -445,7 +445,7 @@ export function MultiLoginButton({
       {/* Facebook */}
       <button
         className="btn"
-        onClick={() => loginWithFacebook()}
+        onClick={() => loginWithFacebook(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/')}
         style={{
           width: '100%',
           background: '#1877F2',

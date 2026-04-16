@@ -32,6 +32,6 @@ export async function GET(req: NextRequest) {
     scope: 'public_profile',
     response_type: 'code',
   })
-  const fbUrl = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`
+  const fbUrl = `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`
   return NextResponse.redirect(fbUrl)
 }

@@ -27,8 +27,11 @@ export async function GET(req: NextRequest) {
   const errorParam = req.nextUrl.searchParams.get('error')
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`
-  const redirectError = (msg: string) =>
-    NextResponse.redirect(`${siteUrl}/?login_error=${encodeURIComponent(msg)}`)
+  console.log('[facebook/callback] hit', { hasCode: !!code, hasState: !!state, errorParam, siteUrl, host: req.headers.get('host') })
+  const redirectError = (msg: string) => {
+    console.error('[facebook/callback] error:', msg)
+    return NextResponse.redirect(`${siteUrl}/?login_error=${encodeURIComponent(msg)}`)
+  }
 
   if (errorParam) return redirectError(errorParam)
   if (!code || !state) return redirectError('missing_params')
@@ -58,7 +61,7 @@ export async function GET(req: NextRequest) {
       redirect_uri: redirectUri,
       code,
     })
-    tokenRes = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?${params.toString()}`)
+    tokenRes = await fetch(`https://graph.facebook.com/v21.0/oauth/access_token?${params.toString()}`)
   } catch {
     return redirectError('facebook_unreachable')
   }
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
 
   // Get profile (name + picture)
   const profileRes = await fetch(
-    `https://graph.facebook.com/v19.0/me?fields=id,name,picture.width(200).height(200)&access_token=${accessToken}&appsecret_proof=${appsecretProof}`
+    `https://graph.facebook.com/v21.0/me?fields=id,name,picture.width(200).height(200)&access_token=${accessToken}&appsecret_proof=${appsecretProof}`
   )
   if (!profileRes.ok) return redirectError('profile_fetch_failed')
   const profile = await profileRes.json()
