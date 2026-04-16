@@ -1,20 +1,14 @@
-// ดึง contact info ของผู้ขาย — ต้อง login ก่อน (กัน scrape เบอร์โทร)
+// ดึง contact info ของผู้ขาย — ไม่ต้อง login (เพิ่มโอกาสขาย)
+// ป้องกัน scrape ด้วย rate limit ต่อ IP
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getSessionUser } from '@/lib/session'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  // ต้อง login ก่อนเห็นเบอร์ผู้ขาย
-  const user = await getSessionUser()
-  if (!user) {
-    return NextResponse.json({ error: 'login_required' }, { status: 401 })
-  }
-
-  // Rate limit: 20 ครั้ง/นาที/user กัน bulk scrape
-  if (!checkRateLimit(`contact:${user.id}`, 20, 60_000)) {
+  // Rate limit: 20 ครั้ง/นาที/IP กัน bulk scrape
+  if (!checkRateLimit(`contact:${getClientIp(req)}`, 20, 60_000)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

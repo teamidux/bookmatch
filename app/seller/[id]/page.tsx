@@ -400,11 +400,8 @@ export default function SellerPage({ params }: PageProps) {
           }).map(l => {
             return (
               <div key={l.id} onClick={async () => {
-                if (!user) { loginWithLine(typeof window !== 'undefined' ? window.location.pathname : `/seller/${id}`); return }
                 setCopied(false)
-                const ciRes = await fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`)
-                if (ciRes.status === 401) { loginWithLine(typeof window !== 'undefined' ? window.location.pathname : `/seller/${id}`); return }
-                const ci = await ciRes.json().catch(() => ({}))
+                const ci = await fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({}))
                 setSellerPII(ci)
                 setContactListing(l)
               }} style={{ cursor: 'pointer' }}>
