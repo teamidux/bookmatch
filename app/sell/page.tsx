@@ -696,14 +696,14 @@ function SellPage() {
                   <div style={{ background: '#FEF9C3', border: '1px solid #FDE047', borderRadius: 12, padding: '14px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 22, flexShrink: 0 }}>📖</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#713F12' }}>หนังสือไม่มี Barcode</div>
-                      <div style={{ fontSize: 13, color: '#92400E', marginTop: 2 }}>กรอกชื่อหนังสือเพื่อค้นหาก่อน หรือเพิ่มใหม่</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#713F12' }}>ยังไม่มีข้อมูลในระบบ</div>
+                      <div style={{ fontSize: 13, color: '#92400E', marginTop: 2 }}>อาจเป็นหนังสือเก่า สำนักพิมพ์อิสระ หรือพิมพ์จำนวนจำกัด</div>
                     </div>
                     <button onClick={resetSearch} style={{ background: 'none', border: 'none', fontSize: 13, color: '#92400E', cursor: 'pointer', fontFamily: 'Kanit', flexShrink: 0 }}>← กลับ</button>
                   </div>
                   <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
                     <div style={{ fontSize: 14, color: '#1E40AF', lineHeight: 1.7 }}>
-                      ค้นหาไม่เจอ? อาจเป็นหนังสือเก่า สำนักพิมพ์อิสระ หรือพิมพ์จำนวนจำกัด — กรอกข้อมูลด้านล่างเพื่อเพิ่มเข้าระบบได้เลย 🙏
+                      กรอกข้อมูลด้านล่างเพื่อเพิ่มหนังสือเข้าระบบได้เลย 🙏
                     </div>
                   </div>
                   <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 14 }}>
