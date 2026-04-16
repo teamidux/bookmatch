@@ -82,21 +82,21 @@ export default function AdminPage() {
   if (isAdmin === false) return <div style={{ padding: 40, textAlign: 'center', fontFamily: 'Kanit', color: '#DC2626' }}>ไม่มีสิทธิ์เข้าถึง</div>
   if (isAdmin === null) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spin" style={{ width: 28, height: 28 }} /></div>
 
-  const deleteUser = async () => {
+  const deleteUser = async (mode: 'hard' | 'soft') => {
     if (!result?.user?.id) return
     setDeleting(true)
     try {
       const r = await fetch('/api/admin/user/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: result.user.id }),
+        body: JSON.stringify({ userId: result.user.id, mode }),
       })
       const d = await r.json()
-      if (!r.ok) { setError(d.message || d.error || 'ลบไม่สำเร็จ'); return }
+      if (!r.ok) { setError(d.message || d.error || 'ลบไม่สำเร็จ'); setDeleting(false); return }
       setResult(null)
       setConfirmDelete(false)
       setError('')
-      alert('ลบ user สำเร็จ')
+      alert(mode === 'hard' ? 'ลบ user + ข้อมูลทั้งหมดแล้ว' : 'Soft delete สำเร็จ (หลักฐานยังอยู่)')
     } catch {
       setError('เชื่อมต่อไม่ได้')
     } finally {
@@ -165,20 +165,31 @@ export default function AdminPage() {
             </div>
 
             {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <div style={{ marginBottom: 14 }}>
               {!confirmDelete ? (
-                <button onClick={() => setConfirmDelete(true)} style={{ padding: '8px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer' }}>
-                  ลบ User
-                </button>
-              ) : (
-                <>
-                  <button onClick={deleteUser} disabled={deleting} style={{ padding: '8px 16px', background: '#DC2626', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
-                    {deleting ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setConfirmDelete(true)} style={{ padding: '8px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer' }}>
+                    ลบ User
                   </button>
-                  <button onClick={() => setConfirmDelete(false)} style={{ padding: '8px 16px', background: '#F1F5F9', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, color: '#64748B', cursor: 'pointer' }}>
+                </div>
+              ) : (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B', marginBottom: 8 }}>เลือกวิธีลบ:</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <button onClick={() => deleteUser('hard')} disabled={deleting} style={{ flex: 1, padding: '10px 8px', background: '#DC2626', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
+                      {deleting ? 'กำลังลบ...' : 'Hard Delete'}
+                    </button>
+                    <button onClick={() => deleteUser('soft')} disabled={deleting} style={{ flex: 1, padding: '10px 8px', background: '#F59E0B', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
+                      {deleting ? 'กำลังลบ...' : 'Soft Delete'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#7F1D1D', lineHeight: 1.5, marginBottom: 8 }}>
+                    Hard: ลบทุกอย่าง (test) / Soft: ซ่อนข้อมูลส่วนตัว เก็บหลักฐาน (production)
+                  </div>
+                  <button onClick={() => setConfirmDelete(false)} style={{ width: '100%', padding: '8px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, fontFamily: 'Kanit', fontSize: 12, color: '#64748B', cursor: 'pointer' }}>
                     ยกเลิก
                   </button>
-                </>
+                </div>
               )}
             </div>
 
