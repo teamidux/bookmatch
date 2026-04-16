@@ -45,18 +45,39 @@ export async function POST(req: NextRequest) {
 }
 
 async function notifySeller(supabase: any, sellerId: string, bookId: string | null) {
-  // === In-app notification — ทุก platform ===
+  // === ดึงข้อมูลหนังสือ + นับจำนวนคนที่เคยกดติดต่อ ===
   let bookTitle = 'หนังสือของคุณ'
+  let bookIsbn = ''
+  let contactCount = 1
+
   if (bookId) {
-    const { data: book } = await supabase.from('books').select('title, isbn').eq('id', bookId).maybeSingle()
-    if (book?.title) bookTitle = `"${book.title}"`
+    const [bookRes, countRes] = await Promise.all([
+      supabase.from('books').select('title, isbn').eq('id', bookId).maybeSingle(),
+      supabase.from('contact_events').select('id', { count: 'exact', head: true }).eq('book_id', bookId).eq('seller_id', sellerId),
+    ])
+    if (bookRes.data?.title) bookTitle = `"${bookRes.data.title}"`
+    if (bookRes.data?.isbn) bookIsbn = bookRes.data.isbn
+    if (countRes.count) contactCount = countRes.count
+  }
+
+  // === Copy ที่ actionable ===
+  const title = contactCount === 1
+    ? `มีคนสนใจ ${bookTitle}!`
+    : `${bookTitle} มีคนสนใจแล้ว ${contactCount} คน!`
+  const body = contactCount === 1
+    ? 'มีคนกดดูช่องทางติดต่อคุณ รอข้อความจากผู้ซื้อได้เลย'
+    : `มี ${contactCount} คนกดดูช่องทางติดต่อคุณแล้ว หนังสือเล่มนี้ขายได้ไวแน่นอน`
+  const url = bookIsbn ? `/book/${bookIsbn}` : '/profile'
+
+  // === In-app notification ===
+  if (bookId) {
     await supabase.from('notifications').insert({
       user_id: sellerId,
       type: 'contact',
-      title: 'มีคนสนใจหนังสือของคุณ!',
-      body: `มีคนกดติดต่อเรื่อง ${bookTitle}`,
-      url: book?.isbn ? `/book/${book.isbn}` : '/profile',
-      metadata: { book_id: bookId },
+      title,
+      body,
+      url,
+      metadata: { book_id: bookId, contact_count: contactCount },
     })
   }
 
@@ -66,7 +87,6 @@ async function notifySeller(supabase: any, sellerId: string, bookId: string | nu
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY
   if (!vapidSubject || !vapidPublic || !vapidPrivate) return
 
-  // ดึง push subscription ของผู้ขาย
   const { data: sub } = await supabase
     .from('push_subscriptions')
     .select('subscription')
@@ -76,16 +96,15 @@ async function notifySeller(supabase: any, sellerId: string, bookId: string | nu
 
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
   const payload = JSON.stringify({
-    title: 'มีคนสนใจหนังสือของคุณ!',
-    body: `มีคนกดติดต่อเรื่อง ${bookTitle}`,
-    url: '/profile',
-    tag: `contact-${sellerId}`,
+    title,
+    body,
+    url,
+    tag: `contact-${bookId || sellerId}`,
   })
 
   try {
     await webpush.sendNotification(sub.subscription, payload)
   } catch (e: any) {
-    // Subscription หมดอายุ → ลบออก
     if (e.statusCode === 404 || e.statusCode === 410) {
       await supabase.from('push_subscriptions').delete().eq('user_id', sellerId)
     }
