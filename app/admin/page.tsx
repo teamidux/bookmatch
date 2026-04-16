@@ -43,6 +43,8 @@ export default function AdminPage() {
   const [result, setResult] = useState<UserResult | null>(null)
   const [error, setError] = useState('')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // เช็ค admin access
   useEffect(() => {
@@ -79,6 +81,28 @@ export default function AdminPage() {
   if (!user) return <div style={{ padding: 40, textAlign: 'center', fontFamily: 'Kanit' }}>กรุณา login ก่อน</div>
   if (isAdmin === false) return <div style={{ padding: 40, textAlign: 'center', fontFamily: 'Kanit', color: '#DC2626' }}>ไม่มีสิทธิ์เข้าถึง</div>
   if (isAdmin === null) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spin" style={{ width: 28, height: 28 }} /></div>
+
+  const deleteUser = async () => {
+    if (!result?.user?.id) return
+    setDeleting(true)
+    try {
+      const r = await fetch('/api/admin/user/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: result.user.id }),
+      })
+      const d = await r.json()
+      if (!r.ok) { setError(d.message || d.error || 'ลบไม่สำเร็จ'); return }
+      setResult(null)
+      setConfirmDelete(false)
+      setError('')
+      alert('ลบ user สำเร็จ')
+    } catch {
+      setError('เชื่อมต่อไม่ได้')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const u = result?.user
   const s = result?.summary
@@ -138,6 +162,24 @@ export default function AdminPage() {
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{u.display_name}</div>
                 <div style={{ fontSize: 13, color: '#64748B', wordBreak: 'break-all' }}>{u.id}</div>
               </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {!confirmDelete ? (
+                <button onClick={() => setConfirmDelete(true)} style={{ padding: '8px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer' }}>
+                  ลบ User
+                </button>
+              ) : (
+                <>
+                  <button onClick={deleteUser} disabled={deleting} style={{ padding: '8px 16px', background: '#DC2626', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
+                    {deleting ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} style={{ padding: '8px 16px', background: '#F1F5F9', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, color: '#64748B', cursor: 'pointer' }}>
+                    ยกเลิก
+                  </button>
+                </>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
