@@ -350,10 +350,18 @@ export default function SellerPage({ params }: PageProps) {
                 text: `ดูหนังสือมือสองที่ ${seller?.display_name} กำลังขาย ${listings.length} เล่ม`,
                 url,
               }
-              if (navigator.share) {
-                try { await navigator.share(shareData) } catch {}
-              } else {
-                navigator.clipboard.writeText(url).then(() => show('คัดลอกลิงก์ร้านแล้ว'))
+              try {
+                if (navigator.share) { await navigator.share(shareData); return }
+              } catch {}
+              try {
+                await navigator.clipboard.writeText(url)
+                show('คัดลอกลิงก์ร้านแล้ว')
+              } catch {
+                const ta = document.createElement('textarea')
+                ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0'
+                document.body.appendChild(ta); ta.select()
+                document.execCommand('copy'); document.body.removeChild(ta)
+                show('คัดลอกลิงก์ร้านแล้ว')
               }
             }}
             style={{
