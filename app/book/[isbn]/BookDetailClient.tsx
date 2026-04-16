@@ -485,17 +485,17 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 13, color: l.price_includes_shipping ? 'var(--green)' : 'var(--ink3)', fontWeight: l.price_includes_shipping ? 600 : 400 }}>{l.price_includes_shipping ? '✓ ส่งฟรี' : 'ไม่รวมค่าส่ง'}</div>
                 <button onClick={async () => {
+                  if (!user) { loginWithLine(typeof window !== 'undefined' ? window.location.pathname : `/book/${isbn}`); return }
                   setCopied(false)
-                  // fetch contact info (line_id, phone) แยก — ต้องรู้ทั้ง listing_id + seller_id
-                  const [ciRes] = await Promise.all([
-                    fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({})),
-                    fetch('/api/listings/contact', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ listing_id: l.id, book_id: book?.id, seller_id: l.seller_id }),
-                    }).catch(() => {}),
-                  ])
-                  setContactPII(ciRes)
+                  const ciRes = await fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`)
+                  if (ciRes.status === 401) { loginWithLine(typeof window !== 'undefined' ? window.location.pathname : `/book/${isbn}`); return }
+                  const ci = await ciRes.json().catch(() => ({}))
+                  fetch('/api/listings/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: l.id, book_id: book?.id, seller_id: l.seller_id }),
+                  }).catch(() => {})
+                  setContactPII(ci)
                   setContactListing(l)
                 }} style={{ background: 'var(--primary)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                   ติดต่อ
