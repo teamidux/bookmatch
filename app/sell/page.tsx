@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase, fetchBookByISBN, Book } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { Nav, BottomNav, BookCover, PhoneVerifyModal, useToast, Toast, ScanErrorSheet, MultiLoginButton, useCapture, CameraCaptureModal } from '@/components/ui'
+import { Nav, BottomNav, BookCover, useToast, Toast, ScanErrorSheet, MultiLoginButton, useCapture, CameraCaptureModal } from '@/components/ui'
 import { scanBarcode } from '@/lib/scan'
 
 const CONDITIONS = [
@@ -68,7 +68,8 @@ function SellPage() {
 
   // showLogin removed — login goes directly to LINE OAuth
   const goLogin = () => loginWithLine(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/sell')
-  const [showPhoneVerify, setShowPhoneVerify] = useState(false)
+  // ref เก็บเบอร์ที่เพิ่งบันทึกจาก guard — กัน stale closure ตอน auto-retry submit
+  const savedPhoneRef = useRef('')
   const [isbn, setIsbn] = useState(searchParams.get('isbn') || '')
   const [fetchedBook, setFetchedBook] = useState<Partial<Book> | null>(null)
   // notFoundMode: null=ยังค้นหา | 'has_isbn'=มี ISBN แต่ไม่อยู่ในระบบ | 'no_isbn'=ไม่มีบาร์โค้ด
@@ -275,8 +276,9 @@ function SellPage() {
     if (!user) { goLogin(); return }
 
     // Guard: บังคับเบอร์โทรก่อน — ต้องเช็คก่อน validation อื่น
-    // เพราะ contact auto-fill จากเบอร์/LINE ID ถ้าไม่มีเบอร์ contact จะว่าง
-    if (!user.phone) {
+    // ใช้ savedPhoneRef กัน stale closure ตอน auto-retry หลัง guard
+    const phone = user.phone || savedPhoneRef.current
+    if (!phone) {
       setGuardPhoneInput('')
       setPhoneGuardError('')
       setShowPhoneGuard(true)
@@ -286,8 +288,8 @@ function SellPage() {
     if (!fetchedBook?.title && !manualTitle) { show('กรุณาดึงข้อมูลหนังสือก่อน'); return }
     if (!coverFile) { show('กรุณาใส่รูปหน้าปก'); return }
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { show('กรุณาใส่ราคาที่ถูกต้อง'); return }
-    // contact auto-fill จาก user.phone หรือ user.line_id — ถ้ายังว่างใช้เบอร์โทร
-    const finalContact = contact.trim() || user.phone || ''
+    // contact: ใช้ค่าที่ auto-fill ไว้ หรือ fallback เป็นเบอร์โทร
+    const finalContact = contact.trim() || phone
     if (!finalContact) { show('กรุณาใส่ช่องทางติดต่อ'); return }
 
     setSubmitting(true)
@@ -322,7 +324,7 @@ function SellPage() {
           condition: cond,
           price: parseFloat(price),
           price_includes_shipping: shipping === 'free',
-          contact: contact.trim() || user.phone || '',
+          contact: finalContact,
           notes: [
             notes.trim(),
             shipping === 'buyer' && shippingCost ? `ค่าส่งประมาณ ฿${shippingCost}` : '',
@@ -345,11 +347,6 @@ function SellPage() {
 
       setSubmitSuccess(true)
       show('ลงขายเรียบร้อยแล้ว 🎉')
-      // Reload user ก่อนเช็ค — กัน stale data (เช่น verify เบอร์แล้วแต่ user object ยังเก่า)
-      await reloadUser()
-      const freshRes = await fetch('/api/auth/me')
-      const freshUser = freshRes.ok ? (await freshRes.json()).user : user
-      // บังคับเบอร์แล้ว ตรงนี้ต้องมีเบอร์แน่นอน → ไปหน้า book เลย
       router.push(`/book/${currentIsbn}`)
       return // ไม่ต้อง setSubmitting(false) — ค้าง loading จน redirect เสร็จ
     } catch (e: any) {
@@ -377,11 +374,12 @@ function SellPage() {
         setPhoneGuardError(d.message || 'บันทึกไม่สำเร็จ ลองใหม่')
         return
       }
+      savedPhoneRef.current = cleaned
       setContact(cleaned)
       await reloadUser()
       setShowPhoneGuard(false)
-      // ลงขายต่อทันที
-      setTimeout(() => submit(), 100)
+      // ลงขายต่อทันที (savedPhoneRef กัน stale closure)
+      setTimeout(() => submit(), 150)
     } catch {
       setPhoneGuardError('เกิดข้อผิดพลาด ลองใหม่')
     } finally {
@@ -438,8 +436,6 @@ function SellPage() {
           </div>
         </div>
       )}
-
-      {showPhoneVerify && <PhoneVerifyModal onClose={() => setShowPhoneVerify(false)} onDone={() => setShowPhoneVerify(false)} />}
 
       {/* Success overlay — แสดงทันทีหลังลงขายสำเร็จ กัน user งงว่าผ่านรึยัง */}
       {submitSuccess && (
