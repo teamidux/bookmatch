@@ -365,7 +365,12 @@ function SellPage() {
       }
       return // ไม่ต้อง setSubmitting(false) — ค้าง loading จน redirect เสร็จ
     } catch (e: any) {
-      show('❌ ' + (e.message || 'เกิดข้อผิดพลาด'))
+      const msg = e.message || 'เกิดข้อผิดพลาด'
+      if (msg.includes('fetch') || msg.includes('network')) {
+        show('❌ เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')
+      } else {
+        show('❌ ' + msg)
+      }
       setSubmitSuccess(false)
     }
     setSubmitting(false)
@@ -620,25 +625,19 @@ function SellPage() {
                       </div>
                     )}
 
-                    {/* ค้นไม่เจอ → อธิบาย + กรอกเอง */}
+                    {/* ค้นไม่เจอ → อธิบาย + ปุ่มเพิ่มเอง */}
                     {sellSearch.trim().length >= 2 && !sellSearching && !fetching && sellResults.length === 0 && (
-                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#92400E', marginBottom: 4 }}>ไม่พบ "{sellSearch}"</div>
-                        <div style={{ fontSize: 13, color: '#78350F', lineHeight: 1.6, marginBottom: 10 }}>
+                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, padding: '16px', marginTop: 4 }}>
+                        <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 16, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>ไม่พบ "{sellSearch}"</div>
+                        <div style={{ fontSize: 14, color: '#78350F', lineHeight: 1.7, marginBottom: 14 }}>
                           อาจเป็นหนังสือเก่า สำนักพิมพ์อิสระ หรือยังไม่มีในระบบ
                         </div>
                         <button onClick={() => { setNotFoundMode('no_isbn'); setIsbn(bmIsbn); setManualTitle(sellSearch) }}
-                          style={{ width: '100%', background: '#92400E', border: 'none', borderRadius: 8, padding: '10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, color: 'white', cursor: 'pointer' }}>
-                          ✏️ กรอกข้อมูลเพื่อเพิ่มเข้าระบบ
+                          style={{ width: '100%', background: '#92400E', border: 'none', borderRadius: 10, padding: '13px 16px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 15, color: 'white', cursor: 'pointer' }}>
+                          ✏️ เพิ่มหนังสือด้วยตัวเอง
                         </button>
                       </div>
                     )}
-
-                    {/* ปุ่มกรอกเองตรง (ไม่ต้องค้นก่อน) */}
-                    <button onClick={() => { setNotFoundMode('no_isbn'); setIsbn(bmIsbn) }}
-                      style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px', fontFamily: 'Kanit', fontWeight: 600, fontSize: 13, color: 'var(--ink2)', cursor: 'pointer', marginTop: 4 }}>
-                      ✏️ กรอกข้อมูลเอง
-                    </button>
                   </div>
                 </>
               )}
