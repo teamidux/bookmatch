@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data: ls, error } = await supabase
     .from('listings')
-    .select('*, users(id, display_name, sold_count, confirmed_count, is_verified, line_id, phone, seller_type, store_name, phone_verified_at, id_verified_at, line_oa_friend_at, avatar_url, banned_at)')
+    .select('*, users(id, display_name, sold_count, confirmed_count, is_verified, line_id, phone, seller_type, store_name, phone_verified_at, id_verified_at, line_oa_friend_at, avatar_url, banned_at, deleted_at)')
     .eq('book_id', bookId)
     .eq('status', 'active')
     .order('price')
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   // ซ่อน LINE ID + เบอร์โทร + กรอง banned users ออก
   if (!error) {
     const safe = (ls || [])
-      .filter((l: any) => !l.users?.banned_at) // ซ่อน listings ของ user ที่โดน ban
+      .filter((l: any) => !l.users?.banned_at && !l.users?.deleted_at) // ซ่อน listings ของ user ที่โดน ban/delete
       .map((l: any) => {
         if (l.users) {
           const { line_id, phone, banned_at, banned_reason, ...safeUser } = l.users

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   // กรอง listings ของ user ที่โดน ban ออก
   const filtered = (data || [])
-    .filter((l: any) => !l.users?.banned_at)
+    .filter((l: any) => !l.users?.banned_at && !l.users?.deleted_at)
     .map((l: any) => { const { users, ...rest } = l; return rest })
     .slice(0, limit)
 
