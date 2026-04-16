@@ -247,30 +247,10 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Delete */}
-              {!confirmDelete ? (
-                <button onClick={() => setConfirmDelete(true)} style={{ padding: '8px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer' }}>
-                  ลบ User
-                </button>
-              ) : (
-                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B', marginBottom: 8 }}>เลือกวิธีลบ:</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <button onClick={() => deleteUser('hard')} disabled={deleting} style={{ flex: 1, padding: '10px 8px', background: '#DC2626', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
-                      {deleting ? 'กำลังลบ...' : 'Hard Delete'}
-                    </button>
-                    <button onClick={() => deleteUser('soft')} disabled={deleting} style={{ flex: 1, padding: '10px 8px', background: '#F59E0B', border: 'none', borderRadius: 8, fontFamily: 'Kanit', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
-                      {deleting ? 'กำลังลบ...' : 'Soft Delete'}
-                    </button>
-                  </div>
-                  <div style={{ fontSize: 11, color: '#7F1D1D', lineHeight: 1.5, marginBottom: 8 }}>
-                    Hard: ลบทุกอย่าง (test) / Soft: ซ่อนข้อมูล เก็บหลักฐาน
-                  </div>
-                  <button onClick={() => setConfirmDelete(false)} style={{ width: '100%', padding: '8px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, fontFamily: 'Kanit', fontSize: 12, color: '#64748B', cursor: 'pointer' }}>
-                    ยกเลิก
-                  </button>
-                </div>
-              )}
+              {/* ลบ User → ไปทำที่ /tomga/users แทน (มี guidance ครบ) */}
+              <a href="/tomga/users" style={{ padding: '8px 16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, fontFamily: 'Kanit', fontSize: 13, fontWeight: 600, color: '#64748B', textDecoration: 'none', textAlign: 'center' }}>
+                จัดการเพิ่มเติม → หน้า Users
+              </a>
             </div>
 
             {/* Login methods */}
