@@ -81,7 +81,6 @@ function SellPage() {
   const [cond, setCond] = useState('good')
   const [price, setPrice] = useState('')
   const [shipping, setShipping] = useState('buyer')
-  const [shippingCost, setShippingCost] = useState('50')
   const [contact, setContact] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -325,10 +324,7 @@ function SellPage() {
           price: parseFloat(price),
           price_includes_shipping: shipping === 'free',
           contact: finalContact,
-          notes: [
-            notes.trim(),
-            shipping === 'buyer' && shippingCost ? `ค่าส่งประมาณ ฿${shippingCost}` : '',
-          ].filter(Boolean).join(' | ') || null,
+          notes: notes.trim() || null,
           photos: [publicUrl],
           existing_book_id: (fetchedBook as any)?.id || null,
           existing_cover_url: fetchedBook?.cover_url || '',
@@ -347,6 +343,8 @@ function SellPage() {
 
       setSubmitSuccess(true)
       show('ลงขายเรียบร้อยแล้ว 🎉')
+      // กัน view_count +1 ตอน redirect ไปหน้า book (ไม่นับ seller เข้าดูตัวเอง)
+      sessionStorage.setItem(`bm_viewed_${currentIsbn}`, '1')
       router.push(`/book/${currentIsbn}`)
       return // ไม่ต้อง setSubmitting(false) — ค้าง loading จน redirect เสร็จ
     } catch (e: any) {
@@ -775,19 +773,17 @@ function SellPage() {
 
               <div className="form-group">
                 <label className="label">ค่าส่ง</label>
-                <select className="input" value={shipping} onChange={e => setShipping(e.target.value)}>
-                  <option value="buyer">ผู้ซื้อจ่ายค่าส่ง</option>
-                  <option value="free">ส่งฟรี (รวมในราคา)</option>
-                  <option value="negotiate">ตกลงกันเอง</option>
-                </select>
-                {shipping === 'buyer' && (
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--ink2)', whiteSpace: 'nowrap' }}>ค่าส่งโดยประมาณ</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink3)' }}>฿</span>
-                    <input className="input" type="number" value={shippingCost} onChange={e => setShippingCost(e.target.value)} placeholder="50" style={{ width: 80 }} />
-                    <span style={{ fontSize: 13, color: 'var(--ink3)' }}>บาท</span>
-                  </div>
-                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[
+                    { val: 'buyer', label: 'ไม่รวมค่าส่ง' },
+                    { val: 'free', label: 'ส่งฟรี' },
+                  ].map(opt => (
+                    <button key={opt.val} type="button" onClick={() => setShipping(opt.val)}
+                      style={{ flex: 1, padding: '10px 8px', border: `1.5px solid ${shipping === opt.val ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, background: shipping === opt.val ? 'var(--primary-light)' : 'white', fontFamily: 'Kanit', fontSize: 14, fontWeight: 700, cursor: 'pointer', color: shipping === opt.val ? 'var(--primary-dark)' : 'var(--ink2)' }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* ช่องทางติดต่อ — ดึงจากระบบอัตโนมัติ read-only */}
