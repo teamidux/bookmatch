@@ -11,15 +11,21 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('listings')
-    .select('id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url)')
+    .select('id, price, condition, price_includes_shipping, photos, created_at, seller_id, books(id, isbn, title, author, cover_url), users!seller_id(banned_at)')
     .eq('status', 'active')
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(limit + 5) // ดึงเผื่อ กรอง banned ออกแล้วยังได้ครบ
 
   if (error) {
     console.error('[recent listings]', error.message)
     return NextResponse.json({ listings: [] })
   }
 
-  return NextResponse.json({ listings: data || [] })
+  // กรอง listings ของ user ที่โดน ban ออก
+  const filtered = (data || [])
+    .filter((l: any) => !l.users?.banned_at)
+    .map((l: any) => { const { users, ...rest } = l; return rest })
+    .slice(0, limit)
+
+  return NextResponse.json({ listings: filtered })
 }

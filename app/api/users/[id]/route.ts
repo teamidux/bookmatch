@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const { data, error } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, is_verified, sold_count, confirmed_count, phone_verified_at, id_verified_at, line_oa_friend_at, created_at, plan, listings_limit, is_pioneer, pioneer_count')
+    .select('id, display_name, avatar_url, is_verified, sold_count, confirmed_count, phone_verified_at, id_verified_at, line_oa_friend_at, created_at, plan, listings_limit, is_pioneer, pioneer_count, banned_at')
     .eq('id', params.id)
     .maybeSingle()
 
