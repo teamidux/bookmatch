@@ -620,13 +620,16 @@ function SellPage() {
                       </div>
                     )}
 
-                    {/* ค้นไม่เจอ → กรอกเอง */}
+                    {/* ค้นไม่เจอ → อธิบาย + กรอกเอง */}
                     {sellSearch.trim().length >= 2 && !sellSearching && !fetching && sellResults.length === 0 && (
-                      <div style={{ fontSize: 13, color: 'var(--ink2)', marginBottom: 8 }}>
-                        ไม่พบ "{sellSearch}" —{' '}
+                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#92400E', marginBottom: 4 }}>ไม่พบ "{sellSearch}"</div>
+                        <div style={{ fontSize: 13, color: '#78350F', lineHeight: 1.6, marginBottom: 10 }}>
+                          อาจเป็นหนังสือเก่า สำนักพิมพ์อิสระ หรือยังไม่มีในระบบ
+                        </div>
                         <button onClick={() => { setNotFoundMode('no_isbn'); setIsbn(bmIsbn); setManualTitle(sellSearch) }}
-                          style={{ background: 'none', border: 'none', color: 'var(--primary)', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
-                          กรอกข้อมูลเอง
+                          style={{ width: '100%', background: '#92400E', border: 'none', borderRadius: 8, padding: '10px', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, color: 'white', cursor: 'pointer' }}>
+                          ✏️ กรอกข้อมูลเพื่อเพิ่มเข้าระบบ
                         </button>
                       </div>
                     )}
@@ -651,22 +654,11 @@ function SellPage() {
                     </div>
                     <button onClick={resetSearch} style={{ background: 'none', border: 'none', fontSize: 13, color: '#92400E', cursor: 'pointer', fontFamily: 'Kanit', flexShrink: 0 }}>← กลับ</button>
                   </div>
-                  {!seenNotFoundTip && (
-                    <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#1E40AF', lineHeight: 1.7, marginBottom: 6 }}>
-                        หนังสือบางเล่มยังไม่มีในฐานข้อมูลของเรา อาจเป็นเพราะเป็นหนังสือเก่า, พิมพ์จำนวนจำกัด, หรือไม่ได้ขึ้นทะเบียน ISBN
-                      </div>
-                      <div style={{ fontSize: 13, color: '#1E40AF', lineHeight: 1.7 }}>
-                        คุณสามารถเพิ่มเข้าระบบเองได้เลย — ช่วยให้คนอื่นที่มีเล่มเดียวกันหาเจอง่ายขึ้นด้วยนะ 🙏
-                      </div>
-                      <button
-                        onClick={() => { setSeenNotFoundTip(true); sessionStorage.setItem('bm_notfound_tip', '1') }}
-                        style={{ background: 'none', border: 'none', fontSize: 12, color: '#3B82F6', fontFamily: 'Kanit', cursor: 'pointer', padding: 0, marginTop: 8 }}
-                      >
-                        เข้าใจแล้ว ✓
-                      </button>
+                  <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 14, color: '#1E40AF', lineHeight: 1.7 }}>
+                      หนังสือบางเล่มอาจเป็นสำนักพิมพ์อิสระ, หนังสือเก่า, หรือไม่ได้ขึ้นทะเบียน ISBN — กรอกข้อมูลด้านล่างเพื่อเพิ่มเข้าระบบได้เลย 🙏
                     </div>
-                  )}
+                  </div>
                   <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 14 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>กรอกข้อมูลหนังสือ เพื่อเพิ่มเข้าระบบและลงขาย</div>
                     <div className="form-group">
@@ -709,22 +701,11 @@ function SellPage() {
                     </div>
                     <button onClick={resetSearch} style={{ background: 'none', border: 'none', fontSize: 13, color: '#92400E', cursor: 'pointer', fontFamily: 'Kanit', flexShrink: 0 }}>← กลับ</button>
                   </div>
-                  {!seenNotFoundTip && (
-                    <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#1E40AF', lineHeight: 1.7, marginBottom: 6 }}>
-                        หนังสือบางเล่มยังไม่มีในฐานข้อมูลของเรา อาจเป็นเพราะเป็นหนังสือเก่า, พิมพ์จำนวนจำกัด, หรือไม่ได้ขึ้นทะเบียน ISBN
-                      </div>
-                      <div style={{ fontSize: 13, color: '#1E40AF', lineHeight: 1.7 }}>
-                        คุณสามารถเพิ่มเข้าระบบเองได้เลย — ช่วยให้คนอื่นที่มีเล่มเดียวกันหาเจอง่ายขึ้นด้วยนะ 🙏
-                      </div>
-                      <button
-                        onClick={() => { setSeenNotFoundTip(true); sessionStorage.setItem('bm_notfound_tip', '1') }}
-                        style={{ background: 'none', border: 'none', fontSize: 12, color: '#3B82F6', fontFamily: 'Kanit', cursor: 'pointer', padding: 0, marginTop: 8 }}
-                      >
-                        เข้าใจแล้ว ✓
-                      </button>
+                  <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 14, color: '#1E40AF', lineHeight: 1.7 }}>
+                      ค้นหาไม่เจอ? อาจเป็นหนังสือเก่า สำนักพิมพ์อิสระ หรือพิมพ์จำนวนจำกัด — กรอกข้อมูลด้านล่างเพื่อเพิ่มเข้าระบบได้เลย 🙏
                     </div>
-                  )}
+                  </div>
                   <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 14 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>กรอกข้อมูลหนังสือ</div>
                     <div className="form-group">
