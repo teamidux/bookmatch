@@ -13,7 +13,7 @@ const CONDITIONS = [
   { key: 'fair', label: '📖 พอใช้', desc: 'มีรอยชัดเจน แต่เนื้อหาครบถ้วน' },
 ]
 
-function compressImage(file: File, maxKB = 300): Promise<File> {
+function compressImage(file: File, maxKB = 200): Promise<File> {
   return new Promise(resolve => {
     const img = new Image()
     const url = URL.createObjectURL(file)
@@ -21,7 +21,7 @@ function compressImage(file: File, maxKB = 300): Promise<File> {
       URL.revokeObjectURL(url)
       const canvas = document.createElement('canvas')
       let { width, height } = img
-      const MAX = 1200
+      const MAX = 800
       if (width > MAX || height > MAX) {
         if (width > height) { height = Math.round(height * MAX / width); width = MAX }
         else { width = Math.round(width * MAX / height); height = MAX }
@@ -40,7 +40,7 @@ function compressImage(file: File, maxKB = 300): Promise<File> {
           }
         }, 'image/jpeg', q)
       }
-      tryQ(0.85)
+      tryQ(0.7)
     }
     img.onerror = () => resolve(file)
     img.src = url
