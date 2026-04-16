@@ -125,9 +125,6 @@ export default function HomePage() {
       const result = await scanBarcode(raw)
       if (result.isbn) {
         router.push(`/book/${result.isbn}`)
-      } else if (result.raw) {
-        setQuery(result.raw)
-        show('อ่านบาร์โค้ดไม่ชัด ลองถ่ายใหม่')
       } else {
         setScanError(true)
       }
