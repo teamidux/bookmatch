@@ -21,16 +21,21 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    await supabase.from('contact_events').insert({
-      listing_id,
-      book_id: book_id || null,
-      seller_id: seller_id || null,
-      buyer_id: user?.id || null,
-    })
+    // ไม่บันทึก + ไม่แจ้ง ถ้าตัวเองกดดูของตัวเอง
+    const isSelf = user?.id && user.id === seller_id
 
-    // Web Push แจ้งผู้ขาย — fire-and-forget ไม่ block response
-    if (seller_id) {
-      notifySeller(supabase, seller_id, book_id).catch(() => {})
+    if (!isSelf) {
+      await supabase.from('contact_events').insert({
+        listing_id,
+        book_id: book_id || null,
+        seller_id: seller_id || null,
+        buyer_id: user?.id || null,
+      })
+
+      // Web Push แจ้งผู้ขาย — fire-and-forget ไม่ block response
+      if (seller_id) {
+        notifySeller(supabase, seller_id, book_id).catch(() => {})
+      }
     }
 
     return NextResponse.json({ ok: true })
