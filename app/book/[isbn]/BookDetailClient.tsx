@@ -446,65 +446,70 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             const isPioneerListing = earliest && l.id === earliest.id
             const avatarUrl = (l.users as any)?.avatar_url
             return (
-            <div key={l.id} className="card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div key={l.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              {/* Header: ผู้ขาย + ราคา */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid var(--border-light)' }}>
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={sellerName || ''} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  <img src={avatarUrl} alt={sellerName || ''} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>👤</div>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>👤</div>
                 )}
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <Link href={`/seller/${l.seller_id}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
-                      {sellerName}
-                    </Link>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Link href={`/seller/${l.seller_id}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+                    {sellerName}
+                  </Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
                     <TrustBadge user={l.users} size="sm" />
-                    {isPioneerListing && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>🏆 ผู้บุกเบิก</span>}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 2 }}>
-                    {`ขายแล้ว ${l.users?.sold_count || 0} · ยืนยัน ${l.users?.confirmed_count || 0} ครั้ง`}
+                    {isPioneerListing && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>🏆 ผู้บุกเบิกเล่มนี้</span>}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="price">฿{l.price}</div>
-                  <CondBadge cond={l.condition} />
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>฿{l.price}</div>
+                  <div style={{ fontSize: 12, color: l.price_includes_shipping ? 'var(--green)' : 'var(--ink3)', fontWeight: 600 }}>{l.price_includes_shipping ? 'ส่งฟรี' : 'ไม่รวมส่ง'}</div>
                 </div>
               </div>
 
-              {l.photos?.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10, overflowX: 'auto' }}>
-                  {l.photos.filter(p => p).map((p, i) => (
-                    <div key={i} onClick={() => setLightbox(p)} style={{ width: 60, height: 90, borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', flexShrink: 0, cursor: 'zoom-in' }}>
-                      <img src={p} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {/* Body: รูป + สภาพ + notes */}
+              <div style={{ padding: '10px 14px' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  {/* รูปหนังสือ */}
+                  {l.photos?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      {l.photos.filter(p => p).slice(0, 2).map((p, i) => (
+                        <div key={i} onClick={() => setLightbox(p)} style={{ width: 52, height: 72, borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden', cursor: 'zoom-in' }}>
+                          <img src={p} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {/* สภาพ + notes */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <CondBadge cond={l.condition} />
+                    {l.notes && !l.notes.includes('ค่าส่งประมาณ') && (
+                      <div style={{ fontSize: 12, color: 'var(--ink2)', marginTop: 6, lineHeight: 1.5 }}>
+                        {l.notes}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-
-              {l.notes && !l.notes.includes('ค่าส่งประมาณ') && (
-                <div style={{ fontSize: 13, color: 'var(--ink2)', background: 'var(--surface)', borderRadius: 8, padding: '7px 10px', marginBottom: 10, lineHeight: 1.5 }}>
-                  📝 {l.notes}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 13, color: l.price_includes_shipping ? 'var(--green)' : 'var(--ink3)', fontWeight: l.price_includes_shipping ? 600 : 400 }}>{l.price_includes_shipping ? '✓ ส่งฟรี' : 'ไม่รวมค่าส่ง'}</div>
-                <button onClick={async () => {
-                  setCopied(false)
-                  const [ci] = await Promise.all([
-                    fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({})),
-                    fetch('/api/listings/contact', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ listing_id: l.id, book_id: book?.id, seller_id: l.seller_id }),
-                    }).catch(() => {}),
-                  ])
-                  setContactPII(ci)
-                  setContactListing(l)
-                }} style={{ background: 'var(--primary)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                  ติดต่อ
-                </button>
               </div>
+
+              {/* Footer: ปุ่มติดต่อ */}
+              <button onClick={async () => {
+                setCopied(false)
+                const [ci] = await Promise.all([
+                  fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({})),
+                  fetch('/api/listings/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: l.id, book_id: book?.id, seller_id: l.seller_id }),
+                  }).catch(() => {}),
+                ])
+                setContactPII(ci)
+                setContactListing(l)
+              }} style={{ width: '100%', background: 'var(--primary)', border: 'none', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '11px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                💬 ติดต่อผู้ขาย
+              </button>
             </div>
           )})
           })(/* IIFE end */)}
