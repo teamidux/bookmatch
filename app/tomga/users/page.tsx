@@ -250,6 +250,12 @@ function AdminUsersPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <a
+                  href={`/tomga/investigate?id=${u.id}`}
+                  style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Kanit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  🔍 ดูรายละเอียด
+                </a>
                 {!u.deleted_at && !u.banned_at && (
                   <button
                     onClick={() => {

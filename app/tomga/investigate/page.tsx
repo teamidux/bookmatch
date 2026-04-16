@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import Link from 'next/link'
 
@@ -54,6 +55,8 @@ export default function AdminPage() {
   const [banning, setBanning] = useState(false)
   const [banReason, setBanReason] = useState('')
 
+  const searchParams = useSearchParams()
+
   // เช็ค admin access
   useEffect(() => {
     if (!user) return
@@ -61,6 +64,23 @@ export default function AdminPage() {
       setIsAdmin(r.status !== 403)
     }).catch(() => setIsAdmin(false))
   }, [user?.id])
+
+  // Auto-search ถ้ามี ?id= ใน URL (มาจากหน้า /tomga/users)
+  useEffect(() => {
+    const urlId = searchParams.get('id')
+    if (urlId && isAdmin) {
+      setSearchType('id')
+      setQuery(urlId)
+      // Auto search
+      setSearching(true)
+      setError('')
+      fetch(`/api/admin/user?id=${encodeURIComponent(urlId)}`)
+        .then(r => r.ok ? r.json() : r.json().then(d => { throw new Error(d.error || 'not found') }))
+        .then(d => setResult(d))
+        .catch(e => setError(e.message || 'ไม่พบ user'))
+        .finally(() => setSearching(false))
+    }
+  }, [isAdmin, searchParams])
 
   const search = async () => {
     if (!query.trim()) return
