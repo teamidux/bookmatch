@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase, Book } from '@/lib/supabase'
 import { GoogleBook } from '@/lib/search'
 // Book type still used for wantedBooks
-import { Nav, BottomNav, BookCover, useToast, Toast, ScanErrorSheet, SkeletonList, TermsFooter, useCapture, CameraCaptureModal } from '@/components/ui'
+import { Nav, BottomNav, BookCover, useToast, Toast, SkeletonList, TermsFooter, useCapture, CameraCaptureModal } from '@/components/ui'
 import { scanBarcode } from '@/lib/scan'
 
 export default function HomePage() {
@@ -17,7 +17,6 @@ export default function HomePage() {
   const [liveSearching, setLiveSearching] = useState(false)
   const [googleLiveResults, setGoogleLiveResults] = useState<GoogleBook[]>([])
   const [scanning, setScanning] = useState(false)
-  const [scanError, setScanError] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
   const [loading, setLoading] = useState(true)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -125,11 +124,8 @@ export default function HomePage() {
       const result = await scanBarcode(raw)
       if (result.isbn) {
         router.push(`/book/${result.isbn}`)
-      } else if (result.raw) {
-        setQuery(result.raw)
-        show('อ่านบาร์โค้ดไม่ชัด ลองถ่ายใหม่ให้เห็นบาร์โค้ดชัดขึ้น')
       } else {
-        setScanError(true)
+        show('อ่านบาร์โค้ดไม่ชัด ลองถ่ายใหม่ให้เห็นบาร์โค้ดชัดขึ้น')
       }
     } finally {
       setScanning(false)
@@ -314,12 +310,6 @@ export default function HomePage() {
             />
           )}
 
-          {scanError && (
-            <ScanErrorSheet
-              onRetry={() => { setScanError(false); isLineIAB ? setShowCamera(true) : scanInputRef.current?.click() }}
-              onClose={() => setScanError(false)}
-            />
-          )}
         </div>
 
         <div className="stats-bar">
