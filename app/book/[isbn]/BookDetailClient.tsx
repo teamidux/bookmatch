@@ -237,11 +237,11 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             <div style={{ fontSize: 13, color: 'var(--ink3)', marginBottom: 16 }}>ISBN: {isbn}</div>
           </div>
 
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.8 }}>
+          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>
               หนังสือบางเล่มอาจเป็น:
             </div>
-            <div style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.8, paddingLeft: 4, marginTop: 4 }}>
+            <div style={{ fontSize: 14, color: 'var(--ink2)', lineHeight: 2, paddingLeft: 4 }}>
               &bull; สำนักพิมพ์อิสระที่ไม่ได้ลงทะเบียนออนไลน์<br/>
               &bull; หนังสือเก่าหรือหายากที่พิมพ์จำนวนน้อย<br/>
               &bull; หนังสืองานศพหรือสิ่งพิมพ์พิเศษ
