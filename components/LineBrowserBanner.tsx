@@ -17,23 +17,44 @@ export default function LineBrowserBanner() {
     } else {
       // Android: auto-redirect ทันที
       const url = window.location.href
-      let redirected = false
-      window.addEventListener('beforeunload', () => { redirected = true }, { once: true })
+      let wentAway = false
+      const markAway = () => { wentAway = true }
+      document.addEventListener('visibilitychange', markAway)
+      window.addEventListener('pagehide', markAway)
+      window.addEventListener('beforeunload', markAway, { once: true })
       window.location.href = `https://line.me/R/nv/externalBrowser?url=${encodeURIComponent(url)}`
       // fallback ถ้า LINE scheme ไม่ work (ยังอยู่หน้าเดิม)
-      setTimeout(() => { if (!redirected) setMode('android-fallback') }, 1500)
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', markAway)
+        window.removeEventListener('pagehide', markAway)
+        if (!wentAway && !document.hidden) setMode('android-fallback')
+      }, 1500)
     }
   }, [])
 
   const openExternal = () => {
     const url = window.location.href
+
+    // Track ว่า redirect สำเร็จไหม — ใช้ visibilitychange/pagehide ตรวจว่า browser
+    // ออกไปแอพอื่น (Safari/Chrome) ถ้าใช่ถือว่าสำเร็จ ไม่ต้อง fallback
+    let wentAway = false
+    const markAway = () => { wentAway = true }
+    document.addEventListener('visibilitychange', markAway)
+    window.addEventListener('pagehide', markAway)
+    window.addEventListener('blur', markAway)
+
     // ลอง LINE scheme ก่อน (ใช้ได้ทั้ง iOS + Android)
     window.location.href = `https://line.me/R/nv/externalBrowser?url=${encodeURIComponent(url)}`
 
-    // fallback หลัง 600ms
+    // fallback หลัง 1200ms ถ้ายังอยู่หน้าเดิม
     setTimeout(() => {
+      document.removeEventListener('visibilitychange', markAway)
+      window.removeEventListener('pagehide', markAway)
+      window.removeEventListener('blur', markAway)
+      if (wentAway || document.hidden) return // redirect สำเร็จ
+
       if (mode === 'ios') {
-        // iOS fallback: copy URL
+        // iOS fallback: copy URL + alert ให้ paste
         if (navigator.clipboard) {
           navigator.clipboard.writeText(url).then(() => {
             alert('คัดลอกลิงก์แล้ว ✓\nเปิด Safari แล้ววาง URL ได้เลย')
@@ -47,7 +68,7 @@ export default function LineBrowserBanner() {
         // Android fallback: intent
         window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
       }
-    }, 600)
+    }, 1200)
   }
 
   // ── iOS: หน้าจอเต็มพร้อมปุ่มใหญ่ ──

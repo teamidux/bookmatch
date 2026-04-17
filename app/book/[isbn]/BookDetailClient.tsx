@@ -11,12 +11,14 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
   const [book, setBook] = useState<Book | null>((initialBook as Book) ?? null)
   const [listings, setListings] = useState<Listing[]>([])
   const [lastSold, setLastSold] = useState<Listing | null>(null)
+  const [pioneerUserId, setPioneerUserId] = useState<string | null>(null)
   const [isWanted, setIsWanted] = useState(false)
   const [loading, setLoading] = useState(true)
   // showLogin removed — login goes directly to LINE OAuth
   const [showWantedForm, setShowWantedForm] = useState(false)
   const [wantedPrice, setWantedPrice] = useState('')
-  const [lightbox, setLightbox] = useState('')
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null)
+  const [contactLoading, setContactLoading] = useState(false)
   const [contactListing, setContactListing] = useState<Listing | null>(null)
   const [contactPII, setContactPII] = useState<{ line_id: string | null; phone: string | null } | null>(null)
   const [copied, setCopied] = useState(false)
@@ -67,7 +69,9 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
 
   const loadListings = async (bookId: string) => {
     try {
-      const [{ listings }, soldRes] = await Promise.all([
+      // Pioneer = คนแรกที่เคยลงเล่มนี้ (ทุกสถานะ) — ผูกกับ user ไม่ใช่ listing
+      // เพื่อให้ขายแล้วกลับมาลงใหม่ยังได้ป้าย + คนต่อมาไม่แย่งตำแหน่ง
+      const [{ listings }, soldRes, pioneerRes] = await Promise.all([
         fetch(`/api/listings?book_id=${bookId}`).then(r => r.json()),
         supabase
           .from('listings')
@@ -77,9 +81,17 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
           .order('sold_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from('listings')
+          .select('seller_id')
+          .eq('book_id', bookId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
       ])
       setListings(listings || [])
       setLastSold((soldRes.data as any) || null)
+      setPioneerUserId((pioneerRes.data as any)?.seller_id || null)
     } catch (err) {
       console.error('[loadListings]', err)
       setListings([])
@@ -276,6 +288,17 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       <Nav />
       <Toast msg={msg} />
 
+      {/* Contact loading overlay — กันคนงงตอนกด "ติดต่อผู้ขาย" แล้วเงียบ */}
+      {contactLoading && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 18, padding: '32px 28px', textAlign: 'center', maxWidth: 300, width: '100%' }}>
+            <span className="spin" style={{ width: 28, height: 28, marginBottom: 12 }} />
+            <div style={{ fontFamily: "'Kanit', sans-serif", fontSize: 15, fontWeight: 700 }}>กำลังโหลดข้อมูลติดต่อ...</div>
+            <div style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4 }}>รอสักครู่</div>
+          </div>
+        </div>
+      )}
+
       {showWantedForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowWantedForm(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px 18px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 480, margin: '0 auto' }}>
@@ -364,9 +387,57 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       )}
 
       {lightbox && (
-        <div onClick={() => setLightbox('')} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.88)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <button onClick={() => setLightbox('')} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-          <img onClick={e => e.stopPropagation()} src={lightbox} alt="" style={{ maxWidth: '92vw', maxHeight: '88vh', borderRadius: 10, objectFit: 'contain' }} />
+        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            onClick={() => setLightbox(null)}
+            aria-label="ปิด"
+            style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 44, height: 44, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+          >
+            ✕
+          </button>
+          <img
+            onClick={e => e.stopPropagation()}
+            src={lightbox.photos[lightbox.index]}
+            alt={`รูป ${lightbox.index + 1}`}
+            style={{ maxWidth: '92vw', maxHeight: '88vh', borderRadius: 10, objectFit: 'contain' }}
+          />
+          {lightbox.photos.length > 1 && (
+            <>
+              {/* Prev */}
+              <button
+                onClick={e => { e.stopPropagation(); setLightbox(prev => prev ? { ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length } : null) }}
+                aria-label="ก่อนหน้า"
+                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 44, height: 44, color: 'white', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+              >
+                ‹
+              </button>
+              {/* Next */}
+              <button
+                onClick={e => { e.stopPropagation(); setLightbox(prev => prev ? { ...prev, index: (prev.index + 1) % prev.photos.length } : null) }}
+                aria-label="ถัดไป"
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 44, height: 44, color: 'white', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+              >
+                ›
+              </button>
+              {/* Dots indicator */}
+              <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 2 }}>
+                {lightbox.photos.map((_, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: i === lightbox.index ? 'white' : 'rgba(255,255,255,.4)',
+                      transition: 'background .15s',
+                    }}
+                  />
+                ))}
+              </div>
+              {/* Counter */}
+              <div style={{ position: 'absolute', top: 24, left: 20, color: 'white', fontSize: 14, fontFamily: 'Kanit', fontWeight: 600, background: 'rgba(0,0,0,.4)', padding: '4px 10px', borderRadius: 12 }}>
+                {lightbox.index + 1} / {lightbox.photos.length}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -488,12 +559,10 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
             </div>
           )}
 
-          {/* หา listing แรกสุดของ book นี้ = ผู้บุกเบิก */}
-          {(() => {
-            const earliest = listings.length > 0 ? listings.reduce((a, b) => new Date(a.created_at) < new Date(b.created_at) ? a : b) : null
-            return listings.map(l => {
+          {/* ป้ายผู้บุกเบิก — ผูกกับ pioneerUserId (คนแรกที่เคยลงเล่มนี้) */}
+          {listings.map(l => {
             const sellerName = l.users?.display_name
-            const isPioneerListing = earliest && l.id === earliest.id
+            const isPioneerListing = pioneerUserId && l.seller_id === pioneerUserId
             const avatarUrl = (l.users as any)?.avatar_url
             return (
             <div key={l.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -522,16 +591,35 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               {/* Body: รูป + สภาพ + notes */}
               <div style={{ padding: '10px 14px' }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  {/* รูปหนังสือ */}
-                  {l.photos?.length > 0 && (
-                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                      {l.photos.filter(p => p).slice(0, 2).map((p, i) => (
-                        <div key={i} onClick={() => setLightbox(p)} style={{ width: 52, height: 72, borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden', cursor: 'zoom-in' }}>
-                          <img src={p} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {/* รูปหนังสือ — โชว์ 2 thumb, รูปที่ 2 มี "+N" badge ถ้าเกิน */}
+                  {(() => {
+                    const allPhotos = (l.photos || []).filter((p: string) => p)
+                    if (allPhotos.length === 0) return null
+                    const visible = allPhotos.slice(0, 2)
+                    const extra = allPhotos.length - 2
+                    return (
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        {visible.map((p: string, i: number) => {
+                          const isLastVisible = i === visible.length - 1
+                          const showOverlay = isLastVisible && extra > 0
+                          return (
+                            <div
+                              key={i}
+                              onClick={() => setLightbox({ photos: allPhotos, index: i })}
+                              style={{ width: 52, height: 72, borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden', cursor: 'zoom-in', position: 'relative', background: 'var(--surface)' }}
+                            >
+                              <img src={p} alt={`รูป ${i + 1}`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              {showOverlay && (
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 14, fontWeight: 700, fontFamily: 'Kanit' }}>
+                                  +{extra}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                   {/* สภาพ + notes */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <CondBadge cond={l.condition} />
@@ -545,24 +633,32 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
               </div>
 
               {/* Footer: ปุ่มติดต่อ */}
-              <button onClick={async () => {
-                setCopied(false)
-                const [ci] = await Promise.all([
-                  fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({})),
-                  fetch('/api/listings/contact', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ listing_id: l.id, book_id: book?.id, seller_id: l.seller_id }),
-                  }).catch(() => {}),
-                ])
-                setContactPII(ci)
-                setContactListing(l)
-              }} style={{ width: '100%', background: 'var(--primary)', border: 'none', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '11px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <button
+                disabled={contactLoading}
+                onClick={async () => {
+                  setCopied(false)
+                  setContactLoading(true)
+                  try {
+                    const [ci] = await Promise.all([
+                      fetch(`/api/listings/contact-info?seller_id=${l.seller_id}&listing_id=${l.id}`).then(r => r.json()).catch(() => ({})),
+                      fetch('/api/listings/contact', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ listing_id: l.id, book_id: book?.id, seller_id: l.seller_id }),
+                      }).catch(() => {}),
+                    ])
+                    setContactPII(ci)
+                    setContactListing(l)
+                  } finally {
+                    setContactLoading(false)
+                  }
+                }}
+                style={{ width: '100%', background: 'var(--primary)', border: 'none', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '11px 16px', color: 'white', fontFamily: 'Kanit', fontWeight: 700, fontSize: 14, cursor: contactLoading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: contactLoading ? 0.7 : 1 }}
+              >
                 💬 ติดต่อผู้ขาย
               </button>
             </div>
-          )})
-          })()}
+          )})}
         </div>
         <div style={{ height: 12 }} />
       </div>
