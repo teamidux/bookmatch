@@ -77,10 +77,10 @@ export default function ImpactPage() {
 
       <div style={{ display: 'grid', gap: 14, marginBottom: 28 }}>
         {[
-          { icon: '📱', title: 'ลงขายง่ายแค่ 15 วินาที', desc: 'สแกน barcode → ระบบดึงชื่อ ผู้แต่ง และราคากลางให้เอง ไม่ต้องพิมพ์ — ทำให้คนที่ต้องการขาย ขายง่ายขึ้น' },
-          { icon: '🔔', title: 'Wanted + Alert', desc: 'คนซื้อกด "ตามหา" รอไว้ พอมีคนมาลงขาย ระบบแจ้งเตือนเข้า LINE ทันที — ของดีไม่หลุดมือ คนที่ตามหาเจอก่อน' },
-          { icon: '🏪', title: 'ระบบสต็อกสำหรับร้านมือสอง', desc: 'ร้านใช้เป็น inventory ฟรี — สแกนเข้าเล่ม ดูราคากลางในระบบ รู้ว่าเล่มไหนในกองคือของหายาก ลูกค้าถามตอบได้ทันที ไม่ต้องรื้อ' },
-          { icon: '🔄', title: 'Extended lifecycle', desc: '1 เล่ม → 2 ผู้อ่าน → 3 ผู้อ่าน → ... ทุก reuse = 1 เล่มใหม่ที่ไม่ต้องพิมพ์' },
+          { icon: '📱', title: 'ลงขายง่ายแค่ 15 วินาที', desc: 'สแกน barcode หลังเล่ม → ระบบดึงชื่อ ผู้แต่ง และราคากลางให้เอง ไม่ต้องพิมพ์ — ทำให้คนที่ต้องการขาย ขายง่ายขึ้น' },
+          { icon: '🔔', title: 'กดตามหา รอเจอจริง', desc: 'อยากได้เล่มไหนกด "ตามหา" รอไว้ พอมีคนมาลงขายเมื่อไหร่ ระบบส่งแจ้งเตือนเข้า LINE คุณทันที — ของดีไม่หลุดมือ' },
+          { icon: '🏪', title: 'ระบบสต็อกสำหรับร้านมือสอง', desc: 'ร้านใช้เป็นระบบจัดเก็บหนังสือฟรี — สแกนเข้าเล่ม ดูราคากลาง รู้ว่าเล่มไหนในกองคือของหายาก ลูกค้าถามตอบได้ทันที ไม่ต้องรื้อ' },
+          { icon: '🔄', title: 'หนังสือเล่มเดียว ส่งต่อได้หลายคน', desc: '1 เล่ม → ผู้อ่านคนที่ 2 → คนที่ 3 → ... ทุกครั้งที่ส่งต่อ คือ 1 เล่มใหม่ที่ไม่ต้องพิมพ์' },
         ].map(s => (
           <div key={s.title} style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: 14, padding: '18px 20px', display: 'flex', gap: 14 }}>
             <div style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{s.icon}</div>
@@ -92,34 +92,37 @@ export default function ImpactPage() {
         ))}
       </div>
 
-      {/* SDG */}
+      {/* ทำไมสำคัญ */}
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0F172A', marginTop: 48, marginBottom: 20, letterSpacing: '-0.01em' }}>
-        สอดคล้องกับ UN Sustainable Development Goals
+        ทำไมถึงสำคัญกับโลก
       </h2>
 
-      <div style={{ display: 'grid', gap: 10, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gap: 12, marginBottom: 20 }}>
         {[
-          { num: 4, title: 'Quality Education', desc: 'หนังสือราคาย่อมเยา = คนเข้าถึงความรู้มากขึ้น', color: '#C5192D' },
-          { num: 12, title: 'Responsible Consumption', desc: 'Reduce > Reuse > Recycle — BookMatch ขับเคลื่อนขั้น Reuse ที่ถูกมองข้าม', color: '#BF8B2E' },
-          { num: 13, title: 'Climate Action', desc: 'ลด Scope 3 emissions ของสำนักพิมพ์ (end-of-life treatment of sold products)', color: '#3F7E44' },
+          { icon: '📚', title: 'ความรู้ไปถึงคนมากขึ้น', desc: 'หนังสือมือสองราคาย่อมเยา ทำให้คนที่เงินไม่พอซื้อเล่มใหม่ก็มีโอกาสได้อ่าน' },
+          { icon: '♻️', title: 'ของดีไม่กลายเป็นขยะ', desc: 'หนังสือที่คุณอ่านจบแล้ววางไว้ในชั้น กลับไปเป็นสมบัติของใครอีกคนแทนที่จะถูกทิ้ง' },
+          { icon: '🌳', title: 'ต้นไม้ไม่ถูกตัดเพิ่ม', desc: 'ทุกเล่มที่ถูก reuse = ไม่ต้องผลิตใหม่ = ต้นไม้ กระดาษ น้ำ และพลังงานไม่ถูกใช้เพิ่ม' },
         ].map(s => (
-          <div key={s.num} style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ background: s.color, color: 'white', width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 }}>
-              {s.num}
-            </div>
+          <div key={s.title} style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: 14, padding: '18px 20px', display: 'flex', gap: 14 }}>
+            <div style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{s.icon}</div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>SDG {s.num} — {s.title}</div>
-              <div style={{ fontSize: 13, color: '#64748B', marginTop: 2, lineHeight: 1.6 }}>{s.desc}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{s.title}</div>
+              <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7 }}>{s.desc}</div>
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 12, padding: '14px 18px', marginBottom: 40, fontSize: 13, color: '#1E3A8A', lineHeight: 1.7 }}>
-        <strong>Methodology note:</strong> ตัวเลข CO2 ต่อเล่มอ้างอิง Paper Task Force
-        (Environmental Defense Fund, 1995) ครอบคลุมการผลิตเยื่อ กระดาษ หมึก และขนส่ง
-        — ประมาณ 2.5 kg CO2 equivalent ต่อเล่ม
-      </div>
+      <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.75, marginBottom: 14 }}>
+        งานวิจัยในต่างประเทศประมาณว่า หนังสือใหม่ 1 เล่มปล่อยคาร์บอนราว <strong>2.5 กิโลกรัม</strong>
+        (จากการผลิตเยื่อ กระดาษ หมึก และขนส่ง) — ทุกเล่มที่คุณส่งต่อผ่าน BookMatch
+        จึงเป็นการช่วยโลกเล็กๆ ที่รวมกันแล้วไม่เล็ก
+      </p>
+
+      <p style={{ fontSize: 13, color: '#94A3B8', marginBottom: 40, lineHeight: 1.7 }}>
+        * สิ่งที่เราทำสอดคล้องกับเป้าหมาย <strong>SDG 4, 12, 13</strong> ของสหประชาชาติ
+        (การศึกษา · การบริโภคอย่างรับผิดชอบ · ลดผลกระทบต่อสภาพภูมิอากาศ)
+      </p>
 
       {/* FOUNDER STORY */}
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0F172A', marginTop: 48, marginBottom: 20, letterSpacing: '-0.01em' }}>
