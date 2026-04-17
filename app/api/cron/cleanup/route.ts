@@ -54,6 +54,8 @@ export async function GET(req: NextRequest) {
   //    เหตุผล: /seller/[id] tab ขายแล้ว + book sold history ยังต้องโชว์ปก
   //            รูปอื่น (สันปก/ตำหนิ) หมดประโยชน์ — ลบประหยัด storage ~80%
   const BUCKET_PUBLIC_PREFIX = '/storage/v1/object/public/listing-photos/'
+  // Path whitelist: ยอมรับเฉพาะ covers/{uuid}/... กันคนปลอม URL ให้ cron ลบไฟล์อื่น
+  const SAFE_PATH_RE = /^covers\/[0-9a-fA-F-]{32,36}\/[0-9]+(_[0-9]+)?\.jpg$/
   let trimmedListings = 0
   let deletedFiles = 0
   const { data: oldSold } = await sb
@@ -66,8 +68,11 @@ export async function GET(req: NextRequest) {
     if (!Array.isArray(l.photos) || l.photos.length <= 1) continue
     const toDelete = l.photos.slice(1)
       .map((u: string) => {
+        if (typeof u !== 'string') return null
         const idx = u.indexOf(BUCKET_PUBLIC_PREFIX)
-        return idx >= 0 ? u.slice(idx + BUCKET_PUBLIC_PREFIX.length) : null
+        if (idx < 0) return null
+        const p = u.slice(idx + BUCKET_PUBLIC_PREFIX.length)
+        return SAFE_PATH_RE.test(p) ? p : null
       })
       .filter((p: string | null): p is string => !!p)
 

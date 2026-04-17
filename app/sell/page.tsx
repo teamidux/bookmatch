@@ -278,8 +278,23 @@ function SellPage() {
     const files = Array.from(e.target.files || [])
     e.target.value = ''
     if (files.length === 0) return
+
+    // Validate: เฉพาะรูป + ≤ 15MB (ก่อน compress — กันไฟล์ใหญ่มากทำ memory spike)
+    const MAX_FILE_BYTES = 15 * 1024 * 1024
+    const valid: File[] = []
+    let rejectedCount = 0
+    for (const f of files) {
+      if (!f.type.startsWith('image/') || f.size > MAX_FILE_BYTES) {
+        rejectedCount++
+        continue
+      }
+      valid.push(f)
+    }
+    if (rejectedCount > 0) show(`ข้าม ${rejectedCount} ไฟล์ที่ไม่ใช่รูปหรือใหญ่เกิน 15MB`)
+    if (valid.length === 0) return
+
     const remaining = MAX_PHOTOS - photoFiles.length
-    const accepted = files.slice(0, remaining)
+    const accepted = valid.slice(0, remaining)
     setCompressing(true)
     try {
       const compressed = await Promise.all(accepted.map(f => compressImage(f)))
@@ -945,7 +960,7 @@ function SellPage() {
                       {compressing ? (
                         <>
                           <span className="spin" style={{ width: 20, height: 20 }} />
-                          <span style={{ fontSize: 11 }}>ย่อรูป...</span>
+                          <span style={{ fontSize: 12 }}>ย่อรูป...</span>
                         </>
                       ) : photoFiles.length === 0 ? (
                         <>
@@ -955,7 +970,7 @@ function SellPage() {
                       ) : (
                         <>
                           <span style={{ fontSize: 28, lineHeight: 1 }}>+</span>
-                          <span style={{ fontSize: 11, lineHeight: 1.3, textAlign: 'center', padding: '0 4px' }}>เพิ่มรูป</span>
+                          <span style={{ fontSize: 12, lineHeight: 1.3, textAlign: 'center', padding: '0 4px' }}>เพิ่มรูป</span>
                         </>
                       )}
                     </button>

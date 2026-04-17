@@ -32,6 +32,20 @@ export async function POST(req: NextRequest) {
   if (!contact?.trim()) return NextResponse.json({ error: 'missing contact' }, { status: 400 })
   if (!condition) return NextResponse.json({ error: 'missing condition' }, { status: 400 })
 
+  // Validate photos: array, length ≤ 5, URLs ต้องมาจาก Supabase Storage ของเรา
+  // กัน: (1) array ยาวเกินล้น (2) URL ชี้ไปเว็บอื่น (XSS/hotlink)
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const EXPECTED_PREFIX = `${SUPABASE_URL}/storage/v1/object/public/listing-photos/`
+  if (photos !== undefined && photos !== null) {
+    if (!Array.isArray(photos)) return NextResponse.json({ error: 'invalid photos' }, { status: 400 })
+    if (photos.length > 5) return NextResponse.json({ error: 'too many photos' }, { status: 400 })
+    for (const url of photos) {
+      if (typeof url !== 'string' || !url.startsWith(EXPECTED_PREFIX)) {
+        return NextResponse.json({ error: 'invalid photo url' }, { status: 400 })
+      }
+    }
+  }
+
   const sb = db()
 
   // 1. หา/สร้าง book

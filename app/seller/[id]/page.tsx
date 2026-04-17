@@ -406,7 +406,7 @@ export default function SellerPage({ params }: PageProps) {
               <button
                 onClick={() => setTab('active')}
                 style={{
-                  flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                  flex: 1, padding: '12px 0', minHeight: 44, fontSize: 14, fontWeight: 700,
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: tab === 'active' ? 'var(--primary)' : 'var(--ink3)',
                   borderBottom: tab === 'active' ? '2px solid var(--primary)' : '2px solid transparent',
@@ -418,7 +418,7 @@ export default function SellerPage({ params }: PageProps) {
               <button
                 onClick={() => setTab('sold')}
                 style={{
-                  flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                  flex: 1, padding: '12px 0', minHeight: 44, fontSize: 14, fontWeight: 700,
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: tab === 'sold' ? 'var(--primary)' : 'var(--ink3)',
                   borderBottom: tab === 'sold' ? '2px solid var(--primary)' : '2px solid transparent',
