@@ -72,13 +72,13 @@ export async function GET(req: NextRequest) {
   }
 
   // ดึงข้อมูลทั้งหมดพร้อมกัน
-  const [userRes, changesRes, listingsRes, sessionsRes, contactsRes, idVerRes, wantedRes, reportsRes] = await Promise.all([
+  const [userRes, changesRes, listingsRes, sessionsRes, contactsRes, filesRes, wantedRes, reportsRes] = await Promise.all([
     sb.from('users').select('*').eq('id', targetUserId).maybeSingle(),
     sb.from('phone_changes_log').select('*').eq('user_id', targetUserId).order('changed_at', { ascending: false }).limit(50),
     sb.from('listings').select('id, book_id, condition, price, contact, status, notes, photos, created_at, books(isbn, title)').eq('seller_id', targetUserId).order('created_at', { ascending: false }).limit(50),
     sb.from('sessions').select('id, ua, ip, created_at').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(30),
     sb.from('contact_events').select('id, listing_id, buyer_id, created_at').eq('seller_id', targetUserId).order('created_at', { ascending: false }).limit(30),
-    sb.from('id_verifications').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(10),
+    sb.storage.from('identity-docs').list(targetUserId, { limit: 20, sortBy: { column: 'created_at', order: 'desc' } }),
     sb.from('wanted').select('*, books(isbn, title)').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(20),
     sb.from('reports').select('*').eq('reported_user_id', targetUserId).order('created_at', { ascending: false }).limit(20),
   ])
@@ -88,17 +88,17 @@ export async function GET(req: NextRequest) {
     ? (sessionsRes.data || [])[(sessionsRes.data || []).length - 1]
     : null
 
-  // สร้าง signed URLs สำหรับเอกสารยืนยันตัวตน (private bucket)
-  const idVers = idVerRes.data || []
-  for (const v of idVers) {
-    if (v.id_image_path) {
-      const { data } = await sb.storage.from('id-verifications').createSignedUrl(v.id_image_path, 3600)
-      ;(v as any).id_image_url = data?.signedUrl || null
-    }
-    if (v.selfie_image_path) {
-      const { data } = await sb.storage.from('id-verifications').createSignedUrl(v.selfie_image_path, 3600)
-      ;(v as any).selfie_image_url = data?.signedUrl || null
-    }
+  // สร้าง signed URLs สำหรับเอกสารยืนยันตัวตนจาก bucket identity-docs (private, 1 ชม.)
+  const identityDocs: { name: string; url: string; type: string; created_at: string | null }[] = []
+  for (const f of filesRes.data || []) {
+    const { data: signed } = await sb.storage
+      .from('identity-docs')
+      .createSignedUrl(`${targetUserId}/${f.name}`, 3600)
+    if (!signed?.signedUrl) continue
+    const type = f.name.startsWith('id_card') ? 'id_card'
+      : f.name.startsWith('bank_book') ? 'bank_book'
+      : 'other'
+    identityDocs.push({ name: f.name, url: signed.signedUrl, type, created_at: (f as any).created_at || null })
   }
 
   return NextResponse.json({
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
     listings: listingsRes.data || [],
     sessions: sessionsRes.data || [],
     contact_events: contactsRes.data || [],
-    id_verifications: idVerRes.data || [],
+    identity_docs: identityDocs,
     wanted: wantedRes.data || [],
     reports_against: reportsRes.data || [],
     summary: {

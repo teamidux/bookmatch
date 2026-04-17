@@ -11,7 +11,7 @@ type UserResult = {
   listings: any[]
   sessions: any[]
   contact_events: any[]
-  id_verifications: any[]
+  identity_docs: { name: string; url: string; type: string; created_at: string | null }[]
   wanted: any[]
   reports_against: any[]
   summary: {
@@ -361,42 +361,44 @@ export default function AdminPage() {
             </SectionCard>
           )}
 
-          {/* ID Verifications — เอกสารยืนยันตัวตน + รูปจริง */}
-          {result.id_verifications.length > 0 && (
-            <SectionCard title={`เอกสารยืนยันตัวตน (${result.id_verifications.length})`} icon="🪪">
-              {result.id_verifications.map((v: any) => {
-                const idUrl = v.id_image_url || ''
-                const selfieUrl = v.selfie_image_url || ''
+          {/* ID Verifications — เอกสารยืนยันตัวตน (จาก identity-docs bucket) */}
+          {result.identity_docs.length > 0 && (
+            <SectionCard title={`เอกสารยืนยันตัวตน (${result.identity_docs.length})`} icon="🪪">
+              {(() => {
+                const u = result.user
+                const verified = !!u?.id_verified_at
+                const submitted = !!u?.id_verify_submitted_at
+                const statusLabel = verified ? 'approved' : submitted ? 'pending' : 'none'
                 return (
-                  <div key={v.id} style={{ padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{
-                        fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-                        background: v.status === 'approved' ? '#DCFCE7' : v.status === 'rejected' ? '#FEE2E2' : '#FEF9C3',
-                        color: v.status === 'approved' ? '#15803D' : v.status === 'rejected' ? '#DC2626' : '#92400E',
-                      }}>
-                        {v.status}
-                      </span>
-                      <span style={{ fontSize: 12, color: '#94A3B8' }}>{formatDate(v.created_at)}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                      {idUrl && (
-                        <div onClick={() => setViewDoc(idUrl)} style={{ cursor: 'zoom-in' }}>
-                          <img src={idUrl} alt="บัตรประชาชน" style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid #E2E8F0' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                          <div style={{ fontSize: 11, color: '#64748B', marginTop: 3, textAlign: 'center' }}>📇 บัตรประชาชน</div>
-                        </div>
-                      )}
-                      {selfieUrl && (
-                        <div onClick={() => setViewDoc(selfieUrl)} style={{ cursor: 'zoom-in' }}>
-                          <img src={selfieUrl} alt="Selfie" style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid #E2E8F0' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                          <div style={{ fontSize: 11, color: '#64748B', marginTop: 3, textAlign: 'center' }}>🤳 Selfie + บัตร</div>
-                        </div>
-                      )}
-                    </div>
-                    {v.admin_note && <div style={{ fontSize: 12, color: '#DC2626', marginTop: 4 }}>Note: {v.admin_note}</div>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                      background: verified ? '#DCFCE7' : submitted ? '#FEF9C3' : '#F1F5F9',
+                      color: verified ? '#15803D' : submitted ? '#92400E' : '#64748B',
+                    }}>
+                      {statusLabel}
+                    </span>
+                    {u?.id_verify_submitted_at && (
+                      <span style={{ fontSize: 12, color: '#94A3B8' }}>ส่งเมื่อ {formatDate(u.id_verify_submitted_at)}</span>
+                    )}
                   </div>
                 )
-              })}
+              })()}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {result.identity_docs.map(doc => (
+                  <div key={doc.name} onClick={() => setViewDoc(doc.url)} style={{ cursor: 'zoom-in' }}>
+                    <img
+                      src={doc.url}
+                      alt={doc.name}
+                      style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F1F5F9' }}
+                      onError={e => { (e.target as HTMLImageElement).style.opacity = '0.3' }}
+                    />
+                    <div style={{ fontSize: 11, color: '#64748B', marginTop: 3, textAlign: 'center' }}>
+                      {doc.type === 'id_card' ? '📇 บัตรประชาชน' : doc.type === 'bank_book' ? '🏦 สมุดบัญชี' : '📄 เอกสาร'}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </SectionCard>
           )}
 
