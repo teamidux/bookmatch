@@ -169,7 +169,15 @@ export function BottomNav() {
 export function TermsFooter() {
   return (
     <div style={{ textAlign: 'center', padding: '20px 0 12px', fontSize: 13, color: '#94A3B8' }}>
-      <Link href="/terms" style={{ color: '#94A3B8', textDecoration: 'underline', textUnderlineOffset: 2 }}>ข้อตกลงการใช้บริการ</Link>
+      <div style={{ marginBottom: 6, color: '#64748B', fontSize: 13, lineHeight: 1.6 }}>
+        หนังสือทุกเล่มสมควรมีชีวิตที่สอง<br />
+        <Link href="/impact" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+          เรื่องราวของเรา →
+        </Link>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <Link href="/terms" style={{ color: '#94A3B8', textDecoration: 'underline', textUnderlineOffset: 2 }}>ข้อตกลงการใช้บริการ</Link>
+      </div>
     </div>
   )
 }
