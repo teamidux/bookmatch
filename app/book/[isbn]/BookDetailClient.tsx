@@ -102,12 +102,9 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
   const loadData = async (cancelled = false) => {
     setLoading(true)
 
-    // ใช้ initialBook จาก server ถ้ามี id (= อยู่ใน DB แล้ว) → ไม่ต้อง query ซ้ำ
-    // ถ้าไม่มี id (= มาจาก Google Books) หรือไม่มีเลย → query DB เพื่อเช็คว่ามีใครเพิ่มไปแล้วหรือยัง
-    const bookId = (initialBook as any)?.id
-    const dbBook = bookId
-      ? initialBook // server ส่งมาจาก DB แล้ว ใช้เลย
-      : (await supabase.from('books').select('*').eq('isbn', isbn).maybeSingle()).data
+    // Query DB สดเสมอ — ไม่ใช้ initialBook เพื่อให้ admin ที่แก้ cover_url / title เห็นผลทันที
+    // (initialBook ใช้แค่ first-paint จาก SSR — ไม่ใช่ source of truth)
+    const { data: dbBook } = await supabase.from('books').select('*').eq('isbn', isbn).maybeSingle()
     if (cancelled) return
 
     if (dbBook?.id) {
@@ -123,7 +120,6 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       }
     }
     // ถ้าไม่มีใน DB → book state ยังเป็น initialBook (จาก Google) หรือ null
-    // ไม่ต้องเรียก Google ซ้ำ — server ทำไปแล้ว
     setLoading(false)
   }
 

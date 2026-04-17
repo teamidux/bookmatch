@@ -12,6 +12,10 @@ interface PageProps {
   params: { isbn: string }
 }
 
+// Force dynamic — กัน Next.js cache ทำให้ admin update cover/title ไม่ขึ้น
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function getBook(isbn: string) {
   const { data } = await supabase
     .from('books')
