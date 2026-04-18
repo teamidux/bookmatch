@@ -56,38 +56,24 @@ export async function GET(req: NextRequest) {
   )
 
   // ─────────────────────────────────────────────────────────────────
-  // 1. DB QUERY
+  // 1. DB QUERY via RPC — pg_trgm + title_norm + ranking
+  // แก้ whitespace variation, word order, typo, partial match ในครั้งเดียว
   // ─────────────────────────────────────────────────────────────────
-  // Variant 1: query ตามที่ user พิมพ์ (escape % และ _ ที่เป็น wildcard)
-  // Variant 2: ตัดช่องว่างทั้งหมด — รองรับ "คิดใหญ่ ไม่คิดเล็ก" vs "คิดใหญ่ไม่คิดเล็ก"
-  // ใช้ separate queries แทน .or() — supabase-js OR filter มี edge case กับ Thai chars
-  const escaped = q.replace(/[%_]/g, '\\$&')
-  const escapedNoWs = escaped.replace(/\s+/g, '')
-  const variants: string[] = [escaped]
-  if (escapedNoWs !== escaped && escapedNoWs.length > 0) variants.push(escapedNoWs)
-
-  const SELECT_COLS = 'id, isbn, title, author, cover_url, wanted_count, view_count'
   const dbQuery = (async () => {
     try {
-      const queries: any[] = []
-      for (let i = 0; i < variants.length; i++) {
-        const v = variants[i]
-        queries.push(
-          supabase.from('books').select(SELECT_COLS).ilike('title', `%${v}%`).limit(50),
-          supabase.from('books').select(SELECT_COLS).ilike('author', `%${v}%`).limit(20),
-        )
+      const { data, error } = await supabase.rpc('search_books', { q, result_limit: 50 })
+      if (error) {
+        // Fallback ถ้า RPC ไม่มี (ยังไม่รัน migration)
+        console.warn('[search] RPC fallback:', error.message)
+        const escaped = q.replace(/[%_]/g, '\\$&')
+        const { data: fb } = await supabase
+          .from('books')
+          .select('id, isbn, title, author, cover_url, wanted_count, view_count')
+          .ilike('title', `%${escaped}%`)
+          .limit(50)
+        return fb || []
       }
-      const results: any[] = await Promise.all(queries)
-      const merged: any[] = []
-      const seen = new Set<string>()
-      for (const r of results) {
-        for (const b of (r.data || [])) {
-          if (!b.id || seen.has(b.id)) continue
-          seen.add(b.id)
-          merged.push(b)
-        }
-      }
-      return merged
+      return data || []
     } catch (err: any) {
       console.error('[search] db query error:', err?.message || err)
       return []
