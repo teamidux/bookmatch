@@ -13,29 +13,47 @@ const CONDITIONS = [
   { key: 'fair', label: '📖 พอใช้', desc: 'มีรอยชัดเจน แต่เนื้อหาครบถ้วน' },
 ]
 
+// วาด bitmap/image ลง canvas — ถ้าเป็นแนวนอน (landscape) หมุน 90° ให้เป็นแนวตั้ง
+// เพราะหนังสือ ~95% เป็นแนวตั้ง — user อัปรูปแนวนอนมา = ถ่ายผิดแนว ส่วนใหญ่
+function drawRotatedIfLandscape(source: CanvasImageSource, sw: number, sh: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  const isLandscape = sw > sh
+  if (isLandscape) {
+    canvas.width = sh  // สลับ w/h
+    canvas.height = sw
+    const ctx = canvas.getContext('2d')!
+    ctx.translate(canvas.width, 0)
+    ctx.rotate(Math.PI / 2) // 90° CW
+    ctx.drawImage(source, 0, 0, sw, sh)
+  } else {
+    canvas.width = sw
+    canvas.height = sh
+    canvas.getContext('2d')!.drawImage(source, 0, 0, sw, sh)
+  }
+  return canvas
+}
+
 // Resize + compress: MAX 1000px (เผื่อ zoom ดูตำหนิบน retina), ≤ 220KB, JPEG
-// ใช้ createImageBitmap + imageOrientation เพื่อ auto-rotate ตาม EXIF (รูปแนวตั้งจากมือถือจะไม่หมุนผิด)
+// ใช้ createImageBitmap + imageOrientation เพื่อ auto-rotate ตาม EXIF
+// + auto-rotate landscape → portrait (หนังสือส่วนใหญ่เป็นแนวตั้ง)
 async function compressImage(file: File, maxKB = 220): Promise<File> {
   const MAX = 1000
   let bitmap: ImageBitmap | null = null
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
-    // Fallback: บาง browser เก่า/Safari เก่า — ใช้ <img> แทน (EXIF auto-respect ใน Safari 13.4+)
+    // Fallback: browser เก่า — ใช้ <img>
     return new Promise(resolve => {
       const img = new Image()
       const url = URL.createObjectURL(file)
       img.onload = () => {
         URL.revokeObjectURL(url)
-        const canvas = document.createElement('canvas')
         let { width, height } = img
         if (width > MAX || height > MAX) {
           if (width > height) { height = Math.round(height * MAX / width); width = MAX }
           else { width = Math.round(width * MAX / height); height = MAX }
         }
-        canvas.width = width
-        canvas.height = height
-        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        const canvas = drawRotatedIfLandscape(img, width, height)
         const tryQ = (q: number) => {
           canvas.toBlob(blob => {
             if (!blob) { canvas.width = 0; canvas.height = 0; resolve(file); return }
@@ -52,16 +70,13 @@ async function compressImage(file: File, maxKB = 220): Promise<File> {
     })
   }
 
-  const canvas = document.createElement('canvas')
   let width = bitmap.width
   let height = bitmap.height
   if (width > MAX || height > MAX) {
     if (width > height) { height = Math.round(height * MAX / width); width = MAX }
     else { width = Math.round(width * MAX / height); height = MAX }
   }
-  canvas.width = width
-  canvas.height = height
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, width, height)
+  const canvas = drawRotatedIfLandscape(bitmap, width, height)
   bitmap.close?.()
 
   return new Promise(resolve => {

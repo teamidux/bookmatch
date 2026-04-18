@@ -1,13 +1,23 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase, Book, Listing, CONDITIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { Nav, BottomNav, BookCover, CondBadge, useToast, Toast, SkeletonList, TrustBadge } from '@/components/ui'
 import { parseLineId } from '@/lib/line-id'
 
 export default function BookDetailClient({ isbn, initialBook }: { isbn: string; initialBook?: Partial<Book> | null }) {
+  const router = useRouter()
   const { user, loginWithLine } = useAuth()
+  // Back button: ถ้ามี history (มาจาก /search) กลับหน้าเดิม ไม่งั้นไปหน้าแรก
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
   const [book, setBook] = useState<Book | null>((initialBook as Book) ?? null)
   const [listings, setListings] = useState<Listing[]>([])
   const [lastSold, setLastSold] = useState<Listing | null>(null)
@@ -257,7 +267,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
     <>
       <Nav />
       <div className="page">
-        <Link href="/" className="back-btn">← กลับ</Link>
+        <button onClick={goBack} className="back-btn" style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 'inherit', color: 'inherit', cursor: 'pointer' }}>← กลับ</button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 160px)', padding: '16px' }}>
           <div style={{ background: 'white', borderRadius: 20, boxShadow: '0 8px 32px rgba(0,0,0,.1)', padding: '32px 24px', maxWidth: 380, width: '100%', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📖</div>
@@ -457,7 +467,7 @@ export default function BookDetailClient({ isbn, initialBook }: { isbn: string; 
       )}
 
       <div className="page">
-        <Link href="/" className="back-btn">← กลับ</Link>
+        <button onClick={goBack} className="back-btn" style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 'inherit', color: 'inherit', cursor: 'pointer' }}>← กลับ</button>
 
         <div style={{ background: 'var(--primary)', padding: '18px 16px', display: 'flex', gap: 14 }}>
           <BookCover coverUrl={book.cover_url} isbn={isbn} title={book.title} size={84} />

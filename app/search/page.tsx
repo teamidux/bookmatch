@@ -26,6 +26,9 @@ function SearchPage() {
   const [expanding, setExpanding] = useState(false)
   const [matchQuality, setMatchQuality] = useState<'exact' | 'partial' | 'none'>('none')
   const [searched, setSearched] = useState(false)
+  // Filter + sort
+  const [onlyWithListings, setOnlyWithListings] = useState(false)
+  const [sortBy, setSortBy] = useState<'relevance' | 'price_low' | 'price_high' | 'popular'>('relevance')
   // เก็บ AbortController ของ request ที่กำลังวิ่ง — ใช้ cancel เมื่อ query เปลี่ยน
   const abortRef = useRef<AbortController | null>(null)
 
@@ -204,14 +207,80 @@ function SearchPage() {
           )}
 
           {!loading && (results.length + googleResults.length) > 0 && (
-            <div style={{ padding: '4px 0 12px', fontSize: 13, fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.02em' }}>
-              พบ {results.length + googleResults.length} เล่ม
-              {expanding && <span style={{ marginLeft: 8, color: 'var(--ink3)', fontWeight: 500 }}>· กำลังค้นเพิ่ม...</span>}
-            </div>
+            <>
+              <div style={{ padding: '4px 0 10px', fontSize: 13, fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.02em' }}>
+                พบ {results.length + googleResults.length} เล่ม
+                {expanding && <span style={{ marginLeft: 8, color: 'var(--ink3)', fontWeight: 500 }}>· กำลังค้นเพิ่ม...</span>}
+              </div>
+
+              {/* Filter + sort bar */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                <button
+                  onClick={() => setOnlyWithListings(v => !v)}
+                  style={{
+                    background: onlyWithListings ? 'var(--primary)' : 'white',
+                    color: onlyWithListings ? 'white' : 'var(--ink2)',
+                    border: `1px solid ${onlyWithListings ? 'var(--primary)' : 'var(--border)'}`,
+                    borderRadius: 20,
+                    padding: '7px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Kanit',
+                  }}
+                >
+                  {onlyWithListings ? '✓ ' : ''}เฉพาะมีคนขาย
+                </button>
+
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as any)}
+                  style={{
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: 20,
+                    padding: '7px 12px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: 'Kanit',
+                    color: 'var(--ink2)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="relevance">เกี่ยวข้องสุด</option>
+                  <option value="price_low">ราคาต่ำ → สูง</option>
+                  <option value="price_high">ราคาสูง → ต่ำ</option>
+                  <option value="popular">ยอดนิยม</option>
+                </select>
+              </div>
+            </>
           )}
 
-          {/* รวม with listings + no listings เป็น list เดียว — listings ก่อน */}
-          {[...results, ...(googleResults as any[])].map((b: any) => {
+          {/* รวม with listings + no listings เป็น list เดียว + filter + sort */}
+          {(() => {
+            let combined = [...results, ...(googleResults as any[])]
+            if (onlyWithListings) {
+              combined = combined.filter((b: any) => (b.active_listings_count || 0) > 0)
+            }
+            if (sortBy === 'price_low') {
+              combined.sort((a: any, b: any) => {
+                const ap = a.min_price ?? Infinity
+                const bp = b.min_price ?? Infinity
+                return ap - bp
+              })
+            } else if (sortBy === 'price_high') {
+              combined.sort((a: any, b: any) => {
+                const ap = a.min_price ?? -1
+                const bp = b.min_price ?? -1
+                return bp - ap
+              })
+            } else if (sortBy === 'popular') {
+              combined.sort((a: any, b: any) => (b.wanted_count || 0) - (a.wanted_count || 0))
+            }
+            // relevance = คง order เดิม (API ส่งตามความเกี่ยวข้อง)
+            return combined
+          })().map((b: any) => {
             const hasListing = (b.active_listings_count || 0) > 0
             const hasSoldHistory = !hasListing && b.last_sold_price
             return (
