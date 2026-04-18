@@ -299,7 +299,10 @@ function SearchPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="book-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                       <div className="book-author">{b.author}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 11, color: 'var(--ink3)', fontFamily: 'monospace', marginTop: 2, letterSpacing: 0.3 }}>
+                        ISBN {b.isbn}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                         {hasListing && b.min_price ? (
                           <>
                             <span className="price">฿{b.min_price}</span>

@@ -253,6 +253,7 @@ export default function HomePage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 600, color: '#121212', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</div>
                         {b.author && <div style={{ fontSize: 13, fontWeight: 500, color: '#555555', lineHeight: 1.5, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.author}</div>}
+                        <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'monospace', marginTop: 2 }}>ISBN {b.isbn}</div>
                         {hasListing && b.min_price && (
                           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginTop: 2 }}>฿{b.min_price} · {b.active_listings_count} คนขาย</div>
                         )}
