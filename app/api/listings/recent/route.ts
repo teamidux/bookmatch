@@ -6,7 +6,8 @@ export async function GET(req: NextRequest) {
   if (!checkRateLimit(`recent:${getClientIp(req)}`, 30, 60_000)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
-  const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || 10), 20)
+  // limit เพิ่มเป็นสูงสุด 50 — client จะทำ seller-diversity round-robin เอง
+  const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || 10), 50)
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('listings')
-    .select('id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url), users!seller_id(banned_at, deleted_at)')
+    .select('id, seller_id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url), users!seller_id(banned_at, deleted_at)')
     .eq('status', 'active')
     .is('users.banned_at', null)
     .is('users.deleted_at', null)
@@ -23,10 +24,9 @@ export async function GET(req: NextRequest) {
     .limit(limit)
 
   if (error) {
-    // Fallback ถ้า filter ไม่ work (บาง Supabase version ไม่รองรับ nested filter)
     const { data: fallback } = await supabase
       .from('listings')
-      .select('id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url)')
+      .select('id, seller_id, price, condition, price_includes_shipping, photos, created_at, books(id, isbn, title, author, cover_url)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(limit)

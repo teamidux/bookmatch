@@ -96,13 +96,41 @@ export default function HomePage() {
     return () => { cancelled = true; clearTimeout(t) }
   }, [query])
 
+  // Round-robin per seller — กัน seller 1 คนยึดหน้าแรก + เพิ่ม variety
+  // รับ listings เยอะ (ตามวันที่) แล้วสลับสลับ seller + cap max per seller
+  const diversifyBySeller = (items: any[], maxPerSeller = 3, target = 12): any[] => {
+    const bySeller: Record<string, any[]> = {}
+    for (const l of items) {
+      const sid = l.seller_id || 'unknown'
+      if (!bySeller[sid]) bySeller[sid] = []
+      if (bySeller[sid].length < maxPerSeller) bySeller[sid].push(l)
+    }
+    const result: any[] = []
+    const sellers = Object.keys(bySeller)
+    let round = 0
+    while (result.length < target) {
+      let added = false
+      for (const s of sellers) {
+        if (bySeller[s][round]) {
+          result.push(bySeller[s][round])
+          added = true
+          if (result.length >= target) break
+        }
+      }
+      if (!added) break
+      round++
+    }
+    return result
+  }
+
   const loadData = async () => {
     const [recentRes, { data: wanted }] = await Promise.all([
-      fetch('/api/listings/recent?limit=10'),
+      // ดึงเยอะหน่อย (40) เพื่อให้ diversify ใช้ได้แม้มี seller เยอะ
+      fetch('/api/listings/recent?limit=40'),
       supabase.from('books').select('*').gt('wanted_count', 0).order('wanted_count', { ascending: false }).order('created_at', { ascending: false }).limit(3),
     ])
     const { listings } = await recentRes.json()
-    setRecentListings(listings || [])
+    setRecentListings(diversifyBySeller(listings || [], 3, 12))
     setWantedBooks(wanted || [])
     setLoading(false)
   }
@@ -357,6 +385,11 @@ export default function HomePage() {
                 หนังสือที่พึ่งลงขายในระบบ
               </div>
             </div>
+            {!loading && recentListings.length > 0 && (
+              <Link href="/browse" style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                ดูทั้งหมด →
+              </Link>
+            )}
           </div>
           {loading && <SkeletonList count={5} />}
           {!loading && recentListings.length === 0 && (
@@ -366,23 +399,40 @@ export default function HomePage() {
               <Link href="/sell"><button className="btn" style={{ maxWidth: 200, margin: '0 auto', display: 'block' }}>ลงขายเป็นคนแรก</button></Link>
             </div>
           )}
-          {recentListings.map((l: any) => (
-            <Link key={l.id} href={`/book/${l.books?.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="card">
-                <div className="book-card">
-                  <BookCover coverUrl={l.photos?.[0]} isbn={!l.photos?.[0] ? l.books?.isbn : undefined} title={l.books?.title} size={60} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="book-title" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.books?.title}</div>
-                    {l.books?.author && <div className="book-author">{l.books.author}</div>}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
-                      <span className="price">฿{l.price}</span>
-                      {l.price_includes_shipping && <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>ส่งฟรี</span>}
+          {/* Grid 2 คอลัมน์ — หนังสือ 12 เล่ม คละ seller */}
+          {!loading && recentListings.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+              {recentListings.map((l: any) => (
+                <Link key={l.id} href={`/book/${l.books?.isbn}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ width: '100%', aspectRatio: '3/4', background: 'var(--surface)', overflow: 'hidden' }}>
+                      {l.photos?.[0] ? (
+                        <img src={l.photos[0]} alt={l.books?.title} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <BookCover isbn={l.books?.isbn} title={l.books?.title} size={120} />
+                      )}
+                    </div>
+                    <div style={{ padding: '10px 12px' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#121212', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 38 }}>{l.books?.title}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                        <span className="price" style={{ fontSize: 16 }}>฿{l.price}</span>
+                        {l.price_includes_shipping && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>ส่งฟรี</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </Link>
-          ))}
+                </Link>
+              ))}
+            </div>
+          )}
+          {!loading && recentListings.length > 0 && (
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <Link href="/browse">
+                <button className="btn btn-ghost" style={{ maxWidth: 280, margin: '0 auto' }}>
+                  ดูหนังสือทั้งหมด →
+                </button>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* How it works — 3 steps ช่วย user ใหม่เข้าใจระบบ */}
