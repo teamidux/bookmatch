@@ -154,7 +154,7 @@ export default function HomePage() {
       )}
       <div className="page">
         <div className="hero">
-          <h1 className="hero-title">ตลาดหนังสือออนไลน์</h1>
+          <h1 className="hero-title">ตลาดหนังสือมือสอง</h1>
           <p className="hero-sub">หนังสือทุกเล่ม — มีคนที่ใช่รออยู่<br />เจอหนังสือที่ตามหา เจอลูกค้าที่รอซื้อ</p>
 
           {/* Search input */}
