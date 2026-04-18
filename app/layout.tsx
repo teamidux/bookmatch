@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { AuthProvider } from '@/lib/auth'
 import PwaInit from '@/components/PwaInit'
 import LineBrowserBanner from '@/components/LineBrowserBanner'
+import FacebookBrowserBanner from '@/components/FacebookBrowserBanner'
 import './globals.css'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bookmatch.app'
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <LineBrowserBanner />
+          <FacebookBrowserBanner />
           {children}
         </AuthProvider>
         <PwaInit />
